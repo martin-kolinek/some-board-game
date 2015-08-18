@@ -28,6 +28,13 @@ mainStyle = do
     background $ url "data/card.svg"
     backgroundSize contain
     backgroundRepeat noRepeat
-    color red
+  star # classSelector workerClass ? do
+    display inlineBlock
+    width $ em 2
+    height $ em 2
+    margin (em 0.5) (em 0.5) (em 0.5) (em 0.5)
+    background $ url "data/worker.svg"
+    backgroundSize contain
+    backgroundRepeat noRepeat
 
 mainStyleByteString = toStrict $ encodeUtf8 $ render mainStyle

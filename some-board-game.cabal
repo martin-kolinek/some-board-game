@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 executable some-board-game
   main-is:             Main.hs
-  other-modules:       Style
+  other-modules:       Style, CssClass
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9,
                        reflex ==0.3.*,
