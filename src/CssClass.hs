@@ -1,4 +1,4 @@
-module CssClass(divCssClass, classSelector, cardClass, cardWrapperClass, workerClass) where
+module CssClass(divCssClass, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass) where
 
 import           Clay
 import           Data.Text
@@ -12,3 +12,4 @@ classSelector (CssClass className) = byClass $ pack className
 cardWrapperClass = CssClass "cardWrapper"
 cardClass = CssClass "card"
 workerClass = CssClass "worker"
+idleWorkerContainerClass = CssClass "idle-worker-container"
