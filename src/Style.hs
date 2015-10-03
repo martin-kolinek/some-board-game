@@ -25,7 +25,7 @@ mainStyle = do
     padding (em 0.5) (em 0.5) (em 0.2) (em 0.5)
     backgroundColor lightgrey
   star # classSelector cardWrapperClass ? do
-    width $ em 5
+    width $ em 8
     display inlineBlock
     position relative
     margin (em 0.5) (em 0.5) (em 0.5) (em 0.5)

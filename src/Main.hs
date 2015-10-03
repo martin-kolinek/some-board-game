@@ -7,6 +7,7 @@ import           Reflex.Dom
 import           Style
 import           Data.List
 import           Data.Maybe
+import           Data.Map as M
 import           Rules
 
 main :: IO ()
@@ -15,6 +16,7 @@ main = mainWidgetWithCss mainStyleByteString $ do
     score <- mapDyn getScore universe
     drawScore score
     drawFreeWorkers universe
+    drawWorkplaces universe
     universe <- foldDyn (\x y -> y) initialUniverse never
   return ()
 
@@ -33,10 +35,28 @@ drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> m ()
 drawFreeWorkers universe = do
   divCssClass freeWorkersClass $ do
     free <- freeWorkers universe
-    let drawFreeWorker workerId = void (divCssClass workerClass $ return ())
-    dynamic <- mapM_ drawFreeWorker `mapDyn` free
+    dynamic <- mapM_ drawWorker `mapDyn` free
     dyn dynamic
     return ()
+  return ()
+
+drawWorker :: MonadWidget t m => WorkerId -> m ()
+drawWorker workerId = void (divCssClass workerClass $ return ())
+
+drawWorkplaces :: MonadWidget t m => Dynamic t Universe -> m ()
+drawWorkplaces universe = do
+  let drawWorkplace :: MonadWidget t m => WorkplaceId -> [WorkerId] -> m ()
+      drawWorkplace workplace workers = void $
+        divCssClass cardWrapperClass $
+          divCssClass cardClass $
+            mapM_ drawWorker workers
+      drawWorkplacesInUniverse universe =
+              let workplaces = M.keys $ getWorkplaces universe
+                  findWorkplaceWorkers universe workplace = (workplace, getWorkplaceOccupants universe workplace)
+                  workplacesWithWorkers = findWorkplaceWorkers universe <$> workplaces
+              in mapM_ (uncurry drawWorkplace) workplacesWithWorkers
+  dynamic <- drawWorkplacesInUniverse `mapDyn` universe
+  dyn dynamic
   return ()
 
 data Worker = Worker Int deriving Eq
