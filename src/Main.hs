@@ -14,13 +14,29 @@ main = mainWidgetWithCss mainStyleByteString $ do
   rec
     score <- mapDyn getScore universe
     drawScore score
+    drawFreeWorkers universe
     universe <- foldDyn (\x y -> y) initialUniverse never
   return ()
+
+freeWorkers :: MonadWidget t m => Dynamic t Universe -> m (Dynamic t [WorkerId])
+freeWorkers universe = do
+  let getFreeWorkers un = [w | w <- getWorkers un, isNothing $ getWorkerWorkplace un w]
+  mapDyn getFreeWorkers universe
 
 drawScore :: MonadWidget t m => Dynamic t Int -> m ()
 drawScore score = do
   scoreString <- mapDyn show score
   divCssClass scoreClass $ dynText scoreString
+  return ()
+
+drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> m ()
+drawFreeWorkers universe = do
+  divCssClass freeWorkersClass $ do
+    free <- freeWorkers universe
+    let drawFreeWorker workerId = void (divCssClass workerClass $ return ())
+    dynamic <- mapM_ drawFreeWorker `mapDyn` free
+    dyn dynamic
+    return ()
   return ()
 
 data Worker = Worker Int deriving Eq

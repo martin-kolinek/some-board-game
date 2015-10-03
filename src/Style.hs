@@ -18,6 +18,12 @@ mainStyle = do
     padding (em 0.5) (em 0.5) (em 0.5) (em 0.5)
     minWidth (em 4)
     textAlign $ alignSide sideRight
+  star # classSelector freeWorkersClass ? do
+    position absolute
+    bottom (px 0)
+    left (em 5)
+    padding (em 0.5) (em 0.5) (em 0.2) (em 0.5)
+    backgroundColor lightgrey
   star # classSelector cardWrapperClass ? do
     width $ em 5
     display inlineBlock
