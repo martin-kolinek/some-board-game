@@ -10,6 +10,14 @@ import           Prelude                 hiding (div)
 
 mainStyle :: Css
 mainStyle = do
+  star # classSelector scoreClass ? do
+    position absolute
+    right (px 0)
+    top (px 0)
+    backgroundColor green
+    padding (em 0.5) (em 0.5) (em 0.5) (em 0.5)
+    minWidth (em 4)
+    textAlign $ alignSide sideRight
   star # classSelector cardWrapperClass ? do
     width $ em 5
     display inlineBlock

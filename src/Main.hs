@@ -7,10 +7,21 @@ import           Reflex.Dom
 import           Style
 import           Data.List
 import           Data.Maybe
+import           Rules
 
 main :: IO ()
-main = mainWidgetWithCss mainStyleByteString $
-  forM_ [1..15] $ const (card undefined)
+main = mainWidgetWithCss mainStyleByteString $ do
+  rec
+    score <- mapDyn getScore universe
+    drawScore score
+    universe <- foldDyn (\x y -> y) initialUniverse never
+  return ()
+
+drawScore :: MonadWidget t m => Dynamic t Int -> m ()
+drawScore score = do
+  scoreString <- mapDyn show score
+  divCssClass scoreClass $ dynText scoreString
+  return ()
 
 data Worker = Worker Int deriving Eq
 
@@ -47,8 +58,8 @@ renderWorker worker = do
 renderWorkers :: MonadWidget t m => [Worker] -> m (Event t Worker)
 renderWorkers workers = do
   events <- forM workers renderWorker
-  return $ leftmost events
 
+  return $ leftmost events
 card :: MonadWidget t m => Dynamic t (m b) -> m (Event t ())
 card cardContent = do
   rec

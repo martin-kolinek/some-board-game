@@ -1,4 +1,4 @@
-module CssClass(divCssClass, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass) where
+module CssClass(divCssClass, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass, scoreClass) where
 
 import           Clay
 import           Data.Text
@@ -8,6 +8,8 @@ newtype CssClass = CssClass String
 
 divCssClass (CssClass className) = elAttr' "div" ("class" =: className)
 classSelector (CssClass className) = byClass $ pack className
+
+scoreClass = CssClass "score"
 
 cardWrapperClass = CssClass "cardWrapper"
 cardClass = CssClass "card"
