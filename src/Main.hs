@@ -15,7 +15,7 @@ main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
   rec
     score <- mapDyn getScore universe
-    drawScore score
+    drawScore universe
     actions <- drawBoard universe
     let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
     universe <- foldDyn tryApplyToUniverse initialUniverse actions
@@ -41,9 +41,9 @@ freeWorkers universe = do
   let getFreeWorkers un = [w | w <- getWorkers un, isNothing $ getWorkerWorkplace un w]
   mapDyn getFreeWorkers universe
 
-drawScore :: MonadWidget t m => Dynamic t Int -> m ()
+drawScore :: MonadWidget t m => Dynamic t Universe -> m ()
 drawScore score = do
-  scoreString <- mapDyn show score
+  scoreString <- mapDyn (show . getScore) score
   divCssClass scoreClass $ dynText scoreString
   return ()
 
