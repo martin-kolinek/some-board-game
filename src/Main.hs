@@ -15,8 +15,9 @@ main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
   rec
     score <- mapDyn getScore universe
-    drawScore universe
-    actions <- drawBoard universe
+    scoreActions <- drawScore universe
+    boardActions <- drawBoard universe
+    let actions = leftmost [boardActions, scoreActions]
     let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
     universe <- foldDyn tryApplyToUniverse initialUniverse actions
   return ()
@@ -41,11 +42,14 @@ freeWorkers universe = do
   let getFreeWorkers un = [w | w <- getWorkers un, isNothing $ getWorkerWorkplace un w]
   mapDyn getFreeWorkers universe
 
-drawScore :: MonadWidget t m => Dynamic t Universe -> m ()
+drawScore :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
 drawScore score = do
   scoreString <- mapDyn (show . getScore) score
-  divCssClass scoreClass $ dynText scoreString
-  return ()
+  (_, event) <- divCssClass scoreClass $ do
+    finishTurnEvent <- button "Finish turn"
+    dynText scoreString
+    return finishTurnEvent
+  return $ const finishTurn <$> event
 
 drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> m (Event t WorkerId)
 drawFreeWorkers universe = do
