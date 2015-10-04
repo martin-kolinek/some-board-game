@@ -9,6 +9,7 @@ import           Data.List
 import           Data.Maybe
 import           Data.Map as M
 import           Rules
+import           ReflexUtil
 
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
@@ -31,30 +32,35 @@ drawScore score = do
   divCssClass scoreClass $ dynText scoreString
   return ()
 
-drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> m ()
+drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> m (Event t WorkerId)
 drawFreeWorkers universe = do
-  divCssClass freeWorkersClass $ do
+  (_, ev) <- divCssClass freeWorkersClass $ do
     free <- freeWorkers universe
-    dynamic <- mapM_ drawWorker `mapDyn` free
-    dyn dynamic
-    return ()
-  return ()
+    let combineWorkerClicks :: MonadWidget t m => [WorkerId] -> m (Event t WorkerId)
+        combineWorkerClicks workers = let events = mapM drawWorker workers
+                                      in leftmost <$> events
+    combineWorkerClicks `mapDyn` free >>= dynEvent
+  return ev
 
-drawWorker :: MonadWidget t m => WorkerId -> m ()
-drawWorker workerId = void (divCssClass workerClass $ return ())
+drawWorker :: MonadWidget t m => WorkerId -> m (Event t WorkerId)
+drawWorker workerId = do
+  (divEl, _) <- divCssClass workerClass $ return ()
+  let clicks = domEvent Click divEl
+  return $ const workerId <$> clicks
 
-drawWorkplaces :: MonadWidget t m => Dynamic t Universe -> m ()
+drawWorkplaces :: MonadWidget t m => Dynamic t Universe -> m (Event t WorkplaceId)
 drawWorkplaces universe = do
-  let drawWorkplace :: MonadWidget t m => WorkplaceId -> [WorkerId] -> m ()
-      drawWorkplace workplace workers = void $
-        divCssClass cardWrapperClass $
+  let drawWorkplace :: MonadWidget t m => WorkplaceId -> [WorkerId] -> m (Event t WorkplaceId)
+      drawWorkplace workplace workers = do
+        (el, _) <- divCssClass cardWrapperClass $
           divCssClass cardClass $
             mapM_ drawWorker workers
+        return $ const workplace <$> domEvent Click el
       drawWorkplacesInUniverse universe =
               let workplaces = M.keys $ getWorkplaces universe
                   findWorkplaceWorkers universe workplace = (workplace, getWorkplaceOccupants universe workplace)
                   workplacesWithWorkers = findWorkplaceWorkers universe <$> workplaces
-              in mapM_ (uncurry drawWorkplace) workplacesWithWorkers
+                  events = mapM (uncurry drawWorkplace) workplacesWithWorkers
+              in leftmost <$> events
   dynamic <- drawWorkplacesInUniverse `mapDyn` universe
-  dyn dynamic
-  return ()
+  dynEvent dynamic
