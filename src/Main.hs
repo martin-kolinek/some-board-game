@@ -16,10 +16,25 @@ main = mainWidgetWithCss mainStyleByteString $ do
   rec
     score <- mapDyn getScore universe
     drawScore score
-    drawFreeWorkers universe
-    drawWorkplaces universe
-    universe <- foldDyn (\x y -> y) initialUniverse never
+    actions <- drawBoard universe
+    let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
+    universe <- foldDyn tryApplyToUniverse initialUniverse actions
   return ()
+
+type UniverseAction = Universe -> Either String Universe
+
+drawBoard :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
+drawBoard universe = do
+  rec
+    let deselects = const Nothing <$> leftmost [workAssignemnts]
+    workerClicks <- drawFreeWorkers universe
+    workplaceClicks <- drawWorkplaces universe
+    selectedWorker <- holdDyn Nothing $ leftmost [Just <$> workerClicks, deselects]
+    let workplaceClicksWithSelectedWorker = attach (current selectedWorker) workplaceClicks
+        extractAssignWork (Just worker, workplace) = Just (worker, workplace)
+        extractAssignWork _ = Nothing
+        workAssignemnts = fmapMaybe extractAssignWork workplaceClicksWithSelectedWorker
+  return $ uncurry startWorking <$> workAssignemnts
 
 freeWorkers :: MonadWidget t m => Dynamic t Universe -> m (Dynamic t [WorkerId])
 freeWorkers universe = do
