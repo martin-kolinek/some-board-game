@@ -7,7 +7,7 @@ import           Reflex.Dom
 import           Style
 import           Data.List
 import           Data.Maybe
-import           Data.Map as M
+import           Data.Map.Strict as M
 import           Rules
 import           ReflexUtil
 
@@ -19,10 +19,33 @@ main = mainWidgetWithCss mainStyleByteString $ do
     boardActions <- drawBoard universe
     let actions = leftmost [boardActions, scoreActions]
     let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
+    drawErrors universe actions
     universe <- foldDyn tryApplyToUniverse initialUniverse actions
   return ()
 
 type UniverseAction = Universe -> Either String Universe
+
+drawErrors :: MonadWidget t m => Dynamic t Universe -> Event t UniverseAction -> m ()
+drawErrors universe actions = void $ divCssClass errorContainerClass $ do
+  let extractError (un, act) = fromLeft $ act un
+      attached = attach (current universe) actions
+      errorEvents = fmapMaybe extractError attached
+      addToMap :: String -> Map Int String -> Map Int String
+      addToMap err map = if M.null map then singleton 1 err else M.insert newIndex err map
+        where newIndex = fst (findMax map) + 1
+      attachIdToEvent :: Reflex t => (Int, Event t ()) -> Event t Int
+      attachIdToEvent (id, event) = const id <$> event
+      extractEventsFromMap map = leftmost $ attachIdToEvent <$> assocs map
+      drawError :: Reflex t => MonadWidget t m => Dynamic t String -> m (Event t ())
+      drawError err = divClass "" $ dynText err >> button "Close"
+  rec
+    closeEvents <- list allErrors drawError
+    allErrors <- foldDyn modifyMap empty addAndRemoveEvents
+    let closeKeyEvents = switch $ extractEventsFromMap <$> current closeEvents
+        modifyMap (Left id) = M.delete id
+        modifyMap (Right err) = addToMap err
+        addAndRemoveEvents = leftmost [Right <$> errorEvents, Left <$> closeKeyEvents]
+  return ()
 
 drawBoard :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
 drawBoard universe = do

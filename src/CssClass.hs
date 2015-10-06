@@ -1,4 +1,4 @@
-module CssClass(divCssClass, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass, scoreClass, freeWorkersClass) where
+module CssClass(divCssClass, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass, scoreClass, freeWorkersClass, errorContainerClass, errorItemClass) where
 
 import           Clay
 import           Data.Text
@@ -16,3 +16,5 @@ cardWrapperClass = CssClass "cardWrapper"
 cardClass = CssClass "card"
 workerClass = CssClass "worker"
 idleWorkerContainerClass = CssClass "idle-worker-container"
+errorContainerClass = CssClass "error-container"
+errorItemClass = CssClass "error-item"

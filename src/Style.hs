@@ -11,7 +11,7 @@ import           Prelude                 hiding (div)
 mainStyle :: Css
 mainStyle = do
   star # classSelector scoreClass ? do
-    position absolute
+    position fixed
     right (px 0)
     top (px 0)
     backgroundColor green
@@ -19,11 +19,14 @@ mainStyle = do
     minWidth (em 4)
     textAlign $ alignSide sideRight
   star # classSelector freeWorkersClass ? do
-    position absolute
+    position fixed
     bottom (px 0)
-    left (em 5)
+    left (pct 50)
+    marginLeft (em (-10))
     padding (em 0.5) (em 0.5) (em 0.2) (em 0.5)
     backgroundColor lightgrey
+    width (em 20)
+    height (em 2.7)
   star # classSelector cardWrapperClass ? do
     width $ em 8
     display inlineBlock
@@ -50,5 +53,12 @@ mainStyle = do
     background $ url "data/worker.svg"
     backgroundSize contain
     backgroundRepeat noRepeat
+  star # classSelector errorContainerClass ? do
+    position fixed
+    width (em 40)
+    left (pct 50)
+    top (px 0)
+    marginLeft (em (-20))
+    backgroundColor salmon
 
 mainStyleByteString = toStrict $ encodeUtf8 $ render mainStyle
