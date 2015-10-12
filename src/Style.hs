@@ -10,6 +10,18 @@ import           Prelude                 hiding (div)
 
 mainStyle :: Css
 mainStyle = do
+  star # classSelector testClass ? do
+    width (px 100)
+    height (px 100)
+    backgroundColor blue
+    transitionProperties ["left", "top"]
+  ".test2" ? do
+    width (px 100)
+    height (px 100)
+    backgroundColor green
+    position fixed
+    right (px 100)
+    bottom (px 100)
   star # classSelector scoreClass ? do
     position fixed
     right (px 0)
