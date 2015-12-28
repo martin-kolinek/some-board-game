@@ -23,7 +23,7 @@ executable some-board-game
                        reflex ==0.3.*,
                        reflex-dom ==0.2.*,
                        clay ==0.10.*,
-                       text >=1.2.1 && <1.2.2,
+                       text >=1.2.1 && <1.2.3,
                        bytestring >=0.10.6 && <0.10.7,
                        some-board-game-rules >=0.1.1.0 && <0.2,
                        containers >=0.5.6 && <0.5.7,
