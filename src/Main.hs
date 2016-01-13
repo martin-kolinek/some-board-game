@@ -81,7 +81,7 @@ drawFreeWorkers universe = do
     let combineWorkerClicks :: MonadWidget t m => [WorkerId] -> m (Event t WorkerId)
         combineWorkerClicks workers = let events = mapM drawWorker workers
                                       in leftmost <$> events
-    combineWorkerClicks `mapDyn` free >>= dynEvent
+    combineWorkerClicks `mapDyn` free >>= dynEvent id
   return ev
 
 drawWorker :: MonadWidget t m => WorkerId -> m (Event t WorkerId)
@@ -105,4 +105,4 @@ drawWorkplaces universe = do
                   events = mapM (uncurry drawWorkplace) workplacesWithWorkers
               in leftmost <$> events
   dynamic <- drawWorkplacesInUniverse `mapDyn` universe
-  dynEvent dynamic
+  dynEvent id dynamic
