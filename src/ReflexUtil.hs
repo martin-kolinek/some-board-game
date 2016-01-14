@@ -1,3 +1,4 @@
+{-#LANGUAGE TupleSections #-}
 module ReflexUtil where
 
 import Reflex
@@ -11,23 +12,13 @@ import qualified Data.Map.Strict as M
 import Data.Maybe
 import Data.Function
 
-data AnimationState a = Initial a | Standard a | Fading a deriving Show
+data AnimationState = Initial | Standard | Fading deriving (Show, Eq)
 
-fromAnimationState (Initial a) = a
-fromAnimationState (Standard a) = a
-fromAnimationState (Fading a) = a
-
-isInitial (Initial _) = True
-isInitial _ = False
-
-isFading (Initial _) = True
-isFading _ = False
-
-animateList :: MonadWidget t m => Show a => Ord a => NominalDiffTime -> Dynamic t [a] -> m (Dynamic t (M.Map a (AnimationState a)))
+animateList :: MonadWidget t m => Show a => Ord a => NominalDiffTime -> Dynamic t [a] -> m (Dynamic t (M.Map a AnimationState))
 animateList time input = do
-  let findInitials nonDelayedList delayed1List = Initial <$> (nonDelayedList \\ delayed1List)
-      findFading delayed1List delayedTimeList = Fading <$> (delayedTimeList \\ delayed1List)
-      findStandard nonDelayedList delayed1List delayedTimeList = Standard <$> (delayed1List `intersect` (nonDelayedList `union` delayedTimeList))
+  let findInitials nonDelayedList delayed1List = (Initial,) <$> (nonDelayedList \\ delayed1List)
+      findFading delayed1List delayedTimeList = (Fading,) <$> (delayedTimeList \\ delayed1List)
+      findStandard nonDelayedList delayed1List delayedTimeList = (Standard,) <$> (delayed1List `intersect` (nonDelayedList `union` delayedTimeList))
   updatedInput <- updatedWithInitialValue input
   delayed1 <- delay 0.0001 updatedInput
   delayed1Dyn <- holdDyn [] delayed1
@@ -40,10 +31,10 @@ animateList time input = do
   fading <- combineDyn findFading delayed1Dyn delayedTimeDyn
   allStates <- mconcatDyn [initials, standard, fading]
   let combineAnimationStates states = head $
-        catMaybes [find isInitial states,find isFading states] ++ [head states]
+        catMaybes [find (==Initial) states,find (==Fading) states] ++ [head states]
       extractMap list =
-        let grouped = groupBy ((==) `on` fromAnimationState) list
-            withKeys = fmap (\l -> (fromAnimationState $ head l, combineAnimationStates l)) grouped
+        let grouped = groupBy ((==) `on` snd) list
+            withKeys = fmap (\l -> (snd $ head l, combineAnimationStates (fst <$> l))) grouped
         in M.fromList withKeys
   mapDyn extractMap allStates
 

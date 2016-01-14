@@ -87,7 +87,7 @@ drawFreeWorkers universe = do
     return $ switch (current combinedClicks)
   return ev
 
-drawWorker :: MonadWidget t m => WorkerId -> Dynamic t (AnimationState WorkerId) -> m (Event t WorkerId)
+drawWorker :: MonadWidget t m => WorkerId -> Dynamic t AnimationState -> m (Event t WorkerId)
 drawWorker workerId animationStates = do
   (divEl, _) <- divCssClass workerClass $ return ()
   let clicks = domEvent Click divEl
@@ -99,7 +99,7 @@ drawWorkplaces universe = do
       drawWorkplace workplace workers = do
         (el, _) <- divCssClass cardWrapperClass $
           divCssClass cardClass $
-            mapM_ (\x -> drawWorker x (constDyn (Standard x))) workers
+            mapM_ (\x -> drawWorker x (constDyn Standard)) workers
         return $ const workplace <$> domEvent Click el
       drawWorkplacesInUniverse universe =
               let workplaces = M.keys $ getWorkplaces universe
