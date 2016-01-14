@@ -10,6 +10,7 @@ import           Data.Maybe
 import           Data.Map.Strict as M
 import           Rules
 import           ReflexUtil
+import Data.Time.Clock
 
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
@@ -78,14 +79,16 @@ drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> m (Event t WorkerId)
 drawFreeWorkers universe = do
   (_, ev) <- divCssClass freeWorkersClass $ do
     free <- freeWorkers universe
-    let combineWorkerClicks :: MonadWidget t m => [WorkerId] -> m (Event t WorkerId)
-        combineWorkerClicks workers = let events = mapM drawWorker workers
-                                      in leftmost <$> events
-    combineWorkerClicks `mapDyn` free >>= dynEvent id
+    animated <- animateList (fromRational 1) free
+    events <- listWithKey animated drawWorker
+    let combineWorkerClicks :: Reflex t => Map WorkerId (Event t WorkerId) -> Event t WorkerId
+        combineWorkerClicks workers = leftmost $ elems workers
+    combinedClicks <- combineWorkerClicks `mapDyn` events
+    return $ switch (current combinedClicks)
   return ev
 
-drawWorker :: MonadWidget t m => WorkerId -> m (Event t WorkerId)
-drawWorker workerId = do
+drawWorker :: MonadWidget t m => WorkerId -> Dynamic t (AnimationState WorkerId) -> m (Event t WorkerId)
+drawWorker workerId animationStates = do
   (divEl, _) <- divCssClass workerClass $ return ()
   let clicks = domEvent Click divEl
   return $ const workerId <$> clicks
@@ -96,7 +99,7 @@ drawWorkplaces universe = do
       drawWorkplace workplace workers = do
         (el, _) <- divCssClass cardWrapperClass $
           divCssClass cardClass $
-            mapM_ drawWorker workers
+            mapM_ (\x -> drawWorker x (constDyn (Standard x))) workers
         return $ const workplace <$> domEvent Click el
       drawWorkplacesInUniverse universe =
               let workplaces = M.keys $ getWorkplaces universe
