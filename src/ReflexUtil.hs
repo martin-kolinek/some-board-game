@@ -38,6 +38,13 @@ animateList time input = do
         in M.fromList withKeys
   mapDyn extractMap allStates
 
+animateState :: MonadWidget t m => CssClass -> CssClass -> Dynamic t AnimationState -> m a -> m (El t, a)
+animateState alwaysOn fade dynamic inner = do
+  let animateCss Standard = [alwaysOn]
+      animateCss _ = [alwaysOn, fade]
+  classes <- mapDyn animateCss dynamic
+  divCssClassDyn classes inner
+
 updatedWithInitialValue :: MonadWidget t m => Dynamic t a -> m (Event t a)
 updatedWithInitialValue input = do
   postBuild <- getPostBuild

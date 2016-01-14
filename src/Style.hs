@@ -53,6 +53,7 @@ mainStyle = do
     background $ url "data/worker.svg"
     backgroundSize contain
     backgroundRepeat noRepeat
+    transition "opacity" (sec 1) easeInOut (sec 0)
   star # classSelector errorContainerClass ? do
     position fixed
     width (em 40)
@@ -60,5 +61,6 @@ mainStyle = do
     top (px 0)
     marginLeft (em (-20))
     backgroundColor salmon
+  star # classSelector fadeClass ? opacity 0
 
 mainStyleByteString = toStrict $ encodeUtf8 $ render mainStyle
