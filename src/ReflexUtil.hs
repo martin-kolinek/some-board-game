@@ -74,3 +74,8 @@ fromLeft _ = Nothing
 
 fromRight (Right a) = Just a
 fromRight _ = Nothing
+
+filterByBehavior func = attachWithMaybe filter
+  where filter a b
+          | func a = Just b
+          | otherwise = Nothing
