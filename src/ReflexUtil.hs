@@ -11,7 +11,7 @@ import qualified Data.Map.Strict as M
 import Data.Maybe
 import Data.Function
 
-data AnimationState a = Initial a | Standard a | Fading a
+data AnimationState a = Initial a | Standard a | Fading a deriving Show
 
 fromAnimationState (Initial a) = a
 fromAnimationState (Standard a) = a
@@ -23,14 +23,15 @@ isInitial _ = False
 isFading (Initial _) = True
 isFading _ = False
 
-animateList :: MonadWidget t m => Ord a => NominalDiffTime -> Dynamic t [a] -> m (Dynamic t (M.Map a (AnimationState a)))
+animateList :: MonadWidget t m => Show a => Ord a => NominalDiffTime -> Dynamic t [a] -> m (Dynamic t (M.Map a (AnimationState a)))
 animateList time input = do
   let findInitials nonDelayedList delayed1List = Initial <$> (nonDelayedList \\ delayed1List)
       findFading delayed1List delayedTimeList = Fading <$> (delayedTimeList \\ delayed1List)
       findStandard nonDelayedList delayed1List delayedTimeList = Standard <$> (delayed1List `intersect` (nonDelayedList `union` delayedTimeList))
-  delayed1 <- delay 0.0001 (updated input)
+  updatedInput <- updatedWithInitialValue input
+  delayed1 <- delay 0.0001 updatedInput
   delayed1Dyn <- holdDyn [] delayed1
-  delayedTime <- delay time (updated input)
+  delayedTime <- delay time updatedInput
   delayedTimeDyn <- holdDyn [] delayedTime
   initials <- combineDyn findInitials input delayed1Dyn
   combined1 <- combineDyn (,) input delayed1Dyn
@@ -45,6 +46,13 @@ animateList time input = do
             withKeys = fmap (\l -> (fromAnimationState $ head l, combineAnimationStates l)) grouped
         in M.fromList withKeys
   mapDyn extractMap allStates
+
+updatedWithInitialValue :: MonadWidget t m => Dynamic t a -> m (Event t a)
+updatedWithInitialValue input = do
+  postBuild <- getPostBuild
+  let tagged = tag (current input) postBuild
+      combined = leftmost [updated input, tagged]
+  return combined
 
 dynEvent :: MonadWidget t m => (b -> Event t a) -> Dynamic  t (m b) -> m (Event t a)
 dynEvent extractEvent dynamic = do
