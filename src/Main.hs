@@ -89,7 +89,7 @@ drawFreeWorkers universe = do
 
 drawWorker :: MonadWidget t m => WorkerId -> Dynamic t AnimationState -> m (Event t WorkerId)
 drawWorker workerId animationStates = do
-  (divEl, _) <- animateState workerClass fadeClass animationStates $ return ()
+  (divEl, _) <- animateState workerClass fadeClass appearClass animationStates $ return ()
   let clicks = domEvent Click divEl
       filteredClicks = filterByBehavior (/=Fading) (current animationStates) clicks
   return $ const workerId <$> filteredClicks

@@ -38,9 +38,9 @@ animateList time input = do
         in M.fromList withKeys
   mapDyn extractMap allStates
 
-animateState :: MonadWidget t m => CssClass -> CssClass -> Dynamic t AnimationState -> m a -> m (El t, a)
-animateState alwaysOn fade dynamic inner = do
-  let animateCss Standard = [alwaysOn]
+animateState :: MonadWidget t m => CssClass -> CssClass -> CssClass -> Dynamic t AnimationState -> m a -> m (El t, a)
+animateState alwaysOn fade appear dynamic inner = do
+  let animateCss Standard = [alwaysOn, appear]
       animateCss _ = [alwaysOn, fade]
   classes <- mapDyn animateCss dynamic
   divCssClassDyn classes inner

@@ -47,13 +47,10 @@ mainStyle = do
     backgroundRepeat noRepeat
   star # classSelector workerClass ? do
     display inlineBlock
-    width $ em 2
     height $ em 2
-    margin (em 0.5) (em 0.5) (em 0.5) (em 0.5)
     background $ url "data/worker.svg"
     backgroundSize contain
     backgroundRepeat noRepeat
-    transition "opacity" (sec 1) easeInOut (sec 0)
   star # classSelector errorContainerClass ? do
     position fixed
     width (em 40)
@@ -61,6 +58,15 @@ mainStyle = do
     top (px 0)
     marginLeft (em (-20))
     backgroundColor salmon
-  star # classSelector fadeClass ? opacity 0
+  star # classSelector workerClass# classSelector fadeClass ? do
+    opacity 0
+    width (px 0)
+    margin (px 0) (px 0) (px 0) (px 0)
+    transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
+  star # classSelector workerClass# classSelector appearClass ? do
+    opacity 1
+    width (em 2)
+    margin (em 0.5) (em 0.5) (em 0.5) (em 0.5)
+    transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
 
 mainStyleByteString = toStrict $ encodeUtf8 $ render mainStyle
