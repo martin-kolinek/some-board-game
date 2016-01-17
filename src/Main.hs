@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, ScopedTypeVariables #-}
+{-# LANGUAGE RecursiveDo, ScopedTypeVariables, FlexibleContexts #-}
 
 import           Control.Monad
 import           CssClass
@@ -107,18 +107,15 @@ extractWorkplaceRepresentations universe = do
 
 drawWorkplaces :: MonadWidget t m => Dynamic t Universe -> m (Event t WorkplaceId)
 drawWorkplaces universe = do
-  let drawWorkplace :: MonadWidget t m => WorkplaceId -> [WorkerId] -> m (Event t WorkplaceId)
-      drawWorkplace workplace workers = do
+  workplaces <- getWorkplaces `mapDyn` universe
+  let drawWorkplace workplaceId workplaceAction = do
+        workersInWorkplace <- forDyn universe (`getWorkplaceOccupants` workplaceId)
+        animated <- animateList (fromRational 1) workersInWorkplace
         (el, _) <- divCssClass cardWrapperClass $
-          divCssClass cardClass $ do
-            --animatedWorkers <- animateList (fromRational 1) workers
-            mapM_ (\x -> drawWorker x (constDyn Standard)) workers
-        return $ const workplace <$> domEvent Click el
-      drawWorkplacesInUniverse universe =
-              let workplaces = M.keys $ getWorkplaces universe
-                  findWorkplaceWorkers universe workplace = (workplace, getWorkplaceOccupants universe workplace)
-                  workplacesWithWorkers = findWorkplaceWorkers universe <$> workplaces
-                  events = mapM (uncurry drawWorkplace) workplacesWithWorkers
-              in leftmost <$> events
-  dynamic <- drawWorkplacesInUniverse `mapDyn` universe
-  dynEvent id dynamic
+          divCssClass cardClass $
+            listWithKey animated drawWorker
+        return $ const workplaceId <$> domEvent Click el
+  events <- listWithKey workplaces drawWorkplace
+  let combineEvents map = leftmost (M.elems map)
+  event <- combineEvents `mapDyn` events
+  return $ switch (current event)
