@@ -94,17 +94,6 @@ drawWorker workerId animationStates = do
       filteredClicks = filterByBehavior (/=Fading) (current animationStates) clicks
   return $ const workerId <$> filteredClicks
 
-type WorkplaceRepresentation t = (WorkplaceId, Dynamic t [WorkerId])
-
-extractWorkplaceRepresentations :: MonadWidget t m => Dynamic t Universe -> m (Dynamic t [WorkplaceRepresentation t])
-extractWorkplaceRepresentations universe = do
-  workplaces <- (M.keys . getWorkplaces) `mapDyn` universe
-  let getWorkplaceRepresentation :: MonadWidget t m => Dynamic t Universe -> WorkplaceId -> m (WorkplaceRepresentation t)
-      getWorkplaceRepresentation universe workplaceId = do
-        workers <- flip getWorkplaceOccupants workplaceId `mapDyn` universe
-        return (workplaceId, workers)
-  return undefined
-
 drawWorkplaces :: MonadWidget t m => Dynamic t Universe -> m (Event t WorkplaceId)
 drawWorkplaces universe = do
   workplaces <- getWorkplaces `mapDyn` universe
