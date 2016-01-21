@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, ScopedTypeVariables, FlexibleContexts #-}
+{-# LANGUAGE RecursiveDo, ScopedTypeVariables, FlexibleContexts, TupleSections #-}
 
 import           Control.Monad
 import           CssClass
@@ -11,6 +11,7 @@ import           Data.Map.Strict as M
 import           Rules
 import           ReflexUtil
 import Data.Time.Clock
+import Debug.Trace (trace)
 
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
@@ -37,10 +38,15 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
       attachIdToEvent :: Reflex t => (Int, Event t ()) -> Event t Int
       attachIdToEvent (id, event) = const id <$> event
       extractEventsFromMap map = leftmost $ attachIdToEvent <$> assocs map
-      drawError :: Reflex t => MonadWidget t m => Dynamic t String -> m (Event t ())
-      drawError err = divClass "" $ dynText err >> button "Close"
+      drawError :: Reflex t => MonadWidget t m => Int -> Dynamic t (String, AnimationState) -> m (Event t ())
+      drawError key tuple = do
+        err <- fst `mapDyn` tuple
+        animState <- snd `mapDyn` tuple
+        (_, res) <- animateState errorItemClass fadeClass appearClass animState $ dynText err >> button ("Close" ++ show key)
+        return res
   rec
-    closeEvents <- list allErrors drawError
+    animated <- animateMap (fromRational 1) allErrors
+    closeEvents <- listWithKey animated drawError
     allErrors <- foldDyn modifyMap empty addAndRemoveEvents
     let closeKeyEvents = switch $ extractEventsFromMap <$> current closeEvents
         modifyMap (Left id) = M.delete id

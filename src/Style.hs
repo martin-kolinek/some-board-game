@@ -51,13 +51,6 @@ mainStyle = do
     background $ url "data/worker.svg"
     backgroundSize contain
     backgroundRepeat noRepeat
-  star # classSelector errorContainerClass ? do
-    position fixed
-    width (em 40)
-    left (pct 50)
-    top (px 0)
-    marginLeft (em (-20))
-    backgroundColor salmon
   star # classSelector workerClass# classSelector fadeClass ? do
     opacity 0
     width (px 0)
@@ -68,5 +61,22 @@ mainStyle = do
     width (em 2)
     margin (em 0.5) (em 0.5) (em 0.5) (em 0.5)
     transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
+  star # classSelector errorContainerClass ? do
+    position fixed
+    width (em 40)
+    left (pct 50)
+    top (px 0)
+    marginLeft (em (-20))
+  star # classSelector errorItemClass ? do
+    width (pct 100)
+    display inlineBlock
+    backgroundColor salmon
+    overflow hidden
+    transition "height" (sec 1) ease (sec 0)
+  star # classSelector errorItemClass # classSelector fadeClass ?
+    height (em 0)
+  star # classSelector errorItemClass # classSelector appearClass ?
+    height (em 2)
+
 
 mainStyleByteString = toStrict $ encodeUtf8 $ render mainStyle

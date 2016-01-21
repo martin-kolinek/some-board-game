@@ -14,29 +14,46 @@ import Data.Function
 
 data AnimationState = Initial | Standard | Fading deriving (Show, Eq)
 
-animateList :: MonadWidget t m => Show a => Ord a => NominalDiffTime -> Dynamic t [a] -> m (Dynamic t (M.Map a AnimationState))
-animateList time input = do
-  let findInitials nonDelayedList delayed1List = (Initial,) <$> (nonDelayedList \\ delayed1List)
-      findFading delayed1List delayedTimeList = (Fading,) <$> (delayedTimeList \\ delayed1List)
-      findStandard nonDelayedList delayed1List delayedTimeList = (Standard,) <$> (delayed1List `intersect` (nonDelayedList `union` delayedTimeList))
+animateMap :: MonadWidget t m => Show a => Ord k => NominalDiffTime -> Dynamic t (M.Map k a) -> m (Dynamic t (M.Map k (a, AnimationState)))
+animateMap time input = do
+  let findInitials nonDelayedList delayed1List = (,Initial) <$> (nonDelayedList M.\\ delayed1List)
+      findFading delayed1List delayedTimeList = (,Fading) <$> (delayedTimeList M.\\ delayed1List)
+      findStandard nonDelayedList delayed1List delayedTimeList = (,Standard) <$> (delayed1List `M.intersection` (nonDelayedList `M.union` delayedTimeList))
   updatedInput <- updatedWithInitialValue input
   delayed1 <- delay 0.0001 updatedInput
-  delayed1Dyn <- holdDyn [] delayed1
+  delayed1Dyn <- holdDyn M.empty delayed1
   delayedTime <- delay time updatedInput
-  delayedTimeDyn <- holdDyn [] delayedTime
+  delayedTimeDyn <- holdDyn M.empty delayedTime
   initials <- combineDyn findInitials input delayed1Dyn
   combined1 <- combineDyn (,) input delayed1Dyn
   combined2 <- combineDyn (,) combined1 delayedTimeDyn
   standard <- mapDyn (uncurry (uncurry findStandard)) combined2
   fading <- combineDyn findFading delayed1Dyn delayedTimeDyn
-  allStates <- mconcatDyn [initials, standard, fading]
-  let combineAnimationStates states = head $
-        catMaybes [find (==Initial) states,find (==Fading) states] ++ [head states]
-      extractMap list =
-        let grouped = groupBy ((==) `on` snd) list
-            withKeys = fmap (\l -> (snd $ head l, combineAnimationStates (fst <$> l))) grouped
-        in M.fromList withKeys
-  mapDyn extractMap allStates
+  mconcatDyn [initials, standard, fading]
+
+animateList :: MonadWidget t m => Show a => Ord a => NominalDiffTime -> Dynamic t [a] -> m (Dynamic t (M.Map a AnimationState))
+animateList time input = do
+    let findInitials nonDelayedList delayed1List = (Initial,) <$> (nonDelayedList \\ delayed1List)
+        findFading delayed1List delayedTimeList = (Fading,) <$> (delayedTimeList \\ delayed1List)
+        findStandard nonDelayedList delayed1List delayedTimeList = (Standard,) <$> (delayed1List `intersect` (nonDelayedList `union` delayedTimeList))
+    updatedInput <- updatedWithInitialValue input
+    delayed1 <- delay 0.0001 updatedInput
+    delayed1Dyn <- holdDyn [] delayed1
+    delayedTime <- delay time updatedInput
+    delayedTimeDyn <- holdDyn [] delayedTime
+    initials <- combineDyn findInitials input delayed1Dyn
+    combined1 <- combineDyn (,) input delayed1Dyn
+    combined2 <- combineDyn (,) combined1 delayedTimeDyn
+    standard <- mapDyn (uncurry (uncurry findStandard)) combined2
+    fading <- combineDyn findFading delayed1Dyn delayedTimeDyn
+    allStates <- mconcatDyn [initials, standard, fading]
+    let combineAnimationStates states = head $
+          catMaybes [find (==Initial) states,find (==Fading) states] ++ [head states]
+        extractMap list =
+          let grouped = groupBy ((==) `on` snd) list
+              withKeys = fmap (\l -> (snd $ head l, combineAnimationStates (fst <$> l))) grouped
+          in M.fromList withKeys
+    mapDyn extractMap allStates
 
 animateState :: MonadWidget t m => CssClass -> CssClass -> CssClass -> Dynamic t AnimationState -> m a -> m (El t, a)
 animateState alwaysOn fade appear dynamic inner = do
