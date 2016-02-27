@@ -3,7 +3,8 @@ module ReflexUtil where
 
 import Reflex
 import Reflex.Dom
-import           GHCJS.DOM.Document (documentGetBody)
+import qualified GHCJS.DOM.Document as Doc
+import GHCJS.DOM.Element
 import           Control.Monad.IO.Class
 import CssClass
 import Data.Time.Clock
@@ -79,12 +80,6 @@ dynHold :: Monoid a => MonadWidget t m => Dynamic t (m a) -> m (Dynamic t a)
 dynHold dynamic = do
   inner <- dyn dynamic
   holdDyn mempty inner
-
-getBody :: MonadWidget t m => m (El t)
-getBody = do
-  document <- askDocument
-  Just body <- liftIO $ documentGetBody document
-  wrapElement body
 
 fromLeft (Left a) = Just a
 fromLeft _ = Nothing

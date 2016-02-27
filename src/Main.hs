@@ -15,15 +15,15 @@ import Debug.Trace (trace)
 
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
-  rec
-    score <- mapDyn getScore universe
-    scoreActions <- drawScore universe
-    boardActions <- drawBoard universe
-    let actions = leftmost [boardActions, scoreActions]
-    let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
-    drawErrors universe actions
-    universe <- foldDyn tryApplyToUniverse initialUniverse actions
-  return ()
+    rec
+      score <- mapDyn getScore universe
+      scoreActions <- drawScore universe
+      boardActions <- drawBoard universe
+      let actions = leftmost [boardActions, scoreActions]
+      let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
+      drawErrors universe actions
+      universe <- foldDyn tryApplyToUniverse initialUniverse actions
+    return ()
 
 type UniverseAction = Universe -> Either String Universe
 
