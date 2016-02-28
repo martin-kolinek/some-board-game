@@ -42,7 +42,9 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
       drawError key tuple = do
         err <- fst `mapDyn` tuple
         animState <- snd `mapDyn` tuple
-        (_, res) <- animateState errorItemClass fadeClass appearClass animState $ dynText err >> button ("Close" ++ show key)
+        (_, res) <- animateState errorItemClass fadeClass appearClass animState $ do
+          el "div" $ dynText err
+          el "div" $ buttonSpanCssClass closeButtonClass (return ())
         return res
   rec
     animated <- animateMap (fromRational 1) allErrors

@@ -1,4 +1,4 @@
-module CssClass(CssClass(), divCssClass, divCssClassDyn, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass, scoreClass, freeWorkersClass, errorContainerClass, errorItemClass, fadeClass, appearClass) where
+module CssClass(CssClass(), divCssClass, divCssClassDyn, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass, scoreClass, freeWorkersClass, errorContainerClass, errorItemClass, fadeClass, appearClass, buttonSpanCssClass, closeButtonClass) where
 
 import           Clay as C
 import           Data.Text
@@ -17,6 +17,11 @@ divCssClassDyn classes inner = do
 
 classSelector (CssClass className) = byClass $ pack className
 
+buttonSpanCssClass :: MonadWidget t m => CssClass -> m a -> m (Event t ())
+buttonSpanCssClass (CssClass className) inside = do
+  (el, a) <- elAttr' "span" ("class" =: className) inside
+  return $ domEvent Click el
+
 scoreClass = CssClass "score"
 freeWorkersClass = CssClass "free-workers"
 
@@ -28,3 +33,4 @@ appearClass = CssClass "appear"
 idleWorkerContainerClass = CssClass "idle-worker-container"
 errorContainerClass = CssClass "error-container"
 errorItemClass = CssClass "error-item"
+closeButtonClass = CssClass "fa fa-times"

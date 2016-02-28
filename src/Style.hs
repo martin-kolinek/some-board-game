@@ -10,6 +10,7 @@ import           Prelude                 hiding (div)
 
 mainStyle :: Css
 mainStyle = do
+  importUrl "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"
   star # classSelector scoreClass ? do
     position fixed
     right (px 0)
@@ -70,9 +71,25 @@ mainStyle = do
   star # classSelector errorItemClass ? do
     width (pct 100)
     display inlineBlock
-    backgroundColor salmon
+    backgroundImage $ linearGradient (straight sideTop) [("#f2cece", pct 0), ("#e7b3b3", pct 100)]
+    backgroundRepeat repeatX
+    borderColor "#dc9797"
+    borderRadius (px 4) (px 4) (px 4) (px 4)
+    borderWidth (px 1)
+    borderStyle solid
     overflow hidden
     transition "height" (sec 1) ease (sec 0)
+    verticalAlign middle
+  star # classSelector errorItemClass |> div ? do
+    marginTop (em 0.5)
+    marginBottom (em 0.5)
+    display inlineBlock
+  star # classSelector errorItemClass |> div # lastChild ? do
+    float floatRight
+    marginRight (em 0.3)
+  star # classSelector errorItemClass |> div # firstChild ? do
+    fontWeight bold
+    marginLeft (em 0.3)
   star # classSelector errorItemClass # classSelector fadeClass ?
     height (em 0)
   star # classSelector errorItemClass # classSelector appearClass ?
