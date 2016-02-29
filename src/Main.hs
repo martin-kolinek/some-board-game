@@ -12,7 +12,7 @@ import           Data.Map.Strict as M
 import           Rules
 import           ReflexUtil
 import Data.Time.Clock
-import Debug.Trace (trace)
+import Debug.Trace (traceShowId)
 
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
@@ -60,10 +60,11 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
 drawBoard :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
 drawBoard universe = do
   rec
-    let deselects = const Nothing <$> leftmost [workAssignemnts]
+    let isFree worker universe = isNothing $ getWorkerWorkplace universe =<< worker
+    let deselects = ffilter not $ attachWith isFree (current selectedWorker) (updated universe)
     workerClicks <- drawFreeWorkers universe selectedWorker
     workplaceClicks <- drawWorkplaces universe
-    selectedWorker <- holdDyn Nothing $ leftmost [Just <$> workerClicks, deselects]
+    selectedWorker <- holdDyn Nothing $ leftmost [Just <$> workerClicks, const Nothing <$> deselects]
     let workplaceClicksWithSelectedWorker = attach (current selectedWorker) workplaceClicks
         extractAssignWork (Just worker, workplace) = Just (worker, workplace)
         extractAssignWork _ = Nothing
