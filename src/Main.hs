@@ -47,14 +47,20 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
           el "div" $ dynText err
           el "div" $ buttonSpanCssClass closeButtonClass (return ())
         return res
+      combineWithLast newValue (oldValue, _) = (newValue, newValue M.\\ oldValue)
   rec
     animated <- animateMap (fromRational 1) allErrors
     closeEvents <- listWithKey animated drawError
     allErrors <- foldDyn modifyMap empty addAndRemoveEvents
+    additionsDyn <- foldDyn combineWithLast (M.empty, M.empty) (updated allErrors)
+    let additions = (M.keys . snd) <$> updated additionsDyn
+    timedRemovals <- delay (fromRational 3) additions
     let closeKeyEvents = switch $ extractEventsFromMap <$> current closeEvents
-        modifyMap (Left id) = M.delete id
-        modifyMap (Right err) = addToMap err
-        addAndRemoveEvents = leftmost [Right <$> errorEvents, Left <$> closeKeyEvents]
+        modifyMap (Left ids) mp = Data.List.foldl' (flip M.delete) mp ids
+        modifyMap (Right err) mp = addToMap err mp
+        allRemovals = appendEvents (return <$> closeKeyEvents) timedRemovals
+        addAndRemoveEvents = leftmost [Right <$> errorEvents, Left <$> allRemovals]
+
   return ()
 
 drawBoard :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
