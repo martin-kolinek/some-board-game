@@ -23,11 +23,11 @@ mainStyle = do
     position fixed
     bottom (px 0)
     left (pct 50)
-    marginLeft (em (-10))
-    padding (em 0.5) (em 0.5) (em 0.2) (em 0.5)
+    marginLeft (em (-20))
+    padding (em 0.5) (em 0.5) (em 0.5) (em 0.5)
     backgroundColor lightgrey
-    width (em 20)
-    height (em 2.7)
+    width (em 40)
+    height (em 5)
   star # classSelector cardWrapperClass ? do
     width $ em 8
     display inlineBlock
@@ -48,7 +48,7 @@ mainStyle = do
     backgroundRepeat noRepeat
   star # classSelector workerClass ? do
     display inlineBlock
-    height $ em 2
+    height $ em 4
     background $ url "data/worker.svg"
     backgroundSize contain
     backgroundRepeat noRepeat
@@ -57,9 +57,9 @@ mainStyle = do
     width (px 0)
     margin (px 0) (px 0) (px 0) (px 0)
     transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
-  star # classSelector workerClass# classSelector appearClass ? do
+  star # classSelector workerClass # classSelector appearClass ? do
     opacity 1
-    width (em 2)
+    width (em 4)
     margin (em 0.5) (em 0.5) (em 0.5) (em 0.5)
     transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
   star # classSelector errorContainerClass ? do
