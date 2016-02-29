@@ -24,7 +24,7 @@ mainStyle = do
     bottom (px 0)
     left (pct 50)
     marginLeft (em (-20))
-    padding (em 0.5) (em 0.5) (em 0.5) (em 0.5)
+    padding (em 0.5) (em 1) (em 0.5) (em 1)
     backgroundColor lightgrey
     width (em 40)
     height (em 5)
@@ -43,6 +43,7 @@ mainStyle = do
     bottom $ px 0
     left $ px 0
     right $ px 0
+    padding (em 1) (em 1) (em 1) (em 1)
     background $ url "data/card.svg"
     backgroundSize contain
     backgroundRepeat noRepeat
@@ -52,16 +53,26 @@ mainStyle = do
     background $ url "data/worker.svg"
     backgroundSize contain
     backgroundRepeat noRepeat
-  star # classSelector workerClass# classSelector fadeClass ? do
-    opacity 0
-    width (px 0)
-    margin (px 0) (px 0) (px 0) (px 0)
-    transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
-  star # classSelector workerClass # classSelector appearClass ? do
-    opacity 1
-    width (em 4)
-    margin (em 0.5) (em 0.5) (em 0.5) (em 0.5)
-    transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
+  star # classSelector activeWorkerClass ? do
+    display inlineBlock
+    height $ em 4
+    background (url "data/worker_glowing.svg")
+    backgroundSize contain
+    backgroundRepeat noRepeat
+  let workerFade = do
+        opacity 0
+        width (px 0)
+        margin (px 0) (px 0) (px 0) (px 0)
+        transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
+      workerAppear = do
+        opacity 1
+        width (em 4)
+        margin (em 0.2) (em 0.2) (em 0.2) (em 0.2)
+        transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
+  star # classSelector workerClass # classSelector fadeClass ? workerFade
+  star # classSelector workerClass # classSelector appearClass ? workerAppear
+  star # classSelector activeWorkerClass # classSelector fadeClass ? workerFade
+  star # classSelector activeWorkerClass # classSelector appearClass ? workerAppear
   star # classSelector errorContainerClass ? do
     position fixed
     width (em 40)

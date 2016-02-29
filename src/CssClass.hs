@@ -1,4 +1,4 @@
-module CssClass(CssClass(), divCssClass, divCssClassDyn, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass, scoreClass, freeWorkersClass, errorContainerClass, errorItemClass, fadeClass, appearClass, buttonSpanCssClass, closeButtonClass) where
+module CssClass(CssClass(), divCssClass, divCssClassDyn, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass, scoreClass, freeWorkersClass, errorContainerClass, errorItemClass, fadeClass, appearClass, buttonSpanCssClass, closeButtonClass, activeWorkerClass) where
 
 import           Clay as C
 import           Data.Text
@@ -6,13 +6,16 @@ import           Reflex.Dom
 
 newtype CssClass = CssClass String
 
+instance Monoid CssClass where
+  mempty = CssClass ""
+  mappend (CssClass a) (CssClass b) = CssClass (a ++ " " ++ b)
+
 extractClassName (CssClass className) = className
 
 divCssClass (CssClass className) = elAttr' "div" ("class" =: className)
-divCssClassDyn :: MonadWidget t m => Dynamic t [CssClass] -> m a -> m (El t, a)
-divCssClassDyn classes inner = do
-  let joinClasses classes = C.intersperse " " (extractClassName <$> classes)
-  attrDyn <- mapDyn (("class" =: ) . joinClasses) classes
+divCssClassDyn :: MonadWidget t m => Dynamic t CssClass -> m a -> m (El t, a)
+divCssClassDyn cls inner = do
+  attrDyn <- mapDyn (("class" =: ) . extractClassName) cls
   elDynAttr' "div" attrDyn inner
 
 classSelector (CssClass className) = byClass $ pack className
@@ -28,6 +31,7 @@ freeWorkersClass = CssClass "free-workers"
 cardWrapperClass = CssClass "cardWrapper"
 cardClass = CssClass "card"
 workerClass = CssClass "worker"
+activeWorkerClass = CssClass "active-worker"
 fadeClass = CssClass "fade"
 appearClass = CssClass "appear"
 idleWorkerContainerClass = CssClass "idle-worker-container"

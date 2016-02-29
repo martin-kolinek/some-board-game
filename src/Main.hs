@@ -7,6 +7,7 @@ import           Reflex.Dom
 import           Style
 import           Data.List
 import           Data.Maybe
+import Data.Monoid
 import           Data.Map.Strict as M
 import           Rules
 import           ReflexUtil
@@ -42,7 +43,7 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
       drawError key tuple = do
         err <- fst `mapDyn` tuple
         animState <- snd `mapDyn` tuple
-        (_, res) <- animateState errorItemClass fadeClass appearClass animState $ do
+        (_, res) <- animateState (constDyn errorItemClass) (constDyn fadeClass) (constDyn appearClass) animState $ do
           el "div" $ dynText err
           el "div" $ buttonSpanCssClass closeButtonClass (return ())
         return res
@@ -60,7 +61,7 @@ drawBoard :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
 drawBoard universe = do
   rec
     let deselects = const Nothing <$> leftmost [workAssignemnts]
-    workerClicks <- drawFreeWorkers universe
+    workerClicks <- drawFreeWorkers universe selectedWorker
     workplaceClicks <- drawWorkplaces universe
     selectedWorker <- holdDyn Nothing $ leftmost [Just <$> workerClicks, deselects]
     let workplaceClicksWithSelectedWorker = attach (current selectedWorker) workplaceClicks
@@ -83,21 +84,23 @@ drawScore score = do
     return finishTurnEvent
   return $ const finishTurn <$> event
 
-drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> m (Event t WorkerId)
-drawFreeWorkers universe = do
+drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> Dynamic t (Maybe WorkerId) -> m (Event t WorkerId)
+drawFreeWorkers universe selectedWorker = do
   (_, ev) <- divCssClass freeWorkersClass $ do
     free <- freeWorkers universe
     animated <- animateList (fromRational 1) free
-    events <- listWithKey animated drawWorker
+    events <- listWithKey animated (drawWorker selectedWorker)
     let combineWorkerClicks :: Reflex t => Map WorkerId (Event t WorkerId) -> Event t WorkerId
         combineWorkerClicks workers = leftmost $ elems workers
     combinedClicks <- combineWorkerClicks `mapDyn` events
     return $ switch (current combinedClicks)
   return ev
 
-drawWorker :: MonadWidget t m => WorkerId -> Dynamic t AnimationState -> m (Event t WorkerId)
-drawWorker workerId animationStates = do
-  (divEl, _) <- animateState workerClass fadeClass appearClass animationStates $ return ()
+drawWorker :: MonadWidget t m => Dynamic t (Maybe WorkerId) -> WorkerId -> Dynamic t AnimationState -> m (Event t WorkerId)
+drawWorker selectedWorkerDyn workerId animationStates = do
+  let addHighlight selectedWorker = if selectedWorker == Just workerId then activeWorkerClass else workerClass
+  mainClass <- mapDyn addHighlight selectedWorkerDyn
+  (divEl, _) <- animateState mainClass (constDyn fadeClass) (constDyn appearClass) animationStates $ return ()
   let clicks = domEvent Click divEl
       filteredClicks = filterByBehavior (/=Fading) (current animationStates) clicks
   return $ const workerId <$> filteredClicks
@@ -110,7 +113,7 @@ drawWorkplaces universe = do
         animated <- animateList (fromRational 1) workersInWorkplace
         (el, _) <- divCssClass cardWrapperClass $
           divCssClass cardClass $
-            listWithKey animated drawWorker
+            listWithKey animated (drawWorker $ constDyn Nothing)
         return $ const workplaceId <$> domEvent Click el
   events <- listWithKey workplaces drawWorkplace
   let combineEvents map = leftmost (M.elems map)

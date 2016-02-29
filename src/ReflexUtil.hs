@@ -9,6 +9,7 @@ import           Control.Monad.IO.Class
 import CssClass
 import Data.Time.Clock
 import Data.List as L
+import Data.Monoid
 import qualified Data.Map.Strict as M
 import Data.Maybe
 import Data.Function
@@ -56,12 +57,14 @@ animateList time input = do
           in M.fromList withKeys
     mapDyn extractMap allStates
 
-animateState :: MonadWidget t m => CssClass -> CssClass -> CssClass -> Dynamic t AnimationState -> m a -> m (El t, a)
-animateState alwaysOn fade appear dynamic inner = do
-  let animateCss Standard = [alwaysOn, appear]
-      animateCss _ = [alwaysOn, fade]
-  classes <- mapDyn animateCss dynamic
-  divCssClassDyn classes inner
+animateState :: MonadWidget t m => Dynamic t CssClass -> Dynamic t CssClass -> Dynamic t CssClass -> Dynamic t AnimationState -> m a -> m (El t, a)
+animateState alwaysOnDyn fadeDyn appearDyn dynamic inner = do
+  let combineAll Standard alwaysOn _ appear = alwaysOn <> appear
+      combineAll _ alwaysOn fade _ = alwaysOn <> fade
+  x <- combineDyn combineAll dynamic alwaysOnDyn
+  y <- combineDyn id x fadeDyn
+  z <- combineDyn id y appearDyn
+  divCssClassDyn z inner
 
 updatedWithInitialValue :: MonadWidget t m => Dynamic t a -> m (Event t a)
 updatedWithInitialValue input = do
