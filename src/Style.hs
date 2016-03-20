@@ -113,6 +113,8 @@ mainStyle = do
   star # classSelector playerClass # classSelector selectedPlayerClass ? do
     backgroundColor darkblue
     color white
+  star # classSelector playerClass # classSelector currentPlayerClass ?
+    fontWeight bold
   star # classSelector playerContainerClass ? do
     position fixed
     right nil

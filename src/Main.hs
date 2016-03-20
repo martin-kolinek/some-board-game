@@ -30,11 +30,16 @@ type UniverseAction = Universe -> Either String Universe
 
 drawPlayerSelection :: MonadWidget t m => Dynamic t Universe -> m (Dynamic t PlayerId)
 drawPlayerSelection universeDyn = do
-  let cls isSelected = if isSelected then playerClass <> selectedPlayerClass else playerClass
+  let selectedClass isSelected = if isSelected then selectedPlayerClass else mempty
+      currentClass isCurrent = if isCurrent then currentPlayerClass else mempty
       drawPlayer selectedPlayerId playerId  = do
         playerString <- mapDyn show playerId
         isSelected <- combineDyn (==) playerId selectedPlayerId
-        classDyn <- mapDyn cls isSelected
+        selectedClassDyn <- mapDyn selectedClass isSelected
+        currentPlayerDyn <- mapDyn getCurrentPlayer universeDyn
+        isCurrent <- combineDyn ((==) . Just) playerId currentPlayerDyn
+        currentClassDyn <- mapDyn currentClass isCurrent
+        classDyn <- mconcatDyn [constDyn playerClass, currentClassDyn, selectedClassDyn]
         (el, _) <- divCssClassDyn classDyn $ dynText playerString
         let event = domEvent Click el
         return $ tag (current playerId) event

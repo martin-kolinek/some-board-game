@@ -17,6 +17,7 @@ module CssClass(CssClass(),
   activeWorkerClass,
   playerClass,
   selectedPlayerClass,
+  currentPlayerClass,
   playerContainerClass) where
 
 import           Clay as C
@@ -59,4 +60,5 @@ errorItemClass = CssClass "error-item"
 closeButtonClass = CssClass "fa fa-times"
 playerClass = CssClass "player"
 selectedPlayerClass = CssClass "selected-player"
+currentPlayerClass = CssClass "current-player"
 playerContainerClass = CssClass "player-container"
