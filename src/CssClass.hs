@@ -1,4 +1,23 @@
-module CssClass(CssClass(), divCssClass, divCssClassDyn, classSelector, cardClass, cardWrapperClass, workerClass, idleWorkerContainerClass, scoreClass, freeWorkersClass, errorContainerClass, errorItemClass, fadeClass, appearClass, buttonSpanCssClass, closeButtonClass, activeWorkerClass) where
+module CssClass(CssClass(),
+  divCssClass,
+  divCssClassDyn,
+  classSelector,
+  cardClass,
+  cardWrapperClass,
+  workerClass,
+  idleWorkerContainerClass,
+  scoreClass,
+  freeWorkersClass,
+  errorContainerClass,
+  errorItemClass,
+  fadeClass,
+  appearClass,
+  buttonSpanCssClass,
+  closeButtonClass,
+  activeWorkerClass,
+  playerClass,
+  selectedPlayerClass,
+  playerContainerClass) where
 
 import           Clay as C
 import           Data.Text
@@ -38,3 +57,6 @@ idleWorkerContainerClass = CssClass "idle-worker-container"
 errorContainerClass = CssClass "error-container"
 errorItemClass = CssClass "error-item"
 closeButtonClass = CssClass "fa fa-times"
+playerClass = CssClass "player"
+selectedPlayerClass = CssClass "selected-player"
+playerContainerClass = CssClass "player-container"

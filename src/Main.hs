@@ -17,9 +17,9 @@ import Debug.Trace (traceShowId)
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
     rec
-      score <- mapDyn getScore universe
-      scoreActions <- drawScore universe
-      boardActions <- drawBoard universe
+      currentPlayer <- drawPlayerSelection universe
+      scoreActions <- drawScore universe currentPlayer
+      boardActions <- drawBoard universe currentPlayer
       let actions = leftmost [boardActions, scoreActions]
       let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
       drawErrors universe actions
@@ -27,6 +27,27 @@ main = mainWidgetWithCss mainStyleByteString $ do
     return ()
 
 type UniverseAction = Universe -> Either String Universe
+
+drawPlayerSelection :: MonadWidget t m => Dynamic t Universe -> m (Dynamic t PlayerId)
+drawPlayerSelection universeDyn = do
+  let cls isSelected = if isSelected then playerClass <> selectedPlayerClass else playerClass
+      drawPlayer selectedPlayerId playerId  = do
+        playerString <- mapDyn show playerId
+        isSelected <- combineDyn (==) playerId selectedPlayerId
+        classDyn <- mapDyn cls isSelected
+        (el, _) <- divCssClassDyn classDyn $ dynText playerString
+        let event = domEvent Click el
+        return $ tag (current playerId) event
+  rec
+    (_, selectedPlayer) <- divCssClass playerContainerClass $ do
+      players <- mapDyn getPlayers universeDyn
+      events <- simpleList players (drawPlayer selectedPlayer)
+      combined <- mapDyn leftmost events
+      let selections = switch (current combined)
+      maybePlayerId <- holdDyn Nothing (Just <$> selections)
+      defaultPlayer <- mapDyn head players
+      combineDyn fromMaybe defaultPlayer maybePlayerId
+  return selectedPlayer
 
 drawErrors :: MonadWidget t m => Dynamic t Universe -> Event t UniverseAction -> m ()
 drawErrors universe actions = void $ divCssClass errorContainerClass $ do
@@ -63,12 +84,12 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
 
   return ()
 
-drawBoard :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
-drawBoard universe = do
+drawBoard :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerId -> m (Event t UniverseAction)
+drawBoard universe player = do
   rec
     let isFree worker universe = isNothing $ getWorkerWorkplace universe =<< worker
     let deselects = ffilter not $ attachWith isFree (current selectedWorker) (updated universe)
-    workerClicks <- drawFreeWorkers universe selectedWorker
+    workerClicks <- drawFreeWorkers universe player selectedWorker
     workplaceClicks <- drawWorkplaces universe
     selectedWorker <- holdDyn Nothing $ leftmost [Just <$> workerClicks, const Nothing <$> deselects]
     let workplaceClicksWithSelectedWorker = attach (current selectedWorker) workplaceClicks
@@ -77,24 +98,25 @@ drawBoard universe = do
         workAssignemnts = fmapMaybe extractAssignWork workplaceClicksWithSelectedWorker
   return $ uncurry startWorking <$> workAssignemnts
 
-freeWorkers :: MonadWidget t m => Dynamic t Universe -> m (Dynamic t [WorkerId])
-freeWorkers universe = do
-  let getFreeWorkers un = [w | w <- getWorkers un, isNothing $ getWorkerWorkplace un w]
-  mapDyn getFreeWorkers universe
+freeWorkers :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerId -> m (Dynamic t [WorkerId])
+freeWorkers universeDyn playerDyn = do
+  let getFreeWorkers universe player = [w | w <- getWorkers universe player, isNothing $ getWorkerWorkplace universe w]
+  combineDyn getFreeWorkers universeDyn playerDyn
 
-drawScore :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
-drawScore score = do
-  scoreString <- mapDyn (show . getScore) score
+drawScore :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerId -> m (Event t UniverseAction)
+drawScore universeDyn playerDyn = do
+  score <- combineDyn getScore universeDyn playerDyn
+  scoreString <- mapDyn show score
   (_, event) <- divCssClass scoreClass $ do
     finishTurnEvent <- button "Finish turn"
     dynText scoreString
     return finishTurnEvent
   return $ const finishTurn <$> event
 
-drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> Dynamic t (Maybe WorkerId) -> m (Event t WorkerId)
-drawFreeWorkers universe selectedWorker = do
+drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerId -> Dynamic t (Maybe WorkerId) -> m (Event t WorkerId)
+drawFreeWorkers universeDyn playerDyn selectedWorker = do
   (_, ev) <- divCssClass freeWorkersClass $ do
-    free <- freeWorkers universe
+    free <- freeWorkers universeDyn playerDyn
     animated <- animateList (fromRational 1) free
     events <- listWithKey animated (drawWorker selectedWorker)
     let combineWorkerClicks :: Reflex t => Map WorkerId (Event t WorkerId) -> Event t WorkerId

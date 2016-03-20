@@ -22,7 +22,7 @@ animateMap time input = do
       findFading delayed1List delayedTimeList = (,Fading) <$> (delayedTimeList M.\\ delayed1List)
       findStandard nonDelayedList delayed1List delayedTimeList = (,Standard) <$> (delayed1List `M.intersection` (nonDelayedList `M.union` delayedTimeList))
   updatedInput <- updatedWithInitialValue input
-  delayed1 <- delay 0.0001 updatedInput
+  delayed1 <- delay 0.01 updatedInput
   delayed1Dyn <- holdDyn M.empty delayed1
   delayedTime <- delay time updatedInput
   delayedTimeDyn <- holdDyn M.empty delayedTime
@@ -39,7 +39,7 @@ animateList time input = do
         findFading delayed1List delayedTimeList = (Fading,) <$> (delayedTimeList \\ delayed1List)
         findStandard nonDelayedList delayed1List delayedTimeList = (Standard,) <$> (delayed1List `intersect` (nonDelayedList `union` delayedTimeList))
     updatedInput <- updatedWithInitialValue input
-    delayed1 <- delay 0.0001 updatedInput
+    delayed1 <- delay 0.01 updatedInput
     delayed1Dyn <- holdDyn [] delayed1
     delayedTime <- delay time updatedInput
     delayedTimeDyn <- holdDyn [] delayedTime

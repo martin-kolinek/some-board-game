@@ -105,6 +105,19 @@ mainStyle = do
     height (em 0)
   star # classSelector errorItemClass # classSelector appearClass ?
     height (em 2)
-
+  star # classSelector playerClass ? do
+    margin (em 0.3) (em 0.3) (em 0.3) (em 0.3)
+    padding (em 0.3) (em 0.3) (em 0.3) (em 0.3)
+    backgroundColor lightblue
+    cursor pointer
+  star # classSelector playerClass # classSelector selectedPlayerClass ? do
+    backgroundColor darkblue
+    color white
+  star # classSelector playerContainerClass ? do
+    position fixed
+    right nil
+    top (pct 50)
+    marginTop (em (-6))
+    height (em 12)
 
 mainStyleByteString = toStrict $ encodeUtf8 $ render mainStyle
