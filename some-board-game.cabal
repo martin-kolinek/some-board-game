@@ -31,7 +31,8 @@ executable some-board-game
                        containers,
                        ghcjs-dom,
                        transformers,
-                       time
+                       time,
+                       these
 
   hs-source-dirs:      src
   default-language:    Haskell2010

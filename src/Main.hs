@@ -11,6 +11,7 @@ import Data.Monoid
 import           Data.Map.Strict as M
 import           Rules
 import           ReflexUtil
+import Control.Monad.IO.Class
 import Data.Time.Clock
 import Debug.Trace (traceShowId)
 
@@ -57,7 +58,7 @@ drawPlayerSelection universeDyn = do
   return selectedPlayer
 
 drawErrors :: MonadWidget t m => Dynamic t Universe -> Event t UniverseAction -> m ()
-drawErrors universe actions = void $ divCssClass errorContainerClass $ do
+drawErrors universe actions = return () {- void $ divCssClass errorContainerClass $ do
   let extractError (un, act) = fromLeft $ act un
       attached = attach (current universe) actions
       errorEvents = fmapMaybe extractError attached
@@ -67,18 +68,17 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
       attachIdToEvent :: Reflex t => (Int, Event t ()) -> Event t Int
       attachIdToEvent (id, event) = const id <$> event
       extractEventsFromMap map = leftmost $ attachIdToEvent <$> assocs map
-      drawError :: Reflex t => MonadWidget t m => Int -> Dynamic t (String, AnimationState) -> m (Event t ())
+      drawError :: Reflex t => MonadWidget t m => Int -> Dynamic t (AnimationState, String) -> m (Event t ())
       drawError key tuple = do
-        err <- fst `mapDyn` tuple
-        animState <- snd `mapDyn` tuple
+        err <- snd `mapDyn` tuple
+        animState <- fst `mapDyn` tuple
         (_, res) <- animateState (constDyn errorItemClass) (constDyn fadeClass) (constDyn appearClass) animState $ do
           el "div" $ dynText err
           el "div" $ buttonSpanCssClass closeButtonClass (return ())
         return res
       combineWithLast newValue (oldValue, _) = (newValue, newValue M.\\ oldValue)
   rec
-    animated <- animateMap (fromRational 1) allErrors
-    closeEvents <- listWithKey animated drawError
+    closeEvents <- animated (fromRational 1) allErrors drawError
     allErrors <- foldDyn modifyMap empty addAndRemoveEvents
     additionsDyn <- foldDyn combineWithLast (M.empty, M.empty) (updated allErrors)
     let additions = (M.keys . snd) <$> updated additionsDyn
@@ -89,7 +89,7 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
         allRemovals = appendEvents (return <$> closeKeyEvents) timedRemovals
         addAndRemoveEvents = leftmost [Right <$> errorEvents, Left <$> allRemovals]
 
-  return ()
+  return ()-}
 
 drawBoard :: MonadWidget t m => Dynamic t Universe -> PlayerId -> m (Event t UniverseAction)
 drawBoard universe player = do
@@ -103,6 +103,7 @@ drawBoard universe player = do
         extractAssignWork (Just worker, workplace) = Just (worker, workplace)
         extractAssignWork _ = Nothing
         workAssignemnts = fmapMaybe extractAssignWork workplaceClicksWithSelectedWorker
+  ev <- getPostBuild
   return $ uncurry startWorking <$> workAssignemnts
 
 freeWorkers :: MonadWidget t m => Dynamic t Universe -> PlayerId -> m (Dynamic t [WorkerId])
@@ -124,8 +125,7 @@ drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> PlayerId -> Dynamic 
 drawFreeWorkers universeDyn playerDyn selectedWorker = do
   (_, ev) <- divCssClass freeWorkersClass $ do
     free <- freeWorkers universeDyn playerDyn
-    animated <- animateList (fromRational 1) free
-    events <- listWithKey animated (drawWorker selectedWorker)
+    events <- animatedList2 (fromRational 1) free (drawWorker selectedWorker)
     let combineWorkerClicks :: Reflex t => Map WorkerId (Event t WorkerId) -> Event t WorkerId
         combineWorkerClicks workers = leftmost $ elems workers
     combinedClicks <- combineWorkerClicks `mapDyn` events
@@ -139,6 +139,7 @@ drawWorker selectedWorkerDyn workerId animationStates = do
   (divEl, _) <- animateState mainClass (constDyn fadeClass) (constDyn appearClass) animationStates $ return ()
   let clicks = domEvent Click divEl
       filteredClicks = filterByBehavior (/=Fading) (current animationStates) clicks
+  postBuild <- getPostBuild
   return $ const workerId <$> filteredClicks
 
 drawWorkplaces :: MonadWidget t m => Dynamic t Universe -> m (Event t WorkplaceId)
@@ -146,10 +147,9 @@ drawWorkplaces universe = do
   workplaces <- getWorkplaces `mapDyn` universe
   let drawWorkplace workplaceId workplaceAction = do
         workersInWorkplace <- forDyn universe (`getWorkplaceOccupants` workplaceId)
-        animated <- animateList (fromRational 1) workersInWorkplace
         (el, _) <- divCssClass cardWrapperClass $
           divCssClass cardClass $
-            listWithKey animated (drawWorker $ constDyn Nothing)
+            animatedList (fromRational 1) workersInWorkplace (drawWorker $ constDyn Nothing)
         return $ const workplaceId <$> domEvent Click el
   events <- listWithKey workplaces drawWorkplace
   let combineEvents map = leftmost (M.elems map)
