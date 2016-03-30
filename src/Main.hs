@@ -30,13 +30,13 @@ type UniverseAction = Universe -> Either String Universe
 
 drawPlayerSelection :: MonadWidget t m => Dynamic t Universe -> m (Dynamic t PlayerId)
 drawPlayerSelection universeDyn = do
+  currentPlayerDyn <- mapDyn getCurrentPlayer universeDyn
   let selectedClass isSelected = if isSelected then selectedPlayerClass else mempty
       currentClass isCurrent = if isCurrent then currentPlayerClass else mempty
       drawPlayer selectedPlayerId playerId  = do
         playerString <- mapDyn show playerId
         isSelected <- combineDyn (==) playerId selectedPlayerId
         selectedClassDyn <- mapDyn selectedClass isSelected
-        currentPlayerDyn <- mapDyn getCurrentPlayer universeDyn
         isCurrent <- combineDyn ((==) . Just) playerId currentPlayerDyn
         currentClassDyn <- mapDyn currentClass isCurrent
         classDyn <- mconcatDyn [constDyn playerClass, currentClassDyn, selectedClassDyn]
@@ -48,7 +48,9 @@ drawPlayerSelection universeDyn = do
       players <- mapDyn getPlayers universeDyn
       events <- simpleList players (drawPlayer selectedPlayer)
       combined <- mapDyn leftmost events
-      let selections = switch (current combined)
+      let userSelections = switch (current combined)
+          currentPlayerChangeSelections = fmapMaybe id $ updated currentPlayerDyn
+      let selections = leftmost [userSelections, currentPlayerChangeSelections]
       maybePlayerId <- holdDyn Nothing (Just <$> selections)
       defaultPlayer <- mapDyn head players
       combineDyn fromMaybe defaultPlayer maybePlayerId
