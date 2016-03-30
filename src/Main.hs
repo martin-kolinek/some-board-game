@@ -74,7 +74,7 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
         animState <- fst `mapDyn` tuple
         (_, res) <- animateState (constDyn errorItemClass) (constDyn fadeClass) animState $ do
           el "div" $ dynText err
-          el "div" $ buttonSpanCssClass closeButtonClass (return ())
+          el "div" $ buttonSpanCssClass closeButtonWithIconClass (return ())
         return res
       combineWithLast newValue (oldValue, _) = (newValue, newValue M.\\ oldValue)
   rec

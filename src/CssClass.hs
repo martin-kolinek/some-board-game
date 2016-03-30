@@ -13,6 +13,7 @@ module CssClass(CssClass(),
   fadeClass,
   buttonSpanCssClass,
   closeButtonClass,
+  closeButtonWithIconClass,
   activeWorkerClass,
   playerClass,
   selectedPlayerClass,
@@ -23,6 +24,7 @@ import           Clay as C
 import           Data.Text
 import           Reflex.Dom
 import           Data.String
+import Data.Monoid
 
 newtype CssClass = CssClass String deriving Show
 
@@ -65,7 +67,8 @@ fadeClass = CssClass "fade"
 idleWorkerContainerClass = CssClass "idle-worker-container"
 errorContainerClass = CssClass "error-container"
 errorItemClass = CssClass "error-item"
-closeButtonClass = CssClass "fa fa-times"
+closeButtonClass = CssClass "close-button"
+closeButtonWithIconClass = CssClass "fa fa-times" <> closeButtonClass
 playerClass = CssClass "player"
 selectedPlayerClass = CssClass "selected-player"
 currentPlayerClass = CssClass "current-player"

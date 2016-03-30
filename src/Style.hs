@@ -111,6 +111,7 @@ mainStyle = do
     marginLeft (em 0.3)
   star # classSelector errorItemClass # classSelector fadeClass ?
     height (em 0)
+  star # classSelector closeButtonClass ? cursor pointer
   star # classSelector playerClass ? do
     margin (em 0.3) (em 0.3) (em 0.3) (em 0.3)
     padding (em 0.3) (em 0.3) (em 0.3) (em 0.3)
