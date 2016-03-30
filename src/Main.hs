@@ -18,12 +18,9 @@ import Debug.Trace (traceShowId)
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
     rec
-      currentPlayer <- drawPlayerSelection universe
-      scoreActions <- drawScore universe currentPlayer
-      boardDrawn <- mapDyn (drawBoard universe) (nubDyn currentPlayer)
-      boardActionsDyn <- dynHold boardDrawn
-      let boardActions = switch (current boardActionsDyn)
-      let actions = leftmost [boardActions, scoreActions]
+      finishActions <- drawFinish universe
+      boardActions <- drawBoard universe
+      let actions = leftmost [boardActions, finishActions]
       let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
       drawErrors universe actions
       universe <- foldDyn tryApplyToUniverse initialUniverse actions
@@ -55,7 +52,7 @@ drawPlayerSelection universeDyn = do
       maybePlayerId <- holdDyn Nothing (Just <$> selections)
       defaultPlayer <- mapDyn head players
       combineDyn fromMaybe defaultPlayer maybePlayerId
-  return selectedPlayer
+  return $ nubDyn selectedPlayer
 
 drawErrors :: MonadWidget t m => Dynamic t Universe -> Event t UniverseAction -> m ()
 drawErrors universe actions = void $ divCssClass errorContainerClass $ do
@@ -91,12 +88,16 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
 
   return ()
 
-drawBoard :: MonadWidget t m => Dynamic t Universe -> PlayerId -> m (Event t UniverseAction)
-drawBoard universe player = do
+drawBoard :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
+drawBoard universe = do
   rec
     let isFree worker universe = isNothing $ getWorkerWorkplace universe =<< worker
-    let deselects = ffilter not $ attachWith isFree (current selectedWorker) (updated universe)
-    workerClicks <- drawFreeWorkers universe player selectedWorker
+        deselects = ffilter not $ attachWith isFree (current selectedWorker) (updated universe)
+    currentPlayer <- drawPlayerSelection universe
+    freeWorkersDrawn <- mapDyn (drawFreeWorkers universe selectedWorker) currentPlayer
+    workerClicksSwitches <- dyn freeWorkersDrawn
+    workerClicksBehavior <- hold never workerClicksSwitches
+    let workerClicks = switch workerClicksBehavior
     workplaceClicks <- drawWorkplaces universe
     selectedWorker <- holdDyn Nothing $ leftmost [Just <$> workerClicks, const Nothing <$> deselects]
     let workplaceClicksWithSelectedWorker = attach (current selectedWorker) workplaceClicks
@@ -111,20 +112,15 @@ freeWorkers universeDyn player = do
   let getFreeWorkers universe player = [w | w <- getWorkers universe player, isNothing $ getWorkerWorkplace universe w]
   mapDyn (flip getFreeWorkers player) universeDyn
 
-drawScore :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerId -> m (Event t UniverseAction)
-drawScore universeDyn playerDyn = do
-  score <- combineDyn getScore universeDyn playerDyn
-  scoreString <- mapDyn show score
-  (_, event) <- divCssClass scoreClass $ do
-    finishTurnEvent <- button "Finish turn"
-    dynText scoreString
-    return finishTurnEvent
+drawFinish :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
+drawFinish universeDyn = do
+  (_, event) <- divCssClass scoreClass $ button "Finish turn"
   return $ const finishTurn <$> event
 
-drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> PlayerId -> Dynamic t (Maybe WorkerId) -> m (Event t WorkerId)
-drawFreeWorkers universeDyn playerDyn selectedWorker = do
+drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> Dynamic t (Maybe WorkerId) -> PlayerId -> m (Event t WorkerId)
+drawFreeWorkers universeDyn selectedWorker player = do
   (_, ev) <- divCssClass freeWorkersClass $ do
-    free <- freeWorkers universeDyn playerDyn
+    free <- freeWorkers universeDyn player
     events <- animatedList (fromRational 1) free (drawWorker selectedWorker)
     let combineWorkerClicks :: Reflex t => Map WorkerId (Event t WorkerId) -> Event t WorkerId
         combineWorkerClicks workers = leftmost $ elems workers

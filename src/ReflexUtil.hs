@@ -55,17 +55,6 @@ updatedWithInitialValue input = do
       combined = leftmost [updated input, tagged]
   return combined
 
-dynEvent :: MonadWidget t m => (b -> Event t a) -> Dynamic  t (m b) -> m (Event t a)
-dynEvent extractEvent dynamic = do
-  inner <- dyn dynamic
-  held <- hold never (extractEvent <$> inner)
-  return $ switch held
-
-dynHold :: Monoid a => MonadWidget t m => Dynamic t (m a) -> m (Dynamic t a)
-dynHold dynamic = do
-  inner <- dyn dynamic
-  holdDyn mempty inner
-
 fromLeft (Left a) = Just a
 fromLeft _ = Nothing
 
