@@ -40,7 +40,11 @@ drawPlayerSelection universeDyn = do
         isCurrent <- combineDyn ((==) . Just) playerId currentPlayerDyn
         currentClassDyn <- mapDyn currentClass isCurrent
         classDyn <- mconcatDyn [constDyn playerClass, currentClassDyn, selectedClassDyn]
-        (el, _) <- divCssClassDyn classDyn $ dynText playerString
+        scoreDyn <- combineDyn getScore universeDyn playerId
+        scoreTextDyn <- mapDyn show scoreDyn
+        (el, _) <- divCssClassDyn classDyn $ do
+          dynText playerString
+          dynText scoreTextDyn
         let event = domEvent Click el
         return $ tag (current playerId) event
   rec
