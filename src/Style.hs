@@ -47,50 +47,58 @@ mainStyle = do
     background $ url "data/card.svg"
     backgroundSize contain
     backgroundRepeat noRepeat
-  star # classSelector workerClass ? do
-    display inlineBlock
-    height $ em 4
-    background $ url "data/worker.svg"
-    backgroundSize contain
-    backgroundRepeat noRepeat
-  star # classSelector activeWorkerClass ? do
-    display inlineBlock
-    height $ em 4
-    background (url "data/worker_glowing.svg")
-    backgroundSize contain
-    backgroundRepeat noRepeat
   let workerFade = do
         opacity 0
         width (px 0)
         margin (px 0) (px 0) (px 0) (px 0)
         transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
-      workerAppear = do
+      workerCommon = do
         opacity 1
         width (em 4)
         margin (em 0.2) (em 0.2) (em 0.2) (em 0.2)
         transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
+        display inlineBlock
+        height $ em 4
+        backgroundSize contain
+        backgroundRepeat noRepeat
+        animationName "worker-kf"
+        animationDuration (sec 1)
+        animationIterationCount (iterationCount 1)
+  keyframes "worker-kf" [
+      (0, opacity 0),
+      (100, opacity 1)]
+  star # classSelector workerClass ? do
+    background $ url "data/worker.svg"
+    workerCommon
+  star # classSelector activeWorkerClass ? do
+    background (url "data/worker_glowing.svg")
+    workerCommon
   star # classSelector workerClass # classSelector fadeClass ? workerFade
-  star # classSelector workerClass # classSelector appearClass ? workerAppear
   star # classSelector activeWorkerClass # classSelector fadeClass ? workerFade
-  star # classSelector activeWorkerClass # classSelector appearClass ? workerAppear
   star # classSelector errorContainerClass ? do
     position fixed
     width (em 40)
     left (pct 50)
     top (px 0)
     marginLeft (em (-20))
+  keyframes "error-kf" [
+    (0, height nil),
+    (100, height (em 2))]
   star # classSelector errorItemClass ? do
     width (pct 100)
-    display inlineBlock
     backgroundImage $ linearGradient (straight sideTop) [("#f2cece", pct 0), ("#e7b3b3", pct 100)]
     backgroundRepeat repeatX
     borderColor "#dc9797"
     borderRadius (px 4) (px 4) (px 4) (px 4)
+    height (em 2)
     borderWidth (px 1)
     borderStyle solid
     overflow hidden
     transition "height" (sec 1) ease (sec 0)
     verticalAlign middle
+    animationName "error-kf"
+    animationIterationCount (iterationCount 1)
+    animationDuration (sec 1)
   star # classSelector errorItemClass |> div ? do
     marginTop (em 0.5)
     marginBottom (em 0.5)
@@ -103,8 +111,6 @@ mainStyle = do
     marginLeft (em 0.3)
   star # classSelector errorItemClass # classSelector fadeClass ?
     height (em 0)
-  star # classSelector errorItemClass # classSelector appearClass ?
-    height (em 2)
   star # classSelector playerClass ? do
     margin (em 0.3) (em 0.3) (em 0.3) (em 0.3)
     padding (em 0.3) (em 0.3) (em 0.3) (em 0.3)

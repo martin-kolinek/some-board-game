@@ -58,7 +58,7 @@ drawPlayerSelection universeDyn = do
   return selectedPlayer
 
 drawErrors :: MonadWidget t m => Dynamic t Universe -> Event t UniverseAction -> m ()
-drawErrors universe actions = return () {- void $ divCssClass errorContainerClass $ do
+drawErrors universe actions = void $ divCssClass errorContainerClass $ do
   let extractError (un, act) = fromLeft $ act un
       attached = attach (current universe) actions
       errorEvents = fmapMaybe extractError attached
@@ -72,7 +72,7 @@ drawErrors universe actions = return () {- void $ divCssClass errorContainerClas
       drawError key tuple = do
         err <- snd `mapDyn` tuple
         animState <- fst `mapDyn` tuple
-        (_, res) <- animateState (constDyn errorItemClass) (constDyn fadeClass) (constDyn appearClass) animState $ do
+        (_, res) <- animateState (constDyn errorItemClass) (constDyn fadeClass) animState $ do
           el "div" $ dynText err
           el "div" $ buttonSpanCssClass closeButtonClass (return ())
         return res
@@ -89,7 +89,7 @@ drawErrors universe actions = return () {- void $ divCssClass errorContainerClas
         allRemovals = appendEvents (return <$> closeKeyEvents) timedRemovals
         addAndRemoveEvents = leftmost [Right <$> errorEvents, Left <$> allRemovals]
 
-  return ()-}
+  return ()
 
 drawBoard :: MonadWidget t m => Dynamic t Universe -> PlayerId -> m (Event t UniverseAction)
 drawBoard universe player = do
@@ -125,7 +125,7 @@ drawFreeWorkers :: MonadWidget t m => Dynamic t Universe -> PlayerId -> Dynamic 
 drawFreeWorkers universeDyn playerDyn selectedWorker = do
   (_, ev) <- divCssClass freeWorkersClass $ do
     free <- freeWorkers universeDyn playerDyn
-    events <- animatedList2 (fromRational 1) free (drawWorker selectedWorker)
+    events <- animatedList (fromRational 1) free (drawWorker selectedWorker)
     let combineWorkerClicks :: Reflex t => Map WorkerId (Event t WorkerId) -> Event t WorkerId
         combineWorkerClicks workers = leftmost $ elems workers
     combinedClicks <- combineWorkerClicks `mapDyn` events
@@ -136,7 +136,7 @@ drawWorker :: MonadWidget t m => Dynamic t (Maybe WorkerId) -> WorkerId -> Dynam
 drawWorker selectedWorkerDyn workerId animationStates = do
   let addHighlight selectedWorker = if selectedWorker == Just workerId then activeWorkerClass else workerClass
   mainClass <- mapDyn addHighlight selectedWorkerDyn
-  (divEl, _) <- animateState mainClass (constDyn fadeClass) (constDyn appearClass) animationStates $ return ()
+  (divEl, _) <- animateState mainClass (constDyn fadeClass) animationStates $ return ()
   let clicks = domEvent Click divEl
       filteredClicks = filterByBehavior (/=Fading) (current animationStates) clicks
   postBuild <- getPostBuild

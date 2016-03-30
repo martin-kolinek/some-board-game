@@ -11,7 +11,6 @@ module CssClass(CssClass(),
   errorContainerClass,
   errorItemClass,
   fadeClass,
-  appearClass,
   buttonSpanCssClass,
   closeButtonClass,
   activeWorkerClass,
@@ -23,8 +22,9 @@ module CssClass(CssClass(),
 import           Clay as C
 import           Data.Text
 import           Reflex.Dom
+import           Data.String
 
-newtype CssClass = CssClass String
+newtype CssClass = CssClass String deriving Show
 
 instance Monoid CssClass where
   mempty = CssClass ""
@@ -45,6 +45,15 @@ buttonSpanCssClass (CssClass className) inside = do
   (el, a) <- elAttr' "span" ("class" =: className) inside
   return $ domEvent Click el
 
+animatedClass (CssClass className) duration fadeCss = do
+  let animName = "anim-" ++ className
+  keyframesFromTo (pack animName) fadeCss (return ())
+  C.star # C.byClass (pack className) # classSelector fadeClass ? fadeCss
+  C.star # C.byClass (pack className) ? do
+    animationName (fromString animName)
+    animationDuration duration
+    animationIterationCount $ iterationCount 1
+
 scoreClass = CssClass "score"
 freeWorkersClass = CssClass "free-workers"
 
@@ -53,7 +62,6 @@ cardClass = CssClass "card"
 workerClass = CssClass "worker"
 activeWorkerClass = CssClass "active-worker"
 fadeClass = CssClass "fade"
-appearClass = CssClass "appear"
 idleWorkerContainerClass = CssClass "idle-worker-container"
 errorContainerClass = CssClass "error-container"
 errorItemClass = CssClass "error-item"
