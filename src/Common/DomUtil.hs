@@ -1,12 +1,12 @@
 {-#LANGUAGE TupleSections, ScopedTypeVariables, LambdaCase #-}
-module ReflexUtil where
+module Common.DomUtil where
 
 import Reflex
 import Reflex.Dom
 import qualified GHCJS.DOM.Document as Doc
 import GHCJS.DOM.Element
-import           Control.Monad.IO.Class
-import CssClass
+import Control.Monad.IO.Class
+import Common.CssClass
 import Data.Time.Clock
 import Data.List as L
 import Data.Monoid
@@ -65,3 +65,16 @@ filterByBehavior func = attachWithMaybe filter
   where filter a b
           | func a = Just b
           | otherwise = Nothing
+
+divCssClass (CssClass className) = elAttr' "div" ("class" =: className)
+
+divCssClassDyn :: MonadWidget t m => Dynamic t CssClass -> m a -> m (El t, a)
+divCssClassDyn cls inner = do
+  let extractClassName (CssClass className) = className
+  attrDyn <- mapDyn (("class" =: ) . extractClassName) cls
+  elDynAttr' "div" attrDyn inner
+
+buttonSpanCssClass :: MonadWidget t m => CssClass -> m a -> m (Event t ())
+buttonSpanCssClass (CssClass className) inside = do
+  (el, a) <- elAttr' "span" ("class" =: className) inside
+  return $ domEvent Click el

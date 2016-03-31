@@ -19,7 +19,12 @@ data-files:          data/card.svg,
 
 executable some-board-game
   main-is:             Main.hs
-  other-modules:       Style, CssClass, ReflexUtil
+  other-modules:       Style, Types,
+                       Common.CssClass, Common.DomUtil, 
+                       Errors.Style, Errors.Dom,
+                       Board.Player.Dom, Board.Player.Style
+                       Board.Worker.Dom, Board.Worker.Style
+                       Board.Dom, Board.Style
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9,
                        reflex,
