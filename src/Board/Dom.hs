@@ -13,17 +13,18 @@ import Reflex.Dom
 import Data.Maybe
 import Data.Map.Strict as M
 
-drawBoard :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
-drawBoard universe = do
+drawBoard :: (UniverseReader t m, MonadWidget t m) => m (Event t UniverseAction)
+drawBoard = do
+  universe <- askUniverse
   rec
     let isFree worker universe = isNothing $ getWorkerWorkplace universe =<< worker
         deselects = ffilter not $ attachWith isFree (current selectedWorker) (updated universe)
-    currentPlayer <- drawPlayerSelection universe
-    freeWorkersDrawn <- mapDyn (drawFreeWorkers universe selectedWorker) currentPlayer
+    currentPlayer <- drawPlayerSelection
+    freeWorkersDrawn <- mapDyn (drawFreeWorkers selectedWorker) currentPlayer
     workerClicksSwitches <- dyn freeWorkersDrawn
     workerClicksBehavior <- hold never workerClicksSwitches
     let workerClicks = switch workerClicksBehavior
-    workplaceClicks <- drawWorkplaces universe
+    workplaceClicks <- drawWorkplaces
     selectedWorker <- holdDyn Nothing $ leftmost [Just <$> workerClicks, const Nothing <$> deselects]
     let workplaceClicksWithSelectedWorker = attach (current selectedWorker) workplaceClicks
         extractAssignWork (Just worker, workplace) = Just (worker, workplace)
@@ -32,8 +33,9 @@ drawBoard universe = do
   ev <- getPostBuild
   return $ uncurry startWorking <$> workAssignemnts
 
-drawWorkplaces :: MonadWidget t m => Dynamic t Universe -> m (Event t WorkplaceId)
-drawWorkplaces universe = do
+drawWorkplaces :: (UniverseReader t m, MonadWidget t m) => m (Event t WorkplaceId)
+drawWorkplaces = do
+  universe <- askUniverse
   workplaces <- getWorkplaces `mapDyn` universe
   let drawWorkplace workplaceId workplaceAction = do
         workersInWorkplace <- forDyn universe (`getWorkplaceOccupants` workplaceId)

@@ -9,15 +9,18 @@ import Style
 
 import Reflex.Dom
 import Data.Maybe
+import Control.Monad.Reader
 
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
     rec
-      finishActions <- drawFinish universe
-      boardActions <- drawBoard universe
-      let actions = leftmost [boardActions, finishActions]
       let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
-      drawErrors universe actions
+      actions <- flip runReaderT universe $ do
+        finishActions <- drawFinish universe
+        boardActions <- drawBoard
+        let actions = leftmost [boardActions, finishActions]
+        drawErrors actions
+        return actions
       universe <- foldDyn tryApplyToUniverse initialUniverse actions
     return ()
 

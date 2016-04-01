@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RecursiveDo, FlexibleContexts #-}
 
 module Errors.Dom where
 
@@ -12,8 +12,9 @@ import Control.Monad
 import Data.Map.Strict as M
 import Data.List
 
-drawErrors :: MonadWidget t m => Dynamic t Universe -> Event t UniverseAction -> m ()
-drawErrors universe actions = void $ divCssClass errorContainerClass $ do
+drawErrors :: (MonadWidget t m, UniverseReader t m) => Event t UniverseAction -> m ()
+drawErrors actions = void $ divCssClass errorContainerClass $ do
+  universe <- askUniverse
   let extractError (un, act) = fromLeft $ act un
       attached = attach (current universe) actions
       errorEvents = fmapMaybe extractError attached
@@ -43,5 +44,4 @@ drawErrors universe actions = void $ divCssClass errorContainerClass $ do
         modifyMap (Right err) mp = addToMap err mp
         allRemovals = appendEvents (return <$> closeKeyEvents) timedRemovals
         addAndRemoveEvents = leftmost [Right <$> errorEvents, Left <$> allRemovals]
-
   return ()
