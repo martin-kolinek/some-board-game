@@ -22,7 +22,7 @@ executable some-board-game
   other-modules:       Style, Types,
                        Common.CssClass, Common.DomUtil,
                        Errors.Style, Errors.Dom,
-                       Board.Player.Dom, Board.Player.Style
+                       Board.Player.Dom, Board.Player.Style, Board.Player.Types
                        Board.Worker.Dom, Board.Worker.Style
                        Board.Dom, Board.Style
   -- other-extensions:

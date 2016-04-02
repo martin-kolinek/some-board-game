@@ -7,11 +7,19 @@ import Types
 import Common.DomUtil
 import Board.Worker.Dom
 import Board.Player.Style
+import Board.Player.Types
 
 import Reflex.Dom
 import Data.Maybe
 import Data.Map.Strict
 import Control.Monad
+
+drawPlayers :: (UniverseReader t m, MonadWidget t m) => m (PlayerExports t)
+drawPlayers = do
+  selectedPlayer <- drawPlayerSelection
+  freeWorkersDrawn <- mapDyn drawFreeWorkers selectedPlayer
+  nestedSelectedPlayer <- holdDyn (constDyn Nothing) =<< dyn freeWorkersDrawn
+  return $ PlayerExports (joinDyn nestedSelectedPlayer)
 
 drawPlayerSelection :: (UniverseReader t m, MonadWidget t m) => m (Dynamic t PlayerId)
 drawPlayerSelection = do
@@ -59,13 +67,28 @@ freeWorkers player = do
   let getFreeWorkers universe player = [w | w <- getWorkers universe player, isNothing $ getWorkerWorkplace universe w]
   mapDyn (flip getFreeWorkers player) universe
 
-drawFreeWorkers :: (UniverseReader t m, MonadWidget t m) => Dynamic t (Maybe WorkerId) -> PlayerId -> m (Event t WorkerId)
-drawFreeWorkers selectedWorker player = do
-  (_, ev) <- divCssClass freeWorkersClass $ do
-    free <- freeWorkers player
-    events <- animatedList (fromRational 1) free (drawWorker selectedWorker)
-    let combineWorkerClicks :: Reflex t => Map WorkerId (Event t WorkerId) -> Event t WorkerId
-        combineWorkerClicks workers = leftmost $ elems workers
-    combinedClicks <- combineWorkerClicks `mapDyn` events
-    return $ switch (current combinedClicks)
-  return ev
+drawFreeWorkers :: (UniverseReader t m, MonadWidget t m) => PlayerId -> m (Dynamic t (Maybe WorkerId))
+drawFreeWorkers playerId = do
+  rec
+    (_, ev) <- divCssClass freeWorkersClass $ do
+      free <- freeWorkers playerId
+      events <- animatedList (fromRational 1) free (drawWorker selectedWorker)
+      let combineWorkerClicks :: Reflex t => Map WorkerId (Event t WorkerId) -> Event t WorkerId
+          combineWorkerClicks workers = leftmost $ elems workers
+      combinedClicks <- combineWorkerClicks `mapDyn` events
+      return $  switch (current combinedClicks)
+    selectedWorker <- deselectActiveWorkers ev
+  return selectedWorker
+
+deselectActiveWorkers :: (UniverseReader t m, MonadWidget t m) => Event t WorkerId -> m (Dynamic t (Maybe WorkerId))
+deselectActiveWorkers workers = do
+  let removeNonFreeWorkers maybeWorker universe = do
+          worker <- maybeWorker
+          guard $ isNothing (getWorkerWorkplace universe worker)
+          return worker
+      justWorkers = Just <$> workers
+  heldWorkers <- hold Nothing justWorkers
+  universeChangeEvents <- updated <$> askUniverse
+  let filteredSelection = attachWith removeNonFreeWorkers heldWorkers universeChangeEvents
+  selectedWorkers <- holdDyn Nothing $ leftmost [filteredSelection, justWorkers]
+  return (nubDyn selectedWorkers)
