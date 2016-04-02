@@ -30,17 +30,19 @@ drawBoard = do
 
 drawWorkplaces :: (UniverseReader t m, MonadWidget t m) => m (Event t WorkplaceId)
 drawWorkplaces = do
-  workplaces <- askWorkplaces
-  let drawWorkplace workplaceId workplaceAction = do
-        workersInWorkplace <- askWorkplaceOccupants workplaceId
-        (el, _) <- divCssClass cardWrapperClass $
-          divCssClass cardClass $
-            animatedList (fromRational 1) workersInWorkplace (drawWorker $ constDyn Nothing)
-        return $ const workplaceId <$> domEvent Click el
-  events <- listWithKey workplaces drawWorkplace
-  let combineEvents map = leftmost (M.elems map)
-  event <- combineEvents `mapDyn` events
-  return $ switch (current event)
+  (_, result) <- divCssClass workplacesClass $ do
+    workplaces <- askWorkplaces
+    let drawWorkplace workplaceId workplaceAction = do
+          workersInWorkplace <- askWorkplaceOccupants workplaceId
+          (el, _) <- divCssClass cardWrapperClass $
+            divCssClass cardClass $
+              animatedList (fromRational 1) workersInWorkplace (drawWorker $ constDyn Nothing)
+          return $ const workplaceId <$> domEvent Click el
+    events <- listWithKey workplaces drawWorkplace
+    let combineEvents map = leftmost (M.elems map)
+    event <- combineEvents `mapDyn` events
+    return $ switch (current event)
+  return result
 
 askWorkplaces :: (UniverseReader t m, MonadWidget t m) => m (Dynamic t (Map WorkplaceId WorkplaceAction))
 askWorkplaces = join $ mapDyn getWorkplaces <$> askUniverse

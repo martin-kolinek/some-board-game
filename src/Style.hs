@@ -7,9 +7,9 @@ import Errors.Style
 import Board.Style
 
 import Clay
-import Data.ByteString.Lazy
+import Data.ByteString.Lazy hiding (repeat)
 import Data.Text.Lazy.Encoding
-import Prelude hiding (div)
+import Prelude hiding (div, repeat)
 
 finishClass = CssClass "finish"
 
@@ -18,6 +18,10 @@ mainStyle = do
   errorStyle
   boardStyle
   importUrl "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"
+  body ? do
+    backgroundImage $ url "data/background.png"
+    backgroundRepeat repeat
+  div ? margin nil nil nil nil
   star # classSelector finishClass ? do
     position fixed
     right (px 0)
