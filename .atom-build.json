@@ -1,0 +1,5 @@
+{
+  "cmd": "stack",
+  "args": ["--stack-yaml", "stack-ghcjs.yaml", "build"],
+  "errorMatch": "(?<file>[\\/0-9a-zA-Z\\._\\-]+):(?<line>\\d+):(?<col>\\d+):"
+}
