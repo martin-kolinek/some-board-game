@@ -33,7 +33,7 @@ workerStyle = do
       (0, opacity 0),
       (100, opacity 1)]
   star # classSelector workerClass ? do
-    background $ url "data/worker.svg"
+    background $ url "data/worker_green.svg"
     workerCommon
   star # classSelector activeWorkerClass ? do
     background (url "data/worker_glowing.svg")
