@@ -17,6 +17,8 @@ import Control.Monad
 drawPlayers :: (UniverseReader t m, MonadWidget t m) => m (PlayerExports t)
 drawPlayers = do
   selectedPlayer <- drawPlayerSelection
+  resourcesDrawn <- mapDyn drawPlayerResources selectedPlayer
+  dyn resourcesDrawn
   freeWorkersDrawn <- mapDyn drawFreeWorkers selectedPlayer
   nestedSelectedPlayer <- holdDyn (constDyn Nothing) =<< dyn freeWorkersDrawn
   return $ PlayerExports (joinDyn nestedSelectedPlayer)
@@ -25,19 +27,17 @@ drawPlayerSelection :: (UniverseReader t m, MonadWidget t m) => m (Dynamic t Pla
 drawPlayerSelection = do
   currentPlayerDyn <- askCurrentPlayer
   let selectedClass isSelected = if isSelected then selectedPlayerClass else mempty
-      currentClass isCurrent = if isCurrent then currentPlayerClass else mempty
+      drawCurrentPlayerIcon isCurrent = when isCurrent $ void (divCssClass currentPlayerClass (return ()))
       drawPlayer selectedPlayerId playerId  = do
         playerString <- mapDyn show playerId
         isSelected <- combineDyn (==) playerId selectedPlayerId
         selectedClassDyn <- mapDyn selectedClass isSelected
         isCurrent <- combineDyn ((==) . Just) playerId currentPlayerDyn
-        currentClassDyn <- mapDyn currentClass isCurrent
-        classDyn <- mconcatDyn [constDyn playerClass, currentClassDyn, selectedClassDyn]
-        scoreDyn <- askScore playerId
-        scoreTextDyn <- mapDyn show scoreDyn
+        classDyn <- mconcatDyn [constDyn playerClass, selectedClassDyn]
         (el, _) <- divCssClassDyn classDyn $ do
           dynText playerString
-          dynText scoreTextDyn
+          currentIconDrawn <- mapDyn drawCurrentPlayerIcon isCurrent
+          dyn currentIconDrawn
         let event = domEvent Click el
         return $ tag (current playerId) event
   rec
@@ -59,7 +59,16 @@ askCurrentPlayer =  join $ mapDyn getCurrentPlayer <$> askUniverse
 askPlayers :: (UniverseReader t m, MonadWidget t m) => m (Dynamic t [PlayerId])
 askPlayers = join $ mapDyn getPlayers <$> askUniverse
 
-askScore player = join $ combineDyn getScore <$> askUniverse <*> pure player
+drawPlayerResources :: (UniverseReader t m, MonadWidget t m) => PlayerId -> m ()
+drawPlayerResources player = do
+  divCssClass resourcesClass $ do
+    score <- askScore player
+    scoreText <- mapDyn show score
+    text "Score: "
+    dynText scoreText
+  return ()
+
+askScore player = join $ combineDyn getScore <$> askUniverse <*> pure (constDyn player)
 
 freeWorkers :: (UniverseReader t m, MonadWidget t m) => PlayerId -> m (Dynamic t [WorkerId])
 freeWorkers player = do
