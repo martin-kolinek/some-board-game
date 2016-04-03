@@ -10,21 +10,19 @@ import Style
 import Reflex.Dom
 import Data.Maybe
 import Control.Monad.Reader
+import Control.Monad.Except
 
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
     rec
-      let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ action universe
+      let applyActionWithTryFinishTurn :: UniverseAction -> Universe -> Either String Universe
+          applyActionWithTryFinishTurn action universe = do
+            withActionApplied <- action universe
+            catchError (finishTurn withActionApplied) (const $ return withActionApplied)
+      let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ applyActionWithTryFinishTurn action universe
       actions <- flip runReaderT universe $ do
-        finishActions <- drawFinish universe
-        boardActions <- drawBoard
-        let actions = leftmost [boardActions, finishActions]
+        actions <- drawBoard
         drawErrors actions
         return actions
       universe <- foldDyn tryApplyToUniverse initialUniverse actions
     return ()
-
-drawFinish :: MonadWidget t m => Dynamic t Universe -> m (Event t UniverseAction)
-drawFinish universeDyn = do
-  (_, event) <- divCssClass finishClass $ button "Finish turn"
-  return $ const finishTurn <$> event
