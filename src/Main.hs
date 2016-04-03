@@ -15,14 +15,16 @@ import Control.Monad.Except
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
     rec
-      let applyActionWithTryFinishTurn :: UniverseAction -> Universe -> Either String Universe
-          applyActionWithTryFinishTurn action universe = do
+      let applyActionWithTryFinishTurn :: Universe -> UniverseAction -> Either String Universe
+          applyActionWithTryFinishTurn universe action = do
             withActionApplied <- action universe
             catchError (finishTurn withActionApplied) (const $ return withActionApplied)
-      let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ applyActionWithTryFinishTurn action universe
+      let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ applyActionWithTryFinishTurn universe action
       actions <- flip runReaderT universe $ do
         actions <- drawBoard
         drawErrors actions
         return actions
-      universe <- foldDyn tryApplyToUniverse initialUniverse actions
+      let actionsApplied = attachWith applyActionWithTryFinishTurn (current universe) actions
+          correctMoves = fmapMaybe fromRight actionsApplied
+      universe <- holdDyn initialUniverse correctMoves
     return ()
