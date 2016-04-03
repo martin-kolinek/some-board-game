@@ -36,10 +36,10 @@ boardStyle = do
     backgroundSize contain
     backgroundRepeat noRepeat
   star # classSelector workplacesClass ? do
-    width (pct 60)
+    width (pct 50)
     backgroundImage $ url "data/cardbackground.png"
     backgroundRepeat repeat
-    borderRadius (px 10) (px 10) (px 10) (px 10)
-    borderColor "#1c0d00"
+    borderRadius (px 15) (px 15) (px 15) (px 15)
+    borderColor "#27231a"
     borderWidth (px 4)
     borderStyle solid
