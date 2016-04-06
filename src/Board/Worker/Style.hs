@@ -2,14 +2,40 @@
 
 module Board.Worker.Style where
 
+import Board.Settings.Types
 import Common.CssClass hiding (fadeClass)
 import qualified Common.CssClass as C
 
 import Clay
+import Control.Monad
 
 workerClass = CssClass "worker"
 activeWorkerClass = CssClass "active-worker"
 fadeClass = C.fadeClass
+
+colorClass PlayerRed = CssClass "worker-red"
+colorClass PlayerBlue = CssClass "worker-blue"
+colorClass PlayerCyan = CssClass "worker-cyan"
+colorClass PlayerGreen = CssClass "worker-green"
+colorClass PlayerWhite = CssClass "worker-white"
+colorClass PlayerOrange = CssClass "worker-orange"
+colorClass PlayerBlack = CssClass "worker-black"
+
+colorUrl PlayerRed = url "data/worker_red.svg"
+colorUrl PlayerBlue = url "data/worker_blue.svg"
+colorUrl PlayerCyan = url "data/worker_cyan.svg"
+colorUrl PlayerGreen = url "data/worker_green.svg"
+colorUrl PlayerWhite = url "data/worker_white.svg"
+colorUrl PlayerOrange = url "data/worker_yellow.svg"
+colorUrl PlayerBlack = url "data/worker_black.svg"
+
+colorGlowingUrl PlayerRed = url "data/worker_red_glowing.svg"
+colorGlowingUrl PlayerBlue = url "data/worker_blue_glowing.svg"
+colorGlowingUrl PlayerCyan = url "data/worker_cyan_glowing.svg"
+colorGlowingUrl PlayerGreen = url "data/worker_green_glowing.svg"
+colorGlowingUrl PlayerWhite = url "data/worker_white_glowing.svg"
+colorGlowingUrl PlayerOrange = url "data/worker_yellow_glowing.svg"
+colorGlowingUrl PlayerBlack = url "data/worker_black_glowing.svg"
 
 workerStyle = do
   let workerFade = do
@@ -32,6 +58,13 @@ workerStyle = do
   keyframes "worker-kf" [
       (0, opacity 0),
       (100, opacity 1)]
+  forM_ allPlayerColors $ \color -> do
+    star # classSelector (colorClass color) ? do
+      background $ colorUrl color
+      workerCommon
+    star # classSelector (colorClass color) # classSelector activeWorkerClass ? do
+      background $ colorGlowingUrl color
+      workerCommon
   star # classSelector workerClass ? do
     background $ url "data/worker_green.svg"
     workerCommon

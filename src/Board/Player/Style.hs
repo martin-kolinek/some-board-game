@@ -13,9 +13,9 @@ playerContainerClass = CssClass "player-container"
 
 freeWorkersClass = CssClass "free-workers"
 resourcesClass = CssClass "resources"
-playClass = CssClass "fa fa-play"
-currentPlayerIconClass = CssClass "current-player-icon"
-currentPlayerClass = playClass <> currentPlayerIconClass
+currentPlayerIconClassIcon = CssClass "fa fa-play"
+currentPlayerIconClassInternal = CssClass "current-player-icon"
+currentPlayerIconClass = currentPlayerIconClassIcon <> currentPlayerIconClassInternal
 
 playerStyle = do
   star # classSelector freeWorkersClass ? do
@@ -52,5 +52,5 @@ playerStyle = do
     padding (em 1) (em 1) (em 1) (em 1)
     boxSizing borderBox
     fontWeight bold
-  star # classSelector currentPlayerIconClass ?
+  star # classSelector currentPlayerIconClassInternal ?
     float floatRight

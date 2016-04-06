@@ -21,6 +21,7 @@ executable some-board-game
                        Common.CssClass, Common.DomUtil,
                        Errors.Style, Errors.Dom,
                        Board.Player.Dom, Board.Player.Style, Board.Player.Types
+                       Board.Settings.Dom, Board.Settings.Style, Board.Settings.Types
                        Board.Worker.Dom, Board.Worker.Style
                        Board.Dom, Board.Style
   -- other-extensions:
@@ -36,7 +37,9 @@ executable some-board-game
                        transformers,
                        time,
                        these,
-                       mtl
+                       mtl,
+                       lens,
+                       data-default
 
   hs-source-dirs:      src
   default-language:    Haskell2010

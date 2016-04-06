@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, ScopedTypeVariables, FlexibleContexts, TupleSections #-}
+{-# LANGUAGE RecursiveDo, ScopedTypeVariables, FlexibleContexts, TupleSections, FlexibleInstances, MultiParamTypeClasses #-}
 
 import Rules
 import Common.DomUtil
@@ -11,6 +11,8 @@ import Reflex.Dom
 import Data.Maybe
 import Control.Monad.Reader
 import Control.Monad.Except
+
+instance ContainsUniverse (Dynamic t Universe) t where extractUniverse = id
 
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do

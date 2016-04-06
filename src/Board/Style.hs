@@ -5,6 +5,7 @@ module Board.Style where
 import Common.CssClass
 import Board.Player.Style
 import Board.Worker.Style
+import Board.Settings.Style
 import Prelude hiding (repeat)
 
 import Clay
@@ -16,6 +17,7 @@ workplacesClass = CssClass "workplaces"
 boardStyle = do
   playerStyle
   workerStyle
+  boardSettingsStyle
   star # classSelector cardWrapperClass ? do
     width $ em 8
     display inlineBlock

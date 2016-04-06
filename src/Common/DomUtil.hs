@@ -1,4 +1,5 @@
-{-#LANGUAGE TupleSections, ScopedTypeVariables, LambdaCase #-}
+{-# LANGUAGE TupleSections, ScopedTypeVariables, LambdaCase,
+   MultiParamTypeClasses, FlexibleInstances, InstanceSigs #-}
 module Common.DomUtil where
 
 import Reflex
@@ -17,6 +18,7 @@ import Reflex.Host.Class
 import Data.Align
 import Data.These
 import Data.Either
+import Data.Default
 
 data AnimationState = Initial | Standard | Fading deriving (Show, Eq)
 
@@ -78,3 +80,36 @@ buttonSpanCssClass :: MonadWidget t m => CssClass -> m a -> m (Event t ())
 buttonSpanCssClass (CssClass className) inside = do
   (el, a) <- elAttr' "span" ("class" =: className) inside
   return $ domEvent Click el
+
+class MonadWidget t m => ExtractableFromEvent t m b where
+   extractFromEvent :: Event t b -> m b
+
+instance MonadWidget t m => ExtractableFromEvent t m (Event t b) where
+  extractFromEvent event = do
+    held <- hold never event
+    return $ switch held
+
+instance (MonadWidget t m, Default b) => ExtractableFromEvent t m (Dynamic t b) where
+  extractFromEvent event = do
+    held <- holdDyn (constDyn def) event
+    return $ joinDyn held
+
+instance (MonadWidget t m, ExtractableFromEvent t m a, ExtractableFromEvent t m b) => ExtractableFromEvent t m (a, b) where
+  extractFromEvent event = do
+    let aev = fst <$> event
+    let bev = snd <$> event
+    a <- extractFromEvent aev
+    b <- extractFromEvent bev
+    return (a, b)
+
+instance MonadWidget t m => ExtractableFromEvent t m () where
+  extractFromEvent event = return ()
+
+mapDynExtract :: (ExtractableFromEvent t m b, MonadWidget t m) => (a -> m b) -> Dynamic t a -> m b
+mapDynExtract func dynamic = do
+  mapped <- mapDyn func dynamic
+  dyned <- dyn mapped
+  extractFromEvent dyned
+
+leftmostPair :: Reflex t => [(Event t a, Event t b)] -> (Event t a, Event t b)
+leftmostPair events = (leftmost (fst <$> events), leftmost (snd <$> events))
