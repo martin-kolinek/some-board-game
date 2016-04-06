@@ -13,9 +13,9 @@ drawSettingsIcon = do
   rec
     (el, _) <- divCssClass settingsIconClass $ return ()
     let settingsIconClicks = domEvent Click el
-        combinedEvents = leftmost [settingsIconClicks, shroudClicks]
-    settingsVisible <- toggle False $ combinedEvents
-    settingsChanges <- mapDynExtract drawSettingsWindow settingsVisible
+        combinedEvents = leftmost [settingsIconClicks, shroudClicks, closePopupClicks]
+    settingsVisible <- toggle False combinedEvents
+    (settingsChanges, closePopupClicks) <- mapDynExtract drawSettingsWindow settingsVisible
     shroudClicks <- mapDynExtract drawShroud settingsVisible
   foldDyn updatePlayerSettings initialSettings settingsChanges
 
@@ -25,9 +25,15 @@ drawShroud True = do
   (el, _) <- divCssClass shroudClass $ return ()
   return (domEvent Click el)
 
-drawSettingsWindow :: MonadWidget t m => Bool -> m (Event t SinglePlayerSettings)
-drawSettingsWindow False = return never
+drawSettingsWindow :: MonadWidget t m => Bool -> m (Event t SinglePlayerSettings, Event t ())
+drawSettingsWindow False = return (never, never)
 drawSettingsWindow True = do
   (_, result) <- divCssClass settingsPopupClass $ do
-    return never
+    closeClicks <- drawSettingsClose
+    return (never, closeClicks)
   return result
+
+drawSettingsClose :: MonadWidget t m => m (Event t ())
+drawSettingsClose = do
+  (el, _) <- divCssClass settingsPopupClose $ return ()
+  return $ domEvent Click el

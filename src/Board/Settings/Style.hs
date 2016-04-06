@@ -10,6 +10,11 @@ settingsIconClassInternal = CssClass "settings-icon"
 settingsIconClass = settingsIconClassSymbol <> settingsIconClassInternal
 
 settingsPopupClass = CssClass "settings-popup"
+
+settingsPopupCloseIcon = CssClass "fa fa-times"
+settingsPopupCloseInternal = CssClass "settings-popup-close"
+settingsPopupClose = settingsPopupCloseIcon <> settingsPopupCloseInternal
+
 shroudClass = CssClass "shroud"
 
 boardSettingsStyle = do
@@ -29,6 +34,12 @@ boardSettingsStyle = do
     width (em 40)
     backgroundColor red
     zIndex 2
+  star # classSelector settingsPopupCloseInternal ? do
+    position absolute
+    right (pt 5)
+    top (pt 5)
+    fontSize (pt 15)
+    cursor pointer
   star # classSelector shroudClass ? do
     zIndex 1
     position fixed
