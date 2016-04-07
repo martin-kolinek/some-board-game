@@ -1,9 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Board.Settings.Style where
 
 import Common.CssClass
 
 import Data.Monoid
 import Clay
+import Prelude hiding ((**))
 
 settingsIconClassSymbol = CssClass "fa fa-cog"
 settingsIconClassInternal = CssClass "settings-icon"
@@ -17,6 +20,8 @@ settingsPopupClose = settingsPopupCloseIcon <> settingsPopupCloseInternal
 
 shroudClass = CssClass "shroud"
 
+settingsLineClass = CssClass "settings-line"
+
 boardSettingsStyle = do
   star # classSelector settingsIconClassInternal ? do
     position fixed
@@ -28,17 +33,22 @@ boardSettingsStyle = do
     position fixed
     left (pct 50)
     top (pct 50)
-    marginTop (em (-10))
-    height (em 20)
-    marginLeft (em (-20))
-    width (em 40)
-    backgroundColor red
+    marginTop (em (-15))
+    height (em 30)
+    marginLeft (em (-24))
+    width (em 48)
+    backgroundImage $ url "data/background.png"
+    borderWidth (px 3)
+    borderStyle solid
+    borderColor "#222222"
+    padding (em 3) (em 3) (em 3) (em 3)
+    borderRadius (px 15) (px 15) (px 15) (px 15)
     zIndex 2
   star # classSelector settingsPopupCloseInternal ? do
     position absolute
-    right (pt 5)
-    top (pt 5)
-    fontSize (pt 15)
+    right (pt 10)
+    top (pt 10)
+    fontSize (pt 20)
     cursor pointer
   star # classSelector shroudClass ? do
     zIndex 1
@@ -50,3 +60,10 @@ boardSettingsStyle = do
     margin nil nil nil nil
     opacity 0.6
     backgroundColor black
+  star # classSelector settingsLineClass ? do
+    height (em 4.4)
+    lineHeight (em 4.4)
+    margin (em 0.8) (em 0.8) (em 0.8) (em 0.8)
+  star # classSelector settingsLineClass ** input ? do
+    verticalAlign middle
+    marginRight (em 3)

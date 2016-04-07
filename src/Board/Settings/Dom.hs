@@ -8,11 +8,13 @@ import Types
 import Board.Settings.Types
 import Board.Settings.Style
 import Board.Player.Dom
+import Board.Worker.Style
 import Common.DomUtil
-import Data.Map.Strict
 
 import Reflex.Dom
 import Control.Monad
+import Data.Map.Strict
+import Data.Monoid
 
 drawSettingsIcon :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => m (Dynamic t PlayerSettings)
 drawSettingsIcon = do
@@ -49,12 +51,32 @@ drawSettingsClose = do
   return $ domEvent Click el
 
 drawPlayerSettings :: (PlayerSettingsReader t m x, MonadWidget t m) => PlayerId -> Dynamic t () -> m (Event t SinglePlayerSettings)
-drawPlayerSettings playerId _ = do
+drawPlayerSettings playerId _ = divCssClass' settingsLineClass $ do
   currentSettings <- askSinglePlayerSettings playerId
   postBuild <- getPostBuild
-  input <- textInput $ def
+  nameInput <- textInput $ def
                         & setValue .~ tag (playerName <$> current currentSettings) postBuild
-  let nameDyn = value input
-      createSinglePlayerSettings name = SinglePlayerSettings name PlayerGreen playerId
-      filteredChanges = traceEvent "aaa" $ ffilter (uncurry (/=)) $ attach (playerName <$> current currentSettings) (updated nameDyn)
-  return $ createSinglePlayerSettings <$> (snd <$> filteredChanges)
+  colorSelections <- drawColorSelection playerId
+  let nameDyn = value nameInput
+      createSinglePlayerSettingsWithName oldSettings name = SinglePlayerSettings name (playerColor oldSettings) playerId
+      createSinglePlayerSettingsWithColor oldSettings color = SinglePlayerSettings (playerName oldSettings) color playerId
+      nameChanges = attachWith createSinglePlayerSettingsWithName (current currentSettings) (updated nameDyn)
+      colorChanges = attachWith createSinglePlayerSettingsWithColor (current currentSettings) colorSelections
+      filteredChanges = ffilter (uncurry (/=)) $ attach (current currentSettings) (leftmost [nameChanges, colorChanges])
+  return $ snd <$> filteredChanges
+
+drawColorSelection :: (PlayerSettingsReader t m x, MonadWidget t m) => PlayerId -> m (Event t PlayerColor)
+drawColorSelection playerId = do
+  playerSettings <- askSinglePlayerSettings playerId
+  currentColor <- mapDyn playerColor playerSettings
+  events <- forM allPlayerColors $ drawColor currentColor
+  return $ leftmost events
+
+drawColor :: MonadWidget t m => Dynamic t PlayerColor -> PlayerColor -> m (Event t PlayerColor)
+drawColor selectedColorDyn color = do
+  let cls selectedColor
+            | selectedColor == color = colorClass color <> activeWorkerClass
+            | otherwise = colorClass color
+  classToDraw <- mapDyn cls selectedColorDyn
+  (el, _) <- divCssClassDyn classToDraw $ return ()
+  return $ const color <$> domEvent Click el

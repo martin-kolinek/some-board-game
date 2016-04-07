@@ -76,6 +76,8 @@ divCssClassDyn cls inner = do
   attrDyn <- mapDyn (("class" =: ) . extractClassName) cls
   elDynAttr' "div" attrDyn inner
 
+divCssClass' cls a = snd <$> divCssClass cls a
+
 buttonSpanCssClass :: MonadWidget t m => CssClass -> m a -> m (Event t ())
 buttonSpanCssClass (CssClass className) inside = do
   (el, a) <- elAttr' "span" ("class" =: className) inside

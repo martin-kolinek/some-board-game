@@ -8,7 +8,7 @@ import Data.Maybe
 import Reflex.Dom
 import Control.Monad.Reader
 
-data PlayerColor = PlayerGreen | PlayerBlue | PlayerRed | PlayerCyan | PlayerOrange | PlayerWhite | PlayerBlack deriving Show
+data PlayerColor = PlayerGreen | PlayerBlue | PlayerRed | PlayerCyan | PlayerOrange | PlayerWhite | PlayerBlack deriving (Show, Eq)
 
 allPlayerColors = [PlayerGreen, PlayerBlue, PlayerRed, PlayerCyan, PlayerOrange, PlayerWhite, PlayerBlack]
 
@@ -16,7 +16,7 @@ data SinglePlayerSettings = SinglePlayerSettings {
   playerName :: String,
   playerColor :: PlayerColor,
   settingsPlayerId :: PlayerId
-} deriving Show
+} deriving (Show, Eq)
 
 type PlayerSettings = [SinglePlayerSettings]
 

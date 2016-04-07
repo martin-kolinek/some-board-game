@@ -12,6 +12,7 @@ import Control.Monad
 workerClass = CssClass "worker"
 activeWorkerClass = CssClass "active-worker"
 fadeClass = C.fadeClass
+workerAnimationClass = CssClass "worker-animation"
 
 colorClass PlayerRed = CssClass "worker-red"
 colorClass PlayerBlue = CssClass "worker-blue"
@@ -52,9 +53,7 @@ workerStyle = do
         height $ em 4
         backgroundSize contain
         backgroundRepeat noRepeat
-        animationName "worker-kf"
-        animationDuration (sec 1)
-        animationIterationCount (iterationCount 1)
+        verticalAlign vAlignTop
   keyframes "worker-kf" [
       (0, opacity 0),
       (100, opacity 1)]
@@ -65,6 +64,10 @@ workerStyle = do
     star # classSelector (colorClass color) # classSelector activeWorkerClass ? do
       background $ colorGlowingUrl color
       workerCommon
+  star # classSelector workerAnimationClass ? do
+    animationName "worker-kf"
+    animationDuration (sec 1)
+    animationIterationCount (iterationCount 1)
   star # classSelector workerClass ? do
     background $ url "data/worker_green.svg"
     workerCommon
