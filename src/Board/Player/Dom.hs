@@ -95,7 +95,7 @@ freeWorkers player = do
   let getFreeWorkers universe player = [w | w <- getWorkers universe player, isNothing $ getWorkerWorkplace universe w]
   mapDyn (flip getFreeWorkers player) universe
 
-drawFreeWorkers :: (UniverseReader t m x, MonadWidget t m) => PlayerId -> m (Dynamic t (Maybe WorkerId))
+drawFreeWorkers :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (Dynamic t (Maybe WorkerId))
 drawFreeWorkers playerId = do
   rec
     (_, ev) <- divCssClass freeWorkersClass $ do

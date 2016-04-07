@@ -40,7 +40,7 @@ drawBoard = do
       return (uncurry startWorking <$> workAssignemnts, innerSettings)
   return result
 
-drawWorkplaces :: (UniverseReader t m x, MonadWidget t m) => m (Event t WorkplaceId)
+drawWorkplaces :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => m (Event t WorkplaceId)
 drawWorkplaces = do
   (_, result) <- divCssClass workplacesClass $ do
     workplaces <- askWorkplaces

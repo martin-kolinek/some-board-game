@@ -9,7 +9,6 @@ import qualified Common.CssClass as C
 import Clay
 import Control.Monad
 
-workerClass = CssClass "worker"
 activeWorkerClass = CssClass "active-worker"
 fadeClass = C.fadeClass
 workerAnimationClass = CssClass "worker-animation"
@@ -64,15 +63,8 @@ workerStyle = do
     star # classSelector (colorClass color) # classSelector activeWorkerClass ? do
       background $ colorGlowingUrl color
       workerCommon
+    star # classSelector (colorClass color) # classSelector fadeClass ? workerFade
   star # classSelector workerAnimationClass ? do
     animationName "worker-kf"
     animationDuration (sec 1)
     animationIterationCount (iterationCount 1)
-  star # classSelector workerClass ? do
-    background $ url "data/worker_green.svg"
-    workerCommon
-  star # classSelector activeWorkerClass ? do
-    background (url "data/worker_green_glowing.svg")
-    workerCommon
-  star # classSelector workerClass # classSelector fadeClass ? workerFade
-  star # classSelector activeWorkerClass # classSelector fadeClass ? workerFade
