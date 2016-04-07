@@ -25,7 +25,18 @@ drawSettingsIcon = do
     settingsVisible <- toggle False combinedEvents
     (settingsChanges, closePopupClicks) <- mapDynExtract drawSettingsWindow settingsVisible
     shroudClicks <- mapDynExtract drawShroud settingsVisible
-  foldDyn updatePlayerSettings initialSettings settingsChanges
+    postBuild <- getPostBuild
+    universe <- askUniverse
+    let postBuildSettings = createInitialSettings <$> tag (current universe) postBuild
+        settingsEvents = attachWith (flip updatePlayerSettings) (current settingsDyn) settingsChanges
+        allSettingsEvents = leftmost [settingsEvents, postBuildSettings]
+    settingsDyn <- holdDyn initialSettings allSettingsEvents
+  return settingsDyn
+
+createInitialSettings universe =
+  let playerNames = (("Player " ++) . show) <$> [1..]
+      zipped = zip (zip playerNames (cycle allPlayerColors)) (getPlayers universe)
+  in uncurry (uncurry SinglePlayerSettings) <$> zipped
 
 drawShroud :: MonadWidget t m => Bool -> m (Event t ())
 drawShroud False = return never
