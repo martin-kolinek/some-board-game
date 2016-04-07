@@ -27,9 +27,9 @@ instance ContainsPlayerSettings (a, Dynamic t PlayerSettings) t where
 drawBoard :: (UniverseReader t m x, MonadWidget t m) => m (Event t UniverseAction)
 drawBoard = do
   universeDyn <- askUniverse
-  settings <- drawSettingsIcon
-  flip runReaderT (universeDyn, settings) $ do
-    rec
+  rec
+    (result, settings) <- flip runReaderT (universeDyn, settings) $ do
+      innerSettings <- drawSettingsIcon
       playerExports <- drawPlayers
       workplaceClicks <- drawWorkplaces
       let selectedWorker = extractSelectedWorker playerExports
@@ -37,7 +37,8 @@ drawBoard = do
           extractAssignWork (Just worker, workplace) = Just (worker, workplace)
           extractAssignWork _ = Nothing
           workAssignemnts = fmapMaybe extractAssignWork workplaceClicksWithSelectedWorker
-    return $ uncurry startWorking <$> workAssignemnts
+      return (uncurry startWorking <$> workAssignemnts, innerSettings)
+  return result
 
 drawWorkplaces :: (UniverseReader t m x, MonadWidget t m) => m (Event t WorkplaceId)
 drawWorkplaces = do
