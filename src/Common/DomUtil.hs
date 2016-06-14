@@ -19,6 +19,8 @@ import Data.Align
 import Data.These
 import Data.Either
 import Data.Default
+import Clay (Css, renderWith, compact)
+import Data.Text.Lazy as T (unpack, tail, init)
 
 data AnimationState = Initial | Standard | Fading deriving (Show, Eq)
 
@@ -115,3 +117,6 @@ mapDynExtract func dynamic = do
 
 leftmostPair :: Reflex t => [(Event t a, Event t b)] -> (Event t a, Event t b)
 leftmostPair events = (leftmost (fst <$> events), leftmost (snd <$> events))
+
+styleStringFromCss :: Css -> String
+styleStringFromCss = unpack . T.tail . T.init . renderWith compact []

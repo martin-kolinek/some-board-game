@@ -2,10 +2,11 @@
 
 module Board.Player.Style where
 
+import Board.Player.Building.Style
 import Common.CssClass
-import Data.Monoid
 
 import Clay
+import Data.Monoid
 
 playerClass = CssClass "player"
 selectedPlayerClass = CssClass "selected-player"
@@ -18,6 +19,7 @@ currentPlayerIconClassInternal = CssClass "current-player-icon"
 currentPlayerIconClass = currentPlayerIconClassIcon <> currentPlayerIconClassInternal
 
 playerStyle = do
+  buildingStyle
   star # classSelector freeWorkersClass ? do
     position fixed
     bottom (em 2)

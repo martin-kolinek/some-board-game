@@ -8,6 +8,7 @@ import Common.DomUtil
 import Board.Worker.Dom
 import Board.Player.Style
 import Board.Player.Types
+import Board.Player.Building.Dom
 import Board.Settings.Types
 
 import Reflex.Dom
@@ -25,6 +26,7 @@ drawPlayers = do
   dyn resourcesDrawn
   freeWorkersDrawn <- mapDyn drawFreeWorkers selectedPlayer
   nestedSelectedPlayer <- holdDyn (constDyn Nothing) =<< dyn freeWorkersDrawn
+  mapDynExtract drawBuildingSpace selectedPlayer
   return $ PlayerExports (joinDyn nestedSelectedPlayer)
 
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
