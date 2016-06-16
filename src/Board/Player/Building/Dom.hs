@@ -32,13 +32,16 @@ drawBuildings buildings = void $ divCssClass buildingSpaceClass $
 
 drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => Dynamic t BuildingOccupants -> m (Dynamic t (Maybe WorkerId))
 drawBuildingOccupants occupants = do
+  universe <- askUniverse
   rec
     (_, lastClickedOccupant) <- divCssClass buildingSpaceClass $ do
       clicks <- forM availableBuildingPositions $ \position -> do
         positionOccupants <- mapDyn (findWithDefault [] position) occupants
+        let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
+        filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universe
         elAttr "div" ("style" =: styleStringFromCss (placeholderTileCss position)) $ do
           let combineOccupantClicks workers = leftmost $ elems workers
-          occupantClicks <- animatedList (fromRational 1) positionOccupants (drawWorkplaceOccupant selectedOccupant)
+          occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
           combinedClicks <- combineOccupantClicks `mapDyn` occupantClicks
           return $ switch (current combinedClicks)
       return $ leftmost clicks
