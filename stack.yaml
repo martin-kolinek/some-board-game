@@ -4,7 +4,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/martin-kolinek/some-board-game-rules.git
-    commit: 7c42f6e349e1da2fe6e9d62c0cf1d5ec40462146
+    commit: 44eb6dd2871117072cc9cd8ab9b0086e9d16c6e5
 extra-deps:
 - ghcjs-dom-0.2.3.1
 - haskell-src-exts-1.16.0.1
