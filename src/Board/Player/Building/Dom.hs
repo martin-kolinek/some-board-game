@@ -16,14 +16,13 @@ import Data.Text.Lazy
 import Data.Map
 import Data.Maybe
 
-drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m ()
+drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (Dynamic t (Maybe WorkerId))
 drawBuildingSpace playerId = do
   universe <- askUniverse
   buildings <- mapDyn (`getBuildingSpace` playerId) universe
   mapDynExtract drawBuildings buildings
   buildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
   drawBuildingOccupants buildingOccupants
-  return ()
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
 drawBuildings buildings = void $ divCssClass buildingSpaceClass $
@@ -31,7 +30,7 @@ drawBuildings buildings = void $ divCssClass buildingSpaceClass $
     let style = styleStringFromCss $ buildingCss building
     elAttr "div" ("style" =: style) $ return ()
 
-drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => Dynamic t BuildingOccupants -> m (Dynamic t (Maybe BuildingOccupant))
+drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => Dynamic t BuildingOccupants -> m (Dynamic t (Maybe WorkerId))
 drawBuildingOccupants occupants = do
   rec
     (_, lastClickedOccupant) <- divCssClass buildingSpaceClass $ do
@@ -44,7 +43,8 @@ drawBuildingOccupants occupants = do
           return $ switch (current combinedClicks)
       return $ leftmost clicks
     selectedOccupant <- deselectInvalidOccupants lastClickedOccupant
-  return selectedOccupant
+    selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
+  return selectedWorker
 
 deselectInvalidOccupants :: (UniverseReader t m x, MonadWidget t m) => Event t BuildingOccupant -> m (Dynamic t (Maybe BuildingOccupant))
 deselectInvalidOccupants occupants = do
