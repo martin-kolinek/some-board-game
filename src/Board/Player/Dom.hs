@@ -23,8 +23,7 @@ drawPlayers :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t 
 drawPlayers = do
   selectedPlayer <- drawPlayerSelection
   resourcesDrawn <- mapDynExtract drawPlayerResources selectedPlayer
-  selectedWorker <- mapDynExtract drawBuildingSpace selectedPlayer
-  return $ PlayerExports selectedWorker
+  mapDynExtract drawBuildingSpace selectedPlayer
 
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
 

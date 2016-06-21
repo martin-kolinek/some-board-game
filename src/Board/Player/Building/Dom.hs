@@ -4,25 +4,30 @@ module Board.Player.Building.Dom where
 
 import Rules
 import Types
-import Clay
+import Clay hiding (Position, id)
 import Common.DomUtil
 import Board.Player.Building.Style
+import Board.Player.Types
 import Board.Worker.Dom
 import Board.Settings.Types
 
 import Reflex.Dom
 import Control.Monad
 import Data.Text.Lazy
-import Data.Map
+import Data.Map as M
 import Data.Maybe
+import Control.Arrow ((***))
 
-drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (Dynamic t (Maybe WorkerId))
+drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (PlayerExports t)
 drawBuildingSpace playerId = do
   universe <- askUniverse
   buildings <- mapDyn (`getBuildingSpace` playerId) universe
   mapDynExtract drawBuildings buildings
   buildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
-  drawBuildingOccupants buildingOccupants
+  (selectedWorker, occupantChanges) <- drawBuildingOccupants buildingOccupants
+  currentBuildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
+  let wholeOccupantChanges = traceEvent "asdf" $ attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
+  return $ PlayerExports selectedWorker wholeOccupantChanges
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
 drawBuildings buildings = void $ divCssClass buildingSpaceClass $
@@ -30,24 +35,34 @@ drawBuildings buildings = void $ divCssClass buildingSpaceClass $
     let style = styleStringFromCss $ buildingCss building
     elAttr "div" ("style" =: style) $ return ()
 
-drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => Dynamic t BuildingOccupants -> m (Dynamic t (Maybe WorkerId))
+drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => Dynamic t BuildingOccupants -> m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
 drawBuildingOccupants occupants = do
   universe <- askUniverse
   rec
-    (_, lastClickedOccupant) <- divCssClass buildingSpaceClass $ do
+    (_, (lastClickedOccupant, lastClickedPosition)) <- divCssClass buildingSpaceClass $ do
       clicks <- forM availableBuildingPositions $ \position -> do
         positionOccupants <- mapDyn (findWithDefault [] position) occupants
         let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
         filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universe
-        elAttr "div" ("style" =: styleStringFromCss (placeholderTileCss position)) $ do
+        (positionDiv, insideClicks) <- elAttr' "div" ("style" =: styleStringFromCss (placeholderTileCss position)) $ do
           let combineOccupantClicks workers = leftmost $ elems workers
           occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
           combinedClicks <- combineOccupantClicks `mapDyn` occupantClicks
           return $ switch (current combinedClicks)
-      return $ leftmost clicks
+        return (insideClicks, const position <$> domEvent Click positionDiv)
+      return $ (leftmost *** leftmost) $ unzip clicks
     selectedOccupant <- deselectInvalidOccupants lastClickedOccupant
     selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
-  return selectedWorker
+    let occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
+  return (selectedWorker, occupantChanges)
+
+findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
+findOccupantChanges selectedOccupant clickedPosition =
+  let removeOccupant occupant = M.map (Prelude.filter (/= occupant))
+      addOccupant occupant = alter (pure . (occupant:) . fromMaybe [])
+      modifyMap (Just occ) pos = addOccupant occ pos . removeOccupant occ
+      modifyMap _ _ = id
+  in attachWith modifyMap (current selectedOccupant) clickedPosition
 
 deselectInvalidOccupants :: (UniverseReader t m x, MonadWidget t m) => Event t BuildingOccupant -> m (Dynamic t (Maybe BuildingOccupant))
 deselectInvalidOccupants occupants = do
