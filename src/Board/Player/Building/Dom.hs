@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RecursiveDo, TupleSections #-}
 
 module Board.Player.Building.Dom where
 
@@ -26,8 +26,10 @@ drawBuildingSpace playerId = do
   buildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
   (selectedWorker, occupantChanges) <- drawBuildingOccupants buildingOccupants
   currentBuildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
-  let wholeOccupantChanges = traceEvent "asdf" $ attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
-  return $ PlayerExports selectedWorker wholeOccupantChanges
+  let wholeOccupantChanges = attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
+  playerStatus <- mapDyn (`getPlayerStatus` playerId) universe
+  positionSelections <- mapDynExtract drawPositionSelection playerStatus
+  return $ PlayerExports selectedWorker wholeOccupantChanges positionSelections
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
 drawBuildings buildings = void $ divCssClass buildingSpaceClass $
@@ -55,6 +57,16 @@ drawBuildingOccupants occupants = do
     selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
     let occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
   return (selectedWorker, occupantChanges)
+
+drawPositionSelection :: (MonadWidget t m) => PlayerStatus -> m (Event t Position)
+drawPositionSelection CuttingForest = do
+  (_, result) <- divCssClass buildingSpaceClass $ do
+    events <- forM availableBuildingPositions $ \position -> do
+      (element, _) <- elAttr' "div" ("style" =: styleStringFromCss (placeholderTileCss position)) $ return ()
+      return $ const position <$> domEvent Click element
+    return $ leftmost events
+  return result
+drawPositionSelection _ = return never
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
 findOccupantChanges selectedOccupant clickedPosition =
@@ -87,7 +99,7 @@ drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState 
 
 workerFromOccupant (WorkerOccupant workerId) = Just workerId
 
-buildingCss (Grass position) = backgroundColor green >> positionCss position >> commonBuildingCss
+buildingCss (Grass position) = backgroundColor lightgreen >> positionCss position >> commonBuildingCss
 buildingCss (Forest position) = backgroundColor darkgreen >> positionCss position >> commonBuildingCss
 buildingCss (Rock position) = backgroundColor gray >> positionCss position >> commonBuildingCss
 buildingCss (InitialRoom position) = backgroundColor red >> positionCss position >> commonBuildingCss

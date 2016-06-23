@@ -39,7 +39,8 @@ drawBoard = do
           workAssignemnts = fmapMaybe extractAssignWork workplaceClicksWithSelectedWorker
           startWorkingActions = uncurry startWorking <$> workAssignemnts
           changeOccupantsActions = uncurry alterOccupants <$> extractOccupantChanges playerExports
-      return (leftmost [startWorkingActions, changeOccupantsActions], innerSettings)
+          selectPositions = (`selectPosition` DirectionDown) <$> extractPositionSelections playerExports
+      return (leftmost [startWorkingActions, changeOccupantsActions, selectPositions], innerSettings)
   return result
 
 drawWorkplaces :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => m (Event t WorkplaceId)
