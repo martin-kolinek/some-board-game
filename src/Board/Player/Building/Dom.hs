@@ -4,7 +4,7 @@ module Board.Player.Building.Dom where
 
 import Rules
 import Types
-import Clay hiding (Position, id)
+import Clay hiding (Position, id, Direction)
 import Common.DomUtil
 import Board.Player.Building.Style
 import Board.Player.Types
@@ -17,6 +17,7 @@ import Data.Text.Lazy
 import Data.Map as M
 import Data.Maybe
 import Control.Arrow ((***))
+import Data.Tuple
 
 drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (PlayerExports t)
 drawBuildingSpace playerId = do
@@ -58,12 +59,16 @@ drawBuildingOccupants occupants = do
     let occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
   return (selectedWorker, occupantChanges)
 
-drawPositionSelection :: (MonadWidget t m) => PlayerStatus -> m (Event t Position)
+drawPositionSelection :: (MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction))
 drawPositionSelection CuttingForest = do
   (_, result) <- divCssClass buildingSpaceClass $ do
+    (rotateElement, _) <- divCssClass rotateButtonWrapperClass $ divCssClass rotateButtonClass $ return ()
+    let rotateClicks = domEvent Click rotateElement
+    direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
     events <- forM availableBuildingPositions $ \position -> do
       (element, _) <- elAttr' "div" ("style" =: styleStringFromCss (placeholderTileCss position)) $ return ()
-      return $ const position <$> domEvent Click element
+      let positionClicks = const position <$> domEvent Click element
+      return $ swap <$> attach (current direction) positionClicks
     return $ leftmost events
   return result
 drawPositionSelection _ = return never
@@ -109,3 +114,8 @@ commonBuildingCss = width (em 12) >> height (em 12) >> position absolute >> bord
 positionCss (x, y) = left (em $ fromIntegral x*12) >> top (em $ fromIntegral y*12)
 
 placeholderTileCss position = positionCss position >> commonBuildingCss
+
+nextDirection DirectionUp = DirectionRight
+nextDirection DirectionRight = DirectionDown
+nextDirection DirectionDown = DirectionLeft
+nextDirection DirectionLeft = DirectionUp

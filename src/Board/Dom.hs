@@ -39,7 +39,7 @@ drawBoard = do
           workAssignemnts = fmapMaybe extractAssignWork workplaceClicksWithSelectedWorker
           startWorkingActions = uncurry startWorking <$> workAssignemnts
           changeOccupantsActions = uncurry alterOccupants <$> extractOccupantChanges playerExports
-          selectPositions = (`selectPosition` DirectionDown) <$> extractPositionSelections playerExports
+          selectPositions = uncurry selectPosition <$> extractPositionSelections playerExports
       return (leftmost [startWorkingActions, changeOccupantsActions, selectPositions], innerSettings)
   return result
 
