@@ -18,6 +18,8 @@ import Data.Map as M
 import Data.Maybe
 import Control.Arrow ((***))
 import Data.Tuple
+import Data.Monoid
+import Data.AdditiveGroup
 
 drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (PlayerExports t)
 drawBuildingSpace playerId = do
@@ -62,14 +64,26 @@ drawBuildingOccupants occupants = do
 drawPositionSelection :: (MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction))
 drawPositionSelection CuttingForest = do
   (_, result) <- divCssClass buildingSpaceClass $ do
-    (rotateElement, _) <- divCssClass rotateButtonWrapperClass $ divCssClass rotateButtonClass $ return ()
-    let rotateClicks = domEvent Click rotateElement
-    direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
-    events <- forM availableBuildingPositions $ \position -> do
-      (element, _) <- elAttr' "div" ("style" =: styleStringFromCss (placeholderTileCss position)) $ return ()
-      let positionClicks = const position <$> domEvent Click element
-      return $ swap <$> attach (current direction) positionClicks
-    return $ leftmost events
+    rec
+      (rotateElement, _) <- divCssClass rotateButtonWrapperClass $ divCssClass rotateButtonClass $ return ()
+      let rotateClicks = domEvent Click rotateElement
+      direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
+      positionData <- forM availableBuildingPositions $ \position -> do
+        let isPositionHighlighted hoveredPosition rotation currentPosition =
+                hoveredPosition == Just currentPosition ||
+                  Just currentPosition == ((^+^ directionAddition rotation) <$> hoveredPosition)
+            styleFunc pos rot
+              | isPositionHighlighted pos rot position = "style" =: styleStringFromCss (highlightedPlaceholderTileCss position)
+              | otherwise = "style" =: styleStringFromCss (placeholderTileCss position)
+        styleDyn <- combineDyn styleFunc hoveredPositions direction
+        (element, _) <- elDynAttr' "div" styleDyn $ return ()
+        let positionClicks = const position <$> domEvent Click element
+        let positionEnters = const (First (Just position)) <$> domEvent Mouseenter element
+        let positionLeaves = const (First Nothing) <$> domEvent Mouseleave element
+        hoveredPosition <- holdDyn (First Nothing) (positionEnters <> positionLeaves)
+        return (swap <$> attach (current direction) positionClicks, hoveredPosition)
+      hoveredPositions <- mapDyn getFirst =<< mconcatDyn (snd <$> positionData)
+    return $ leftmost (fst <$> positionData)
   return result
 drawPositionSelection _ = return never
 
@@ -114,6 +128,8 @@ commonBuildingCss = width (em 12) >> height (em 12) >> position absolute >> bord
 positionCss (x, y) = left (em $ fromIntegral x*12) >> top (em $ fromIntegral y*12)
 
 placeholderTileCss position = positionCss position >> commonBuildingCss
+
+highlightedPlaceholderTileCss position = placeholderTileCss position >> backgroundColor lightgrey
 
 nextDirection DirectionUp = DirectionRight
 nextDirection DirectionRight = DirectionDown
