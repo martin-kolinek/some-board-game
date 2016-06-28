@@ -28,3 +28,4 @@ buildingStyle = do
     position absolute
     left (em 50)
     top (em 2)
+    cursor pointer
