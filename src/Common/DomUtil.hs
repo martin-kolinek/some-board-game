@@ -120,3 +120,8 @@ leftmostPair events = (leftmost (fst <$> events), leftmost (snd <$> events))
 
 styleStringFromCss :: Css -> String
 styleStringFromCss = unpack . T.tail . T.init . renderWith compact []
+
+combineDyn3 :: (Reflex t, MonadHold t m) => (a -> b -> c -> d) -> Dynamic t a -> Dynamic t b -> Dynamic t c -> m (Dynamic t d)
+combineDyn3 f a b c = do
+  x <- combineDyn f a b
+  combineDyn id x c

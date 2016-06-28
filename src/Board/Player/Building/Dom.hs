@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, TupleSections #-}
+{-# LANGUAGE RecursiveDo, TupleSections, OverloadedStrings #-}
 
 module Board.Player.Building.Dom where
 
@@ -20,6 +20,7 @@ import Control.Arrow ((***))
 import Data.Tuple
 import Data.Monoid
 import Data.AdditiveGroup
+import Data.Either
 
 drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (PlayerExports t)
 drawBuildingSpace playerId = do
@@ -61,8 +62,9 @@ drawBuildingOccupants occupants = do
     let occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
   return (selectedWorker, occupantChanges)
 
-drawPositionSelection :: (MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction))
+drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction))
 drawPositionSelection CuttingForest = do
+  universeDyn <- askUniverse
   (_, result) <- divCssClass buildingSpaceClass $ do
     rec
       (rotateElement, _) <- divCssClass rotateButtonWrapperClass $ divCssClass rotateButtonClass $ return ()
@@ -72,10 +74,13 @@ drawPositionSelection CuttingForest = do
         let isPositionHighlighted hoveredPosition rotation currentPosition =
                 hoveredPosition == Just currentPosition ||
                   Just currentPosition == ((^+^ directionAddition rotation) <$> hoveredPosition)
-            styleFunc pos rot
+            isPositionAllowed (Just position) rotation universe = isRight $ selectPosition position rotation universe
+            isPositionAllowed _ _ _ = False
+            styleFunc pos rot un
+              | isPositionHighlighted pos rot position && isPositionAllowed pos rot un = "style" =: styleStringFromCss (highlightedValidPlaceholderTileCss position)
               | isPositionHighlighted pos rot position = "style" =: styleStringFromCss (highlightedPlaceholderTileCss position)
               | otherwise = "style" =: styleStringFromCss (placeholderTileCss position)
-        styleDyn <- combineDyn styleFunc hoveredPositions direction
+        styleDyn <- combineDyn3 styleFunc hoveredPositions direction universeDyn
         (element, _) <- elDynAttr' "div" styleDyn $ return ()
         let positionClicks = const position <$> domEvent Click element
         let positionEnters = const (First (Just position)) <$> domEvent Mouseenter element
@@ -129,7 +134,9 @@ positionCss (x, y) = left (em $ fromIntegral x*12) >> top (em $ fromIntegral y*1
 
 placeholderTileCss position = positionCss position >> commonBuildingCss
 
-highlightedPlaceholderTileCss position = placeholderTileCss position >> backgroundColor lightgrey
+highlightedPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#FFCCCC"
+
+highlightedValidPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#CCFFCC"
 
 nextDirection DirectionUp = DirectionRight
 nextDirection DirectionRight = DirectionDown
