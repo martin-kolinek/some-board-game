@@ -12,6 +12,10 @@ rotateButtonClassInternal = CssClass "rotate-button"
 rotateButtonClassIcon = CssClass "fa fa-rotate-right"
 rotateButtonClass = rotateButtonClassInternal <> rotateButtonClassIcon
 rotateButtonWrapperClass = CssClass "rotate-button-wrapper"
+cancelButtonClassInternal = CssClass "cancel-button"
+cancelButtonClassIcon = CssClass "fa fa-times"
+cancelButtonClass = cancelButtonClassInternal <> cancelButtonClassIcon
+cancelButtonWrapperClass = CssClass "cancel-button-wrapper"
 
 buildingStyle = do
   star # classSelector buildingSpaceClass ? do
@@ -28,4 +32,11 @@ buildingStyle = do
     position absolute
     left (em 50)
     top (em 2)
+    cursor pointer
+  star # classSelector cancelButtonClassInternal ?
+    fontSize (px 30)
+  star # classSelector cancelButtonWrapperClass ? do
+    position absolute
+    left (em 50)
+    top (em 6)
     cursor pointer

@@ -40,7 +40,8 @@ drawBoard = do
           startWorkingActions = uncurry startWorking <$> workAssignemnts
           changeOccupantsActions = uncurry alterOccupants <$> extractOccupantChanges playerExports
           selectPositions = uncurry selectPosition <$> extractPositionSelections playerExports
-      return (leftmost [startWorkingActions, changeOccupantsActions, selectPositions], innerSettings)
+          cancelActions = const cancelSelection <$> extractCancels playerExports
+      return (leftmost [startWorkingActions, changeOccupantsActions, selectPositions, cancelActions], innerSettings)
   return result
 
 drawWorkplaces :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => m (Event t WorkplaceId)

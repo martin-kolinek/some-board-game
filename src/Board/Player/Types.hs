@@ -12,13 +12,14 @@ import Data.Maybe
 data PlayerExports t = PlayerExports {
   extractSelectedWorker :: Dynamic t (Maybe WorkerId),
   extractOccupantChanges :: Event t (PlayerId, BuildingOccupants),
-  extractPositionSelections :: Event t (Position, Direction)
+  extractPositionSelections :: Event t (Position, Direction),
+  extractCancels :: Event t ()
 }
 
 instance MonadWidget t m => ExtractableFromEvent t m (PlayerExports t) where
   extractFromEvent ev =
-    let toTuple (PlayerExports a b c) = ((a, b), c)
-        fromTuple ((a, b), c) = PlayerExports a b c
+    let toTuple (PlayerExports a b c d) = (((a, b), c), d)
+        fromTuple (((a, b), c), d) = PlayerExports a b c d
         tupleEvent = toTuple <$> ev
         extracted = extractFromEvent tupleEvent
     in fromTuple <$> extracted

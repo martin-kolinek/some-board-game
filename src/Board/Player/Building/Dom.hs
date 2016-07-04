@@ -32,8 +32,8 @@ drawBuildingSpace playerId = do
   currentBuildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
   let wholeOccupantChanges = attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
   playerStatus <- mapDyn (`getPlayerStatus` playerId) universe
-  positionSelections <- mapDynExtract drawPositionSelection playerStatus
-  return $ PlayerExports selectedWorker wholeOccupantChanges positionSelections
+  (positionSelections, cancels) <- mapDynExtract drawPositionSelection playerStatus
+  return $ PlayerExports selectedWorker wholeOccupantChanges positionSelections cancels
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
 drawBuildings buildings = void $ divCssClass buildingSpaceClass $
@@ -62,10 +62,12 @@ drawBuildingOccupants occupants = do
     let occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
   return (selectedWorker, occupantChanges)
 
-drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction))
+drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction), Event t ())
 drawPositionSelection CuttingForest = do
   universeDyn <- askUniverse
   (_, result) <- divCssClass buildingSpaceClass $ do
+    (cancelElement, _) <- divCssClass cancelButtonWrapperClass $ divCssClass cancelButtonClass $ return ()
+    let cancelClicks = domEvent Click cancelElement
     rec
       (rotateElement, _) <- divCssClass rotateButtonWrapperClass $ divCssClass rotateButtonClass $ return ()
       let rotateClicks = domEvent Click rotateElement
@@ -88,9 +90,9 @@ drawPositionSelection CuttingForest = do
         hoveredPosition <- holdDyn (First Nothing) (positionEnters <> positionLeaves)
         return (swap <$> attach (current direction) positionClicks, hoveredPosition)
       hoveredPositions <- mapDyn getFirst =<< mconcatDyn (snd <$> positionData)
-    return $ leftmost (fst <$> positionData)
+    return (leftmost (fst <$> positionData), cancelClicks)
   return result
-drawPositionSelection _ = return never
+drawPositionSelection _ = return (never, never)
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
 findOccupantChanges selectedOccupant clickedPosition =

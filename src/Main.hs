@@ -21,7 +21,6 @@ main = mainWidgetWithCss mainStyleByteString $ do
           applyActionWithTryFinishTurn universe action = do
             withActionApplied <- action universe
             catchError (finishTurn withActionApplied) (const $ return withActionApplied)
-      let tryApplyToUniverse action universe = fromMaybe universe $ fromRight $ applyActionWithTryFinishTurn universe action
       actions <- flip runReaderT universe $ do
         actions <- drawBoard
         drawErrors actions
