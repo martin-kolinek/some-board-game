@@ -5,6 +5,7 @@ import Data.Text
 import Reflex.Dom
 import Data.String
 import Data.Monoid
+import Data.Map as M
 
 newtype CssClass = CssClass String deriving Show
 

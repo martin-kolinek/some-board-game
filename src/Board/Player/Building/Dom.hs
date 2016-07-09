@@ -4,7 +4,6 @@ module Board.Player.Building.Dom where
 
 import Rules
 import Types
-import Clay hiding (Position, id, Direction)
 import Common.DomUtil
 import Board.Player.Building.Style
 import Board.Player.Types
@@ -27,8 +26,7 @@ drawBuildingSpace playerId = do
   universe <- askUniverse
   buildings <- mapDyn (`getBuildingSpace` playerId) universe
   mapDynExtract drawBuildings buildings
-  buildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
-  (selectedWorker, occupantChanges) <- drawBuildingOccupants buildingOccupants
+  (selectedWorker, occupantChanges) <- drawBuildingOccupants playerId
   currentBuildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
   let wholeOccupantChanges = attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
   playerStatus <- mapDyn (`getPlayerStatus` playerId) universe
@@ -41,26 +39,39 @@ drawBuildings buildings = void $ divCssClass buildingSpaceClass $
     let style = styleStringFromCss $ buildingCss building
     elAttr "div" ("style" =: style) $ return ()
 
-drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => Dynamic t BuildingOccupants -> m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
-drawBuildingOccupants occupants = do
+drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
+drawBuildingOccupants playerId = do
   universe <- askUniverse
+  occupants <- mapDyn (`getBuildingOccupants` playerId) universe
+  let positionErrorsFunc errors position = Prelude.filter ((== position) . snd) errors
+  occupantErrorsByPosition <- mapDyn (positionErrorsFunc . (`getOccupantErrors` playerId)) universe
   rec
     (_, (lastClickedOccupant, lastClickedPosition)) <- divCssClass buildingSpaceClass $ do
       clicks <- forM availableBuildingPositions $ \position -> do
         positionOccupants <- mapDyn (findWithDefault [] position) occupants
         let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
         filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universe
+        positionErrors <- combineDyn id occupantErrorsByPosition (constDyn position)
         (positionDiv, insideClicks) <- elAttr' "div" ("style" =: styleStringFromCss (placeholderTileCss position)) $ do
-          let combineOccupantClicks workers = leftmost $ elems workers
-          occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
-          combinedClicks <- combineOccupantClicks `mapDyn` occupantClicks
-          return $ switch (current combinedClicks)
+          mapDynExtract drawOccupantErrors positionErrors
+          divCssClass' occupantContainerClass $ do
+            let combineOccupantClicks workers = leftmost $ elems workers
+            occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
+            combinedClicks <- combineOccupantClicks `mapDyn` occupantClicks
+            return $ switch (current combinedClicks)
         return (insideClicks, const position <$> domEvent Click positionDiv)
       return $ (leftmost *** leftmost) $ unzip clicks
     selectedOccupant <- deselectInvalidOccupants lastClickedOccupant
     selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
     let occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
   return (selectedWorker, occupantChanges)
+
+drawOccupantErrors :: (MonadWidget t m) => [OccupantError] -> m ()
+drawOccupantErrors errors =
+  forM_ errors $ \(error, position) ->
+    divCssClass' occupantErrorClass $ do
+      divCssClass' occupantErrorIconClass (return ())
+      divCssClass' occupantErrorTextClass (text error)
 
 drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction), Event t ())
 drawPositionSelection CuttingForest = do
@@ -124,21 +135,6 @@ drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState 
   return $ WorkerOccupant <$> workerEvent
 
 workerFromOccupant (WorkerOccupant workerId) = Just workerId
-
-buildingCss (Grass position) = backgroundColor lightgreen >> positionCss position >> commonBuildingCss
-buildingCss (Forest position) = backgroundColor darkgreen >> positionCss position >> commonBuildingCss
-buildingCss (Rock position) = backgroundColor gray >> positionCss position >> commonBuildingCss
-buildingCss (InitialRoom position) = backgroundColor red >> positionCss position >> commonBuildingCss
-
-commonBuildingCss = width (em 12) >> height (em 12) >> position absolute >> borderColor black >> borderWidth 1 >> borderStyle solid
-
-positionCss (x, y) = left (em $ fromIntegral x*12) >> top (em $ fromIntegral y*12)
-
-placeholderTileCss position = positionCss position >> commonBuildingCss
-
-highlightedPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#FFCCCC"
-
-highlightedValidPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#CCFFCC"
 
 nextDirection DirectionUp = DirectionRight
 nextDirection DirectionRight = DirectionDown

@@ -80,6 +80,8 @@ divCssClassDyn cls inner = do
 
 divCssClass' cls a = snd <$> divCssClass cls a
 
+classAttribute (CssClass className) = M.singleton "class" className
+
 buttonSpanCssClass :: MonadWidget t m => CssClass -> m a -> m (Event t ())
 buttonSpanCssClass (CssClass className) inside = do
   (el, a) <- elAttr' "span" ("class" =: className) inside
