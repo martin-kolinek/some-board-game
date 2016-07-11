@@ -33,16 +33,21 @@ drawBoard = do
       playerExports <- drawPlayers
       workplaceClicks <- drawWorkplaces
       let selectedWorker = extractSelectedWorker playerExports
-          workplaceClicksWithSelectedWorker = attach (current selectedWorker) workplaceClicks
-          extractAssignWork (Just worker, workplace) = Just (worker, workplace)
-          extractAssignWork _ = Nothing
-          workAssignemnts = fmapMaybe extractAssignWork workplaceClicksWithSelectedWorker
-          startWorkingActions = uncurry startWorking <$> workAssignemnts
+          startWorkingActions = createWorkAssignments (current universeDyn) (current selectedWorker) workplaceClicks
           changeOccupantsActions = uncurry alterOccupants <$> extractOccupantChanges playerExports
           selectPositions = uncurry selectPosition <$> extractPositionSelections playerExports
           cancelActions = const cancelSelection <$> extractCancels playerExports
       return (leftmost [startWorkingActions, changeOccupantsActions, selectPositions, cancelActions], innerSettings)
   return result
+
+createWorkAssignments :: Reflex t => Behavior t Universe -> Behavior t (Maybe WorkerId) -> Event t WorkplaceId -> Event t UniverseAction
+createWorkAssignments universeBehavior selectedWorkerBehavior workplaceClicks =
+  let workerPlayers universe selectedWorker = [player | player <- getPlayers universe, worker <- getWorkers universe player, selectedWorker == worker]
+      playerHasOccupantErrors universe selectedWorker = any (not . Prelude.null . getOccupantErrors universe) (workerPlayers universe selectedWorker)
+      combineFunc (universe, Just selectedWorker) workplace =
+        Just $ if playerHasOccupantErrors universe selectedWorker then const (Left "Fix occupants") else startWorking selectedWorker workplace
+      combineFunc _ _ = Nothing
+      in attachWithMaybe combineFunc ((,) <$> universeBehavior <*> selectedWorkerBehavior) workplaceClicks
 
 drawWorkplaces :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => m (Event t WorkplaceId)
 drawWorkplaces = do
