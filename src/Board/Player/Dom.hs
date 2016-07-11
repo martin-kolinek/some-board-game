@@ -42,12 +42,19 @@ findSelectedPlayer :: (MonadWidget t m, UniverseReader t m x) => Dynamic t (Even
 findSelectedPlayer playerClicks = do
   currentPlayerDyn <- askCurrentPlayer
   players <- askPlayers
-  let userSelections = switch (current playerClicks)
-      currentPlayerChangeSelections = fmapMaybe id $ updated currentPlayerDyn
-      selections = leftmost [userSelections, currentPlayerChangeSelections]
-  maybePlayerId <- holdDyn Nothing (Just <$> selections)
-  defaultPlayer <- mapDyn head players
-  result <- combineDyn fromMaybe defaultPlayer maybePlayerId
+  let filterRealPlayerChanges (displayedPlayer, maybeLastPlayer) maybeNextPlayer = do
+        nextPlayer <- maybeNextPlayer
+        guard $ Just nextPlayer /= maybeLastPlayer
+        guard $ Just displayedPlayer == maybeLastPlayer
+        return nextPlayer
+  rec
+    let userSelections = switch (current playerClicks)
+        displayedPlayerWithCurrentPlayer = (,) <$> current result <*> current currentPlayerDyn
+        currentPlayerChangeSelections = attachWithMaybe filterRealPlayerChanges displayedPlayerWithCurrentPlayer (updated currentPlayerDyn)
+        selections = leftmost [userSelections, currentPlayerChangeSelections]
+    maybePlayerId <- holdDyn Nothing (Just <$> selections)
+    defaultPlayer <- mapDyn head players
+    result <- combineDyn fromMaybe defaultPlayer maybePlayerId
   return $ nubDyn result
 
 drawPlayer :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
