@@ -13,7 +13,7 @@ import Data.Map.Strict as M
 import Data.List
 
 drawErrors :: (MonadWidget t m, UniverseReader t m x) => Event t UniverseAction -> m ()
-drawErrors actions = void $ divCssClass errorContainerClass $ do
+drawErrors actions = void $ divCssClass' errorContainerClass $ do
   universe <- askUniverse
   let extractError (un, act) = fromLeft $ act un
       attached = attach (current universe) actions

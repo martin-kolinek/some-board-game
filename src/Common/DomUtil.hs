@@ -50,7 +50,7 @@ animateState alwaysOnDyn fadeDyn dynamic inner = do
       combineAll _ alwaysOn fade = alwaysOn <> fade
   x <- combineDyn combineAll dynamic alwaysOnDyn
   y <- combineDyn id x fadeDyn
-  divCssClassDyn y inner
+  divCssClassDyn' y inner
 
 updatedWithInitialValue :: MonadWidget t m => Dynamic t a -> m (Event t a)
 updatedWithInitialValue input = do
@@ -70,15 +70,15 @@ filterByBehavior func = attachWithMaybe filter
           | func a = Just b
           | otherwise = Nothing
 
-divCssClass (CssClass className) = elAttr' "div" ("class" =: className)
+divCssClass' (CssClass className) = elAttr' "div" ("class" =: className)
 
-divCssClassDyn :: MonadWidget t m => Dynamic t CssClass -> m a -> m (El t, a)
-divCssClassDyn cls inner = do
+divCssClassDyn' :: MonadWidget t m => Dynamic t CssClass -> m a -> m (El t, a)
+divCssClassDyn' cls inner = do
   let extractClassName (CssClass className) = className
   attrDyn <- mapDyn (("class" =: ) . extractClassName) cls
   elDynAttr' "div" attrDyn inner
 
-divCssClass' cls a = snd <$> divCssClass cls a
+divCssClass cls a = snd <$> divCssClass' cls a
 
 classAttribute (CssClass className) = M.singleton "class" className
 
