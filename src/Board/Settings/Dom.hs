@@ -46,15 +46,14 @@ drawShroud True = do
 
 drawSettingsWindow :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => Bool -> m (Event t SinglePlayerSettings, Event t ())
 drawSettingsWindow False = return (never, never)
-drawSettingsWindow True = do
-  (_, result) <- divCssClass' settingsPopupClass $ do
+drawSettingsWindow True =
+  divCssClass settingsPopupClass $ do
     closeClicks <- drawSettingsClose
     players <- askPlayers
     playersAsMap <- mapDyn (fromList . fmap (, ())) players
     listOfEvents <- listWithKey playersAsMap drawPlayerSettings
     events <- mapDyn (leftmost . elems) listOfEvents
     return (switch (current events), closeClicks)
-  return result
 
 drawSettingsClose :: MonadWidget t m => m (Event t ())
 drawSettingsClose = do

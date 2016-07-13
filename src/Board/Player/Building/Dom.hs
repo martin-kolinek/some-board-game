@@ -34,7 +34,7 @@ drawBuildingSpace playerId = do
   return $ PlayerExports selectedWorker wholeOccupantChanges positionSelections cancels
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
-drawBuildings buildings = void $ divCssClass' buildingSpaceClass $
+drawBuildings buildings = divCssClass buildingSpaceClass $
   forM_ buildings $ \building -> do
     let style = styleStringFromCss $ buildingCss building
     elAttr "div" ("style" =: style) $ return ()
@@ -76,7 +76,7 @@ drawOccupantErrors errors =
 drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction), Event t ())
 drawPositionSelection CuttingForest = do
   universeDyn <- askUniverse
-  (_, result) <- divCssClass' buildingSpaceClass $ do
+  divCssClass buildingSpaceClass $ do
     (cancelElement, _) <- divCssClass' cancelButtonWrapperClass $ divCssClass' cancelButtonClass $ return ()
     let cancelClicks = domEvent Click cancelElement
     rec
@@ -102,7 +102,6 @@ drawPositionSelection CuttingForest = do
         return (swap <$> attach (current direction) positionClicks, hoveredPosition)
       hoveredPositions <- mapDyn getFirst =<< mconcatDyn (snd <$> positionData)
     return (leftmost (fst <$> positionData), cancelClicks)
-  return result
 drawPositionSelection _ = return (never, never)
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)

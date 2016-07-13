@@ -50,8 +50,8 @@ createWorkAssignments universeBehavior selectedWorkerBehavior workplaceClicks =
       in attachWithMaybe combineFunc ((,) <$> universeBehavior <*> selectedWorkerBehavior) workplaceClicks
 
 drawWorkplaces :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => m (Event t WorkplaceId)
-drawWorkplaces = do
-  (_, result) <- divCssClass' workplacesClass $ do
+drawWorkplaces =
+  divCssClass workplacesClass $ do
     workplaces <- askWorkplaces
     let drawWorkplace workplaceId workplaceAction = do
           workersInWorkplace <- askWorkplaceOccupants workplaceId
@@ -63,7 +63,6 @@ drawWorkplaces = do
     let combineEvents map = leftmost (M.elems map)
     event <- combineEvents `mapDyn` events
     return $ switch (current event)
-  return result
 
 askWorkplaces :: (UniverseReader t m x, MonadWidget t m) => m (Dynamic t (Map WorkplaceId WorkplaceAction))
 askWorkplaces = join $ mapDyn getWorkplaces <$> askUniverse

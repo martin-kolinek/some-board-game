@@ -28,15 +28,14 @@ drawPlayers = do
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
 
 drawPlayerSelection :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => m (Dynamic t PlayerId)
-drawPlayerSelection = do
-  (_, result) <- divCssClass' playerContainerClass $ do
+drawPlayerSelection =
+  divCssClass playerContainerClass $ do
     rec
       players <- askPlayers
       listOfEvents <- simpleList players $ mapDynExtract (drawPlayer selectedPlayer)
       playerClicks <- mapDyn leftmost listOfEvents
       selectedPlayer <- findSelectedPlayer playerClicks
     return selectedPlayer
-  return result
 
 findSelectedPlayer :: (MonadWidget t m, UniverseReader t m x) => Dynamic t (Event t PlayerId) -> m (Dynamic t PlayerId)
 findSelectedPlayer playerClicks = do
@@ -61,7 +60,7 @@ drawPlayer :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m
 drawPlayer selectedPlayerId playerId  = do
   currentPlayerDyn <- askCurrentPlayer
   let selectedClass isSelected = if isSelected then selectedPlayerClass else mempty
-      drawCurrentPlayerIcon isCurrent = when isCurrent $ void (divCssClass' currentPlayerIconClass (return ()))
+      drawCurrentPlayerIcon isCurrent = when isCurrent $ divCssClass currentPlayerIconClass (return ())
   isSelected <- mapDyn (== playerId) selectedPlayerId
   selectedClassDyn <- mapDyn selectedClass isSelected
   isCurrent <- mapDyn (== Just playerId) currentPlayerDyn
