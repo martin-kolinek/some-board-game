@@ -3,7 +3,7 @@
 module Errors.Style where
 
 import Common.CssClass hiding (fadeClass)
-import qualified Common.CssClass as C
+import Common.CommonClasses
 import Data.Monoid
 import Clay
 import Prelude hiding (div)
@@ -11,8 +11,7 @@ import Prelude hiding (div)
 errorContainerClass = CssClass "error-container"
 errorItemClass = CssClass "error-item"
 closeButtonClass = CssClass "close-button"
-closeButtonWithIconClass = CssClass "fa fa-times" <> closeButtonClass
-fadeClass = C.fadeClass
+closeButtonWithIconClass = closeButtonClass <> faClass <> faTimesClass
 
 errorStyle = do
   star # classSelector errorContainerClass ? do

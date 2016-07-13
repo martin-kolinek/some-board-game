@@ -5,6 +5,7 @@ module Errors.Dom where
 import Rules
 import Types
 import Common.DomUtil
+import Common.CommonClasses
 import Errors.Style
 
 import Reflex.Dom

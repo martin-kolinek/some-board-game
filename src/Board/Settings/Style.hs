@@ -3,6 +3,7 @@
 module Board.Settings.Style where
 
 import Common.CssClass
+import Common.CommonClasses
 
 import Data.Monoid
 import Clay
@@ -14,9 +15,8 @@ settingsIconClass = settingsIconClassSymbol <> settingsIconClassInternal
 
 settingsPopupClass = CssClass "settings-popup"
 
-settingsPopupCloseIcon = CssClass "fa fa-times"
 settingsPopupCloseInternal = CssClass "settings-popup-close"
-settingsPopupClose = settingsPopupCloseIcon <> settingsPopupCloseInternal
+settingsPopupClose = settingsPopupCloseInternal <> faClass <> faTimesClass
 
 shroudClass = CssClass "shroud"
 

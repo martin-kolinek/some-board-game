@@ -2,6 +2,7 @@ module Board.Worker.Dom where
 
 import Rules
 import Common.DomUtil
+import Common.CommonClasses
 import Board.Worker.Style
 import Types
 import Board.Settings.Types

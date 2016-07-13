@@ -3,14 +3,13 @@
 module Board.Worker.Style where
 
 import Board.Settings.Types
-import Common.CssClass hiding (fadeClass)
-import qualified Common.CssClass as C
+import Common.CssClass
+import Common.CommonClasses
 
 import Clay
 import Control.Monad
 
 activeWorkerClass = CssClass "active-worker"
-fadeClass = C.fadeClass
 workerAnimationClass = CssClass "worker-animation"
 
 colorClass PlayerRed = CssClass "worker-red"

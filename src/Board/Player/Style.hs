@@ -4,6 +4,7 @@ module Board.Player.Style where
 
 import Board.Player.Building.Style
 import Common.CssClass
+import Common.CommonClasses
 
 import Clay
 import Data.Monoid
@@ -14,9 +15,8 @@ playerContainerClass = CssClass "player-container"
 
 freeWorkersClass = CssClass "free-workers"
 resourcesClass = CssClass "resources"
-currentPlayerIconClassIcon = CssClass "fa fa-play"
 currentPlayerIconClassInternal = CssClass "current-player-icon"
-currentPlayerIconClass = currentPlayerIconClassIcon <> currentPlayerIconClassInternal
+currentPlayerIconClass = currentPlayerIconClassInternal <> faClass <> faPlayClass
 
 playerStyle = do
   buildingStyle

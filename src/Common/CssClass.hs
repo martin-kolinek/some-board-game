@@ -14,5 +14,3 @@ instance Monoid CssClass where
   mappend (CssClass a) (CssClass b) = CssClass (a ++ " " ++ b)
 
 classSelector (CssClass className) = byClass $ pack className
-
-fadeClass = CssClass "fade"

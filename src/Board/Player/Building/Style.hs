@@ -3,6 +3,7 @@
 module Board.Player.Building.Style where
 
 import Common.CssClass
+import Common.CommonClasses
 
 import Clay
 import Data.Monoid
@@ -10,16 +11,15 @@ import Rules
 
 buildingSpaceClass = CssClass "building-space"
 rotateButtonClassInternal = CssClass "rotate-button"
-rotateButtonClassIcon = CssClass "fa fa-rotate-right"
-rotateButtonClass = rotateButtonClassInternal <> rotateButtonClassIcon
+rotateButtonClass = rotateButtonClassInternal <> faClass <> faRotateRightClass
 rotateButtonWrapperClass = CssClass "rotate-button-wrapper"
 cancelButtonClassInternal = CssClass "cancel-button"
 cancelButtonClassIcon = CssClass "fa fa-times"
-cancelButtonClass = cancelButtonClassInternal <> cancelButtonClassIcon
+cancelButtonClass = cancelButtonClassInternal <> faClass <> faTimesClass
 cancelButtonWrapperClass = CssClass "cancel-button-wrapper"
 
 occupantErrorClass = CssClass "occupant-error"
-occupantErrorIconClass = CssClass "fa fa-exclamation"
+occupantErrorIconClass = faClass <> faExclamationClass
 occupantErrorTextClass = CssClass "occupant-error-text"
 
 occupantContainerClass = CssClass "occupant-container"
@@ -70,9 +70,9 @@ buildingStyle = do
     display none
   star # classSelector occupantErrorClass # hover |> Clay.div # classSelector occupantErrorTextClass ?
     display inline
-  star # classSelector occupantErrorClass |> Clay.div # ".fa-exclamation" ?
+  star # classSelector occupantErrorClass |> Clay.div # classSelector faExclamationClass ?
     display inline
-  star # classSelector occupantErrorClass # hover |> Clay.div # ".fa-exclamation" ?
+  star # classSelector occupantErrorClass # hover |> Clay.div # classSelector faExclamationClass ?
     display none
 
 buildingCss (Grass position) = backgroundColor lightgreen >> positionCss position >> commonBuildingCss

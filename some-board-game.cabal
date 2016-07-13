@@ -18,7 +18,7 @@ cabal-version:       >=1.10
 executable some-board-game
   main-is:             Main.hs
   other-modules:       Style, Types,
-                       Common.CssClass, Common.DomUtil,
+                       Common.CssClass, Common.DomUtil, Common.CommonClasses
                        Errors.Style, Errors.Dom,
                        Board.Player.Building.Dom, Board.Player.Building.Style,
                        Board.Player.Dom, Board.Player.Style, Board.Player.Types,
