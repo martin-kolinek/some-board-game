@@ -34,7 +34,7 @@ drawBuildingSpace playerId = do
   return $ PlayerExports selectedWorker wholeOccupantChanges positionSelections cancels
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
-drawBuildings buildings = divCssClass buildingSpaceClass $
+drawBuildings buildings = divAttributeLike buildingSpaceClass $
   forM_ buildings $ \building -> do
     let style = styleStringFromCss $ buildingCss building
     elAttr "div" ("style" =: style) $ return ()
@@ -46,7 +46,7 @@ drawBuildingOccupants playerId = do
   let positionErrorsFunc errors position = Prelude.filter ((== position) . snd) errors
   occupantErrorsByPosition <- mapDyn (positionErrorsFunc . (`getOccupantErrors` playerId)) universe
   rec
-    (_, (lastClickedOccupant, lastClickedPosition)) <- divCssClass' buildingSpaceClass $ do
+    (_, (lastClickedOccupant, lastClickedPosition)) <- divAttributeLike' buildingSpaceClass $ do
       clicks <- forM availableBuildingPositions $ \position -> do
         positionOccupants <- mapDyn (findWithDefault [] position) occupants
         let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
@@ -54,7 +54,7 @@ drawBuildingOccupants playerId = do
         positionErrors <- combineDyn id occupantErrorsByPosition (constDyn position)
         (positionDiv, insideClicks) <- elAttr' "div" ("style" =: styleStringFromCss (placeholderTileCss position)) $ do
           mapDynExtract drawOccupantErrors positionErrors
-          divCssClass occupantContainerClass $ do
+          divAttributeLike occupantContainerClass $ do
             let combineOccupantClicks workers = leftmost $ elems workers
             occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
             combinedClicks <- combineOccupantClicks `mapDyn` occupantClicks
@@ -69,18 +69,18 @@ drawBuildingOccupants playerId = do
 drawOccupantErrors :: (MonadWidget t m) => [OccupantError] -> m ()
 drawOccupantErrors errors =
   forM_ errors $ \(error, position) ->
-    divCssClass occupantErrorClass $ do
-      divCssClass occupantErrorIconClass (return ())
-      divCssClass occupantErrorTextClass (text error)
+    divAttributeLike occupantErrorClass $ do
+      divAttributeLike occupantErrorIconClass (return ())
+      divAttributeLike occupantErrorTextClass (text error)
 
 drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction), Event t ())
 drawPositionSelection CuttingForest = do
   universeDyn <- askUniverse
-  divCssClass buildingSpaceClass $ do
-    (cancelElement, _) <- divCssClass' cancelButtonWrapperClass $ divCssClass' cancelButtonClass $ return ()
+  divAttributeLike buildingSpaceClass $ do
+    (cancelElement, _) <- divAttributeLike' cancelButtonWrapperClass $ divAttributeLike' cancelButtonClass $ return ()
     let cancelClicks = domEvent Click cancelElement
     rec
-      (rotateElement, _) <- divCssClass' rotateButtonWrapperClass $ divCssClass' rotateButtonClass $ return ()
+      (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
       let rotateClicks = domEvent Click rotateElement
       direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
       positionData <- forM availableBuildingPositions $ \position -> do

@@ -50,7 +50,7 @@ animateState alwaysOnDyn fadeDyn dynamic inner = do
       combineAll _ alwaysOn fade = alwaysOn <> fade
   x <- combineDyn combineAll dynamic alwaysOnDyn
   y <- combineDyn id x fadeDyn
-  divCssClassDyn' y inner
+  divAttributeLikeDyn' y inner
 
 updatedWithInitialValue :: MonadWidget t m => Dynamic t a -> m (Event t a)
 updatedWithInitialValue input = do
@@ -70,15 +70,15 @@ filterByBehavior func = attachWithMaybe filter
           | func a = Just b
           | otherwise = Nothing
 
-divCssClass' (CssClass className) = elAttr' "div" ("class" =: className)
+divAttributeLike' atr = elAttr' "div" (toAttributeMap atr)
 
-divCssClassDyn' :: MonadWidget t m => Dynamic t CssClass -> m a -> m (El t, a)
-divCssClassDyn' cls inner = do
+divAttributeLikeDyn' :: (AttributeLike atr, MonadWidget t m) => Dynamic t atr -> m a -> m (El t, a)
+divAttributeLikeDyn' cls inner = do
   let extractClassName (CssClass className) = className
-  attrDyn <- mapDyn (("class" =: ) . extractClassName) cls
+  attrDyn <- mapDyn toAttributeMap cls
   elDynAttr' "div" attrDyn inner
 
-divCssClass cls a = snd <$> divCssClass' cls a
+divAttributeLike atr a = snd <$> divAttributeLike' atr a
 
 classAttribute (CssClass className) = M.singleton "class" className
 
@@ -127,3 +127,12 @@ combineDyn3 :: (Reflex t, MonadHold t m) => (a -> b -> c -> d) -> Dynamic t a ->
 combineDyn3 f a b c = do
   x <- combineDyn f a b
   combineDyn id x c
+
+class AttributeLike t where
+  toAttributeMap :: t -> M.Map String String
+
+instance AttributeLike CssClass where
+  toAttributeMap (CssClass cls) = "class" =: cls
+
+instance AttributeLike Css where
+  toAttributeMap css = "style" =: styleStringFromCss css

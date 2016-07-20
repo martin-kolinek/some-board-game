@@ -19,7 +19,7 @@ import Data.Monoid
 drawSettingsIcon :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => m (Dynamic t PlayerSettings)
 drawSettingsIcon = do
   rec
-    (el, _) <- divCssClass' settingsIconClass $ return ()
+    (el, _) <- divAttributeLike' settingsIconClass $ return ()
     let settingsIconClicks = domEvent Click el
         combinedEvents = leftmost [settingsIconClicks, shroudClicks, closePopupClicks]
     settingsVisible <- toggle False combinedEvents
@@ -41,13 +41,13 @@ createInitialSettings universe =
 drawShroud :: MonadWidget t m => Bool -> m (Event t ())
 drawShroud False = return never
 drawShroud True = do
-  (el, _) <- divCssClass' shroudClass $ return ()
+  (el, _) <- divAttributeLike' shroudClass $ return ()
   return (domEvent Click el)
 
 drawSettingsWindow :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => Bool -> m (Event t SinglePlayerSettings, Event t ())
 drawSettingsWindow False = return (never, never)
 drawSettingsWindow True =
-  divCssClass settingsPopupClass $ do
+  divAttributeLike settingsPopupClass $ do
     closeClicks <- drawSettingsClose
     players <- askPlayers
     playersAsMap <- mapDyn (fromList . fmap (, ())) players
@@ -57,11 +57,11 @@ drawSettingsWindow True =
 
 drawSettingsClose :: MonadWidget t m => m (Event t ())
 drawSettingsClose = do
-  (el, _) <- divCssClass' settingsPopupClose $ return ()
+  (el, _) <- divAttributeLike' settingsPopupClose $ return ()
   return $ domEvent Click el
 
 drawPlayerSettings :: (PlayerSettingsReader t m x, MonadWidget t m) => PlayerId -> Dynamic t () -> m (Event t SinglePlayerSettings)
-drawPlayerSettings playerId _ = divCssClass settingsLineClass $ do
+drawPlayerSettings playerId _ = divAttributeLike settingsLineClass $ do
   currentSettings <- askSinglePlayerSettings playerId
   postBuild <- getPostBuild
   nameInput <- textInput $ def
@@ -88,5 +88,5 @@ drawColor selectedColorDyn color = do
             | selectedColor == color = colorClass color <> activeWorkerClass
             | otherwise = colorClass color
   classToDraw <- mapDyn cls selectedColorDyn
-  (el, _) <- divCssClassDyn' classToDraw $ return ()
+  (el, _) <- divAttributeLikeDyn' classToDraw $ return ()
   return $ const color <$> domEvent Click el

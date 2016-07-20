@@ -51,12 +51,12 @@ createWorkAssignments universeBehavior selectedWorkerBehavior workplaceClicks =
 
 drawWorkplaces :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => m (Event t WorkplaceId)
 drawWorkplaces =
-  divCssClass workplacesClass $ do
+  divAttributeLike workplacesClass $ do
     workplaces <- askWorkplaces
     let drawWorkplace workplaceId workplaceAction = do
           workersInWorkplace <- askWorkplaceOccupants workplaceId
-          (el, _) <- divCssClass' cardWrapperClass $
-            divCssClass' cardClass $
+          (el, _) <- divAttributeLike' cardWrapperClass $
+            divAttributeLike' cardClass $
               animatedList (fromRational 1) workersInWorkplace (drawWorker $ constDyn Nothing)
           return $ const workplaceId <$> domEvent Click el
     events <- listWithKey workplaces drawWorkplace

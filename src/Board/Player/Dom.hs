@@ -29,7 +29,7 @@ type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePl
 
 drawPlayerSelection :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => m (Dynamic t PlayerId)
 drawPlayerSelection =
-  divCssClass playerContainerClass $ do
+  divAttributeLike playerContainerClass $ do
     rec
       players <- askPlayers
       listOfEvents <- simpleList players $ mapDynExtract (drawPlayer selectedPlayer)
@@ -60,12 +60,12 @@ drawPlayer :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m
 drawPlayer selectedPlayerId playerId  = do
   currentPlayerDyn <- askCurrentPlayer
   let selectedClass isSelected = if isSelected then selectedPlayerClass else mempty
-      drawCurrentPlayerIcon isCurrent = when isCurrent $ divCssClass currentPlayerIconClass (return ())
+      drawCurrentPlayerIcon isCurrent = when isCurrent $ divAttributeLike currentPlayerIconClass (return ())
   isSelected <- mapDyn (== playerId) selectedPlayerId
   selectedClassDyn <- mapDyn selectedClass isSelected
   isCurrent <- mapDyn (== Just playerId) currentPlayerDyn
   classDyn <- mconcatDyn [constDyn playerClass, selectedClassDyn]
-  (el, settingsVisible) <- divCssClassDyn' classDyn $ do
+  (el, settingsVisible) <- divAttributeLikeDyn' classDyn $ do
     displayName <- askPlayerName playerId
     dynText displayName
     mapDynExtract drawCurrentPlayerIcon isCurrent
@@ -84,7 +84,7 @@ askPlayers = join $ mapDyn getPlayers <$> askUniverse
 
 drawPlayerResources :: (UniverseReader t m x, MonadWidget t m) => PlayerId -> m ()
 drawPlayerResources player = do
-  divCssClass' resourcesClass $ do
+  divAttributeLike' resourcesClass $ do
     score <- askScore player
     scoreText <- mapDyn show score
     text "Score: "
