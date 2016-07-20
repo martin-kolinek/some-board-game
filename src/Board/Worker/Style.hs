@@ -51,7 +51,6 @@ workerStyle = do
         height $ em 4
         backgroundSize contain
         backgroundRepeat noRepeat
-        verticalAlign vAlignTop
   keyframes "worker-kf" [
       (0, opacity 0),
       (100, opacity 1)]

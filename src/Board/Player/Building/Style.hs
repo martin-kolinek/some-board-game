@@ -48,8 +48,13 @@ buildingStyle = do
     top (em 6)
     cursor pointer
   star # classSelector occupantContainerClass ? do
-    marginTop (px 30)
-    marginLeft (px 30)
+    width (em 8)
+    height (em 8)
+    textAlign $ alignSide sideCenter
+    lineHeight (em 8)
+  star # classSelector occupantContainerClass |> Clay.div ? do
+    verticalAlign middle
+    fontSize (pct 70)
   star # classSelector occupantErrorClass ? do
     position absolute
     backgroundColor red
@@ -60,6 +65,7 @@ buildingStyle = do
     textAlign $ alignSide sideCenter
     verticalAlign middle
     lineHeight (px 27)
+    zIndex 10
   star # classSelector occupantErrorClass # hover ? do
     width auto
     height auto
@@ -80,9 +86,9 @@ buildingCss (Forest position) = backgroundColor darkgreen >> positionCss positio
 buildingCss (Rock position) = backgroundColor gray >> positionCss position >> commonBuildingCss
 buildingCss (InitialRoom position) = backgroundColor red >> positionCss position >> commonBuildingCss
 
-commonBuildingCss = width (em 12) >> height (em 12) >> position absolute >> borderWidth 1 >> borderStyle solid
+commonBuildingCss = width (em 8) >> height (em 8) >> position absolute >> borderWidth 1 >> borderStyle solid
 
-positionCss (x, y) = left (em $ fromIntegral x*12) >> top (em $ fromIntegral y*12)
+positionCss (x, y) = left (em $ fromIntegral x*8) >> top (em $ fromIntegral y*8)
 
 placeholderTileCss position = positionCss position >> commonBuildingCss
 
