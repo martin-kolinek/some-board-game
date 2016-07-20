@@ -35,9 +35,8 @@ drawBuildingSpace playerId = do
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
 drawBuildings buildings = divAttributeLike buildingSpaceClass $
-  forM_ buildings $ \building -> do
-    let style = styleStringFromCss $ buildingCss building
-    elAttr "div" ("style" =: style) $ return ()
+  forM_ buildings $ \building ->
+    divAttributeLike (buildingCss building) $ return ()
 
 drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
 drawBuildingOccupants playerId = do
@@ -52,7 +51,7 @@ drawBuildingOccupants playerId = do
         let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
         filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universe
         positionErrors <- combineDyn id occupantErrorsByPosition (constDyn position)
-        (positionDiv, insideClicks) <- elAttr' "div" ("style" =: styleStringFromCss (placeholderTileCss position)) $ do
+        (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
           mapDynExtract drawOccupantErrors positionErrors
           divAttributeLike occupantContainerClass $ do
             let combineOccupantClicks workers = leftmost $ elems workers
@@ -90,11 +89,11 @@ drawPositionSelection CuttingForest = do
             isPositionAllowed (Just position) rotation universe = isRight $ selectPosition position rotation universe
             isPositionAllowed _ _ _ = False
             styleFunc pos rot un
-              | isPositionHighlighted pos rot position && isPositionAllowed pos rot un = "style" =: styleStringFromCss (highlightedValidPlaceholderTileCss position)
-              | isPositionHighlighted pos rot position = "style" =: styleStringFromCss (highlightedPlaceholderTileCss position)
-              | otherwise = "style" =: styleStringFromCss (placeholderTileCss position)
+              | isPositionHighlighted pos rot position && isPositionAllowed pos rot un = highlightedValidPlaceholderTileCss position
+              | isPositionHighlighted pos rot position = highlightedPlaceholderTileCss position
+              | otherwise = placeholderTileCss position
         styleDyn <- combineDyn3 styleFunc hoveredPositions direction universeDyn
-        (element, _) <- elDynAttr' "div" styleDyn $ return ()
+        (element, _) <- divAttributeLikeDyn' styleDyn $ return ()
         let positionClicks = const position <$> domEvent Click element
         let positionEnters = const (First (Just position)) <$> domEvent Mouseenter element
         let positionLeaves = const (First Nothing) <$> domEvent Mouseleave element

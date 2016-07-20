@@ -136,3 +136,9 @@ instance AttributeLike CssClass where
 
 instance AttributeLike Css where
   toAttributeMap css = "style" =: styleStringFromCss css
+
+instance AttributeLike (M.Map String String) where
+  toAttributeMap = id
+
+instance (AttributeLike a, AttributeLike b) => AttributeLike (a, b) where
+  toAttributeMap (a, b) = toAttributeMap a <> toAttributeMap b

@@ -24,6 +24,8 @@ occupantErrorTextClass = CssClass "occupant-error-text"
 
 occupantContainerClass = CssClass "occupant-container"
 
+placeholderTileClass = CssClass "placeholder-tile"
+
 buildingStyle = do
   star # classSelector buildingSpaceClass ? do
     position fixed
@@ -47,14 +49,16 @@ buildingStyle = do
     left (em 50)
     top (em 6)
     cursor pointer
-  star # classSelector occupantContainerClass ? do
+  star # classSelector placeholderTileClass ? do
     width (em 8)
     height (em 8)
-    textAlign $ alignSide sideCenter
     lineHeight (em 8)
-  star # classSelector occupantContainerClass |> Clay.div ? do
-    verticalAlign middle
+    textAlign (alignSide sideCenter)
+  star # classSelector occupantContainerClass ? do
     fontSize (pct 70)
+    lineHeight (em 1)
+    verticalAlign middle
+    display inlineBlock
   star # classSelector occupantErrorClass ? do
     position absolute
     backgroundColor red
