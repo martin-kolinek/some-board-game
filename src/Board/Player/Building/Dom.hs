@@ -20,6 +20,7 @@ import Data.Tuple
 import Data.Monoid
 import Data.AdditiveGroup
 import Data.Either
+import Control.Monad.IO.Class
 
 drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (PlayerExports t)
 drawBuildingSpace playerId = do
@@ -42,16 +43,18 @@ drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, Mona
 drawBuildingOccupants playerId = do
   universe <- askUniverse
   occupants <- mapDyn (`getBuildingOccupants` playerId) universe
-  let positionErrorsFunc errors position = Prelude.filter ((== position) . snd) errors
-  occupantErrorsByPosition <- mapDyn (positionErrorsFunc . (`getOccupantErrors` playerId)) universe
+  let positionErrorsFunc position errors = Prelude.filter ((== position) . snd) errors
+  occupantErrors <- mapDyn (`getOccupantErrors` playerId) universe
   rec
     (_, (lastClickedOccupant, lastClickedPosition)) <- divAttributeLike' buildingSpaceClass $ do
       clicks <- forM availableBuildingPositions $ \position -> do
+        liftIO (putStrLn ("Pos " ++ (show position)))
         positionOccupants <- mapDyn (findWithDefault [] position) occupants
         let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
         filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universe
-        positionErrors <- combineDyn id occupantErrorsByPosition (constDyn position)
+        positionErrors <- mapDyn (positionErrorsFunc position) occupantErrors
         (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
+          performEvent_ $ (\e -> liftIO (putStrLn ("Errors "++ (show e)))) <$> (updated positionErrors)
           mapDynExtract drawOccupantErrors positionErrors
           divAttributeLike occupantContainerClass $ do
             let combineOccupantClicks workers = leftmost $ elems workers
