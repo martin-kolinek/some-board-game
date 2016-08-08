@@ -7,9 +7,12 @@ import Errors.Style
 import Board.Style
 
 import Clay
+import qualified Clay.Flexbox as F
 import Data.ByteString.Lazy hiding (repeat)
 import Data.Text.Lazy.Encoding
 import Prelude hiding (div, repeat)
+
+wrapperClass = CssClass "wrapper"
 
 mainStyle :: Css
 mainStyle = do
@@ -19,6 +22,15 @@ mainStyle = do
   body ? do
     backgroundImage $ url "data/background.png"
     backgroundRepeat repeat
+    fontFamily [] [sansSerif]
+    fontSize (px 12)
+    margin nil nil nil nil
+    padding nil nil nil nil
   div ? margin nil nil nil nil
-  
+  star # classSelector wrapperClass ? do
+    display flex
+    flexFlow row F.wrap
+    margin nil nil nil nil
+    padding nil nil nil nil
+
 mainStyleByteString = toStrict $ encodeUtf8 $ render mainStyle

@@ -6,6 +6,7 @@ import Common.CssClass
 import Common.CommonClasses
 
 import Clay
+import qualified Clay.Flexbox as F
 import Data.Monoid
 import Rules
 
@@ -28,26 +29,29 @@ placeholderTileClass = CssClass "placeholder-tile"
 
 buildingStyle = do
   star # classSelector buildingSpaceClass ? do
-    position fixed
-    bottom (em 2)
-    right (em 2)
-    padding (em 1) (em 1) (em 1) (em 1)
-    width (pct 45)
-    height (pct 55)
-    boxSizing borderBox
+    F.flex 4 1 (pct 50)
+    F.order 4
+    F.alignSelf flexStart
+    maxWidth (em 70)
+    minWidth (em 40)
+    position relative
+  star # classSelector buildingSpaceClass # before ? do
+    paddingBottom (pct 75)
+    display block
+    content $ stringContent ""
   star # classSelector rotateButtonClassInternal ?
-    fontSize (px 30)
+    fontSize (em 2)
   star # classSelector rotateButtonWrapperClass ? do
     position absolute
-    left (em 50)
-    top (em 2)
+    left (pct 6)
+    top (pct 88)
     cursor pointer
   star # classSelector cancelButtonClassInternal ?
-    fontSize (px 30)
+    fontSize (em 2)
   star # classSelector cancelButtonWrapperClass ? do
     position absolute
-    left (em 50)
-    top (em 6)
+    left (pct 12)
+    top (pct 88)
     cursor pointer
   star # classSelector placeholderTileClass ? do
     width (em 8)
@@ -85,14 +89,17 @@ buildingStyle = do
   star # classSelector occupantErrorClass # hover |> Clay.div # classSelector faExclamationClass ?
     display none
 
+oneSixth = 15
+oneQuarter = 20
+
 buildingCss (Grass position) = backgroundColor lightgreen >> positionCss position >> commonBuildingCss
 buildingCss (Forest position) = backgroundColor darkgreen >> positionCss position >> commonBuildingCss
 buildingCss (Rock position) = backgroundColor gray >> positionCss position >> commonBuildingCss
 buildingCss (InitialRoom position) = backgroundColor red >> positionCss position >> commonBuildingCss
 
-commonBuildingCss = width (em 8) >> height (em 8) >> position absolute >> borderWidth 1 >> borderStyle solid
+commonBuildingCss = width (pct oneSixth) >> height (pct oneQuarter) >> position absolute >> borderWidth 1 >> borderStyle solid
 
-positionCss (x, y) = left (em $ fromIntegral x*8) >> top (em $ fromIntegral y*8)
+positionCss (x, y) = left (pct $ (fromIntegral x)*oneSixth + 5) >> top (pct $ (fromIntegral y)*oneQuarter+5)
 
 placeholderTileCss position = positionCss position >> commonBuildingCss
 

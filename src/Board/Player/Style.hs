@@ -7,6 +7,7 @@ import Common.CssClass
 import Common.CommonClasses
 
 import Clay
+import Clay.Flexbox as F
 import Data.Monoid
 
 playerClass = CssClass "player"
@@ -37,22 +38,21 @@ playerStyle = do
     borderBottomRightRadius (px 10) (px 10)
     cursor pointer
     width (em 10)
+  star # classSelector playerClass # firstChild ? marginLeft (em 3)
   star # classSelector playerClass # classSelector selectedPlayerClass ? do
     backgroundColor "#27201a"
     color white
     fontWeight bold
   star # classSelector playerContainerClass ? do
-    position fixed
-    right (em 6)
-    top nil
+    order 1
+    F.flex 1 1 (pct 85)
+    minWidth (em 35)
   star # classSelector resourcesClass ? do
-    position fixed
-    right (em 2)
-    top (em 4)
-    width (pct 45)
-    height (pct 30)
-    padding (em 1) (em 1) (em 1) (em 1)
-    boxSizing borderBox
+    order 3
+    F.flex 1 1 (pct 10)
+    minWidth (em 10)
+    padding (em 2) (em 2) (em 2) (em 2)
+    margin (em 2) (em 2) (em 2) (em 2)
     fontWeight bold
   star # classSelector currentPlayerIconClassInternal ?
     float floatRight

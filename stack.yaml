@@ -15,4 +15,5 @@ extra-deps:
 - text-1.2.2.0
 - webkitgtk3-0.14.1.1
 - webkitgtk3-javascriptcore-0.13.1.1
+- clay-0.11
 resolver: lts-5.2

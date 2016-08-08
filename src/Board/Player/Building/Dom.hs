@@ -23,7 +23,7 @@ import Data.Either
 import Control.Monad.IO.Class
 
 drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (PlayerExports t)
-drawBuildingSpace playerId = do
+drawBuildingSpace playerId = divAttributeLike buildingSpaceClass $ do
   universe <- askUniverse
   buildings <- mapDyn (`getBuildingSpace` playerId) universe
   mapDynExtract drawBuildings buildings
@@ -35,7 +35,7 @@ drawBuildingSpace playerId = do
   return $ PlayerExports selectedWorker wholeOccupantChanges positionSelections cancels
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
-drawBuildings buildings = divAttributeLike buildingSpaceClass $
+drawBuildings buildings =
   forM_ buildings $ \building ->
     divAttributeLike (buildingCss building) $ return ()
 
@@ -46,23 +46,22 @@ drawBuildingOccupants playerId = do
   let positionErrorsFunc position errors = Prelude.filter ((== position) . snd) errors
   occupantErrors <- mapDyn (`getOccupantErrors` playerId) universe
   rec
-    (_, (lastClickedOccupant, lastClickedPosition)) <- divAttributeLike' buildingSpaceClass $ do
-      clicks <- forM availableBuildingPositions $ \position -> do
-        liftIO (putStrLn ("Pos " ++ (show position)))
-        positionOccupants <- mapDyn (findWithDefault [] position) occupants
-        let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
-        filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universe
-        positionErrors <- mapDyn (positionErrorsFunc position) occupantErrors
-        (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
-          performEvent_ $ (\e -> liftIO (putStrLn ("Errors "++ (show e)))) <$> (updated positionErrors)
-          mapDynExtract drawOccupantErrors positionErrors
-          divAttributeLike occupantContainerClass $ do
-            let combineOccupantClicks workers = leftmost $ elems workers
-            occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
-            combinedClicks <- combineOccupantClicks `mapDyn` occupantClicks
-            return $ switch (current combinedClicks)
-        return (insideClicks, const position <$> domEvent Click positionDiv)
-      return $ (leftmost *** leftmost) $ unzip clicks
+    clicks <- forM availableBuildingPositions $ \position -> do
+      liftIO (putStrLn ("Pos " ++ (show position)))
+      positionOccupants <- mapDyn (findWithDefault [] position) occupants
+      let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
+      filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universe
+      positionErrors <- mapDyn (positionErrorsFunc position) occupantErrors
+      (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
+        performEvent_ $ (\e -> liftIO (putStrLn ("Errors "++ (show e)))) <$> (updated positionErrors)
+        mapDynExtract drawOccupantErrors positionErrors
+        divAttributeLike occupantContainerClass $ do
+          let combineOccupantClicks workers = leftmost $ elems workers
+          occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
+          combinedClicks <- combineOccupantClicks `mapDyn` occupantClicks
+          return $ switch (current combinedClicks)
+      return (insideClicks, const position <$> domEvent Click positionDiv)
+    let (lastClickedOccupant, lastClickedPosition) = (leftmost *** leftmost) $ unzip clicks
     selectedOccupant <- deselectInvalidOccupants lastClickedOccupant
     selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
     let occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
@@ -78,32 +77,31 @@ drawOccupantErrors errors =
 drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction), Event t ())
 drawPositionSelection CuttingForest = do
   universeDyn <- askUniverse
-  divAttributeLike buildingSpaceClass $ do
-    (cancelElement, _) <- divAttributeLike' cancelButtonWrapperClass $ divAttributeLike' cancelButtonClass $ return ()
-    let cancelClicks = domEvent Click cancelElement
-    rec
-      (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
-      let rotateClicks = domEvent Click rotateElement
-      direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
-      positionData <- forM availableBuildingPositions $ \position -> do
-        let isPositionHighlighted hoveredPosition rotation currentPosition =
-                hoveredPosition == Just currentPosition ||
-                  Just currentPosition == ((^+^ directionAddition rotation) <$> hoveredPosition)
-            isPositionAllowed (Just position) rotation universe = isRight $ selectPosition position rotation universe
-            isPositionAllowed _ _ _ = False
-            styleFunc pos rot un
-              | isPositionHighlighted pos rot position && isPositionAllowed pos rot un = highlightedValidPlaceholderTileCss position
-              | isPositionHighlighted pos rot position = highlightedPlaceholderTileCss position
-              | otherwise = placeholderTileCss position
-        styleDyn <- combineDyn3 styleFunc hoveredPositions direction universeDyn
-        (element, _) <- divAttributeLikeDyn' styleDyn $ return ()
-        let positionClicks = const position <$> domEvent Click element
-        let positionEnters = const (First (Just position)) <$> domEvent Mouseenter element
-        let positionLeaves = const (First Nothing) <$> domEvent Mouseleave element
-        hoveredPosition <- holdDyn (First Nothing) (positionEnters <> positionLeaves)
-        return (swap <$> attach (current direction) positionClicks, hoveredPosition)
-      hoveredPositions <- mapDyn getFirst =<< mconcatDyn (snd <$> positionData)
-    return (leftmost (fst <$> positionData), cancelClicks)
+  (cancelElement, _) <- divAttributeLike' cancelButtonWrapperClass $ divAttributeLike' cancelButtonClass $ return ()
+  let cancelClicks = domEvent Click cancelElement
+  rec
+    (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
+    let rotateClicks = domEvent Click rotateElement
+    direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
+    positionData <- forM availableBuildingPositions $ \position -> do
+      let isPositionHighlighted hoveredPosition rotation currentPosition =
+              hoveredPosition == Just currentPosition ||
+                Just currentPosition == ((^+^ directionAddition rotation) <$> hoveredPosition)
+          isPositionAllowed (Just position) rotation universe = isRight $ selectPosition position rotation universe
+          isPositionAllowed _ _ _ = False
+          styleFunc pos rot un
+            | isPositionHighlighted pos rot position && isPositionAllowed pos rot un = highlightedValidPlaceholderTileCss position
+            | isPositionHighlighted pos rot position = highlightedPlaceholderTileCss position
+            | otherwise = placeholderTileCss position
+      styleDyn <- combineDyn3 styleFunc hoveredPositions direction universeDyn
+      (element, _) <- divAttributeLikeDyn' styleDyn $ return ()
+      let positionClicks = const position <$> domEvent Click element
+      let positionEnters = const (First (Just position)) <$> domEvent Mouseenter element
+      let positionLeaves = const (First Nothing) <$> domEvent Mouseleave element
+      hoveredPosition <- holdDyn (First Nothing) (positionEnters <> positionLeaves)
+      return (swap <$> attach (current direction) positionClicks, hoveredPosition)
+    hoveredPositions <- mapDyn getFirst =<< mconcatDyn (snd <$> positionData)
+  return (leftmost (fst <$> positionData), cancelClicks)
 drawPositionSelection _ = return (never, never)
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)

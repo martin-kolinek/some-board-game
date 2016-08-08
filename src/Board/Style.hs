@@ -9,6 +9,7 @@ import Board.Settings.Style
 import Prelude hiding (repeat)
 
 import Clay
+import qualified Clay.Flexbox as F
 
 cardWrapperClass = CssClass "cardWrapper"
 cardClass = CssClass "card"
@@ -38,14 +39,14 @@ boardStyle = do
     backgroundSize contain
     backgroundRepeat noRepeat
   star # classSelector workplacesClass ? do
-    width (pct 45)
+    F.flex 4 1 (pct 30)
+    F.order 5
+    margin (em 2) (em 2) (em 2) (em 2)
+    minWidth (em 13)
     backgroundImage $ url "data/cardbackground.png"
     backgroundRepeat repeat
     borderRadius (px 15) (px 15) (px 15) (px 15)
-    top (em 2)
-    left (em 2)
     borderColor "#27231a"
     borderWidth (px 4)
     borderStyle solid
     minHeight (pct 90)
-    position absolute

@@ -16,6 +16,7 @@ instance ContainsUniverse (Dynamic t Universe) t where extractUniverse = id
 
 main :: IO ()
 main = mainWidgetWithCss mainStyleByteString $ do
+  divAttributeLike wrapperClass $ do
     rec
       let applyActionWithTryFinishTurn :: Universe -> UniverseAction -> Either String Universe
           applyActionWithTryFinishTurn universe action = do

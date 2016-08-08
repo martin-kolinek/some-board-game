@@ -7,6 +7,8 @@ import Common.CommonClasses
 
 import Data.Monoid
 import Clay
+import qualified Clay.Flexbox as F
+import Clay.Stylesheet
 import Prelude hiding ((**))
 
 settingsIconClassSymbol = CssClass "fa fa-cog"
@@ -25,10 +27,14 @@ settingsLineClass = CssClass "settings-line"
 boardSettingsStyle = do
   star # classSelector settingsIconClassInternal ? do
     position fixed
-    right (pt 10)
-    top (pt 5)
-    fontSize (pt 30)
+    fontSize (em 3)
     cursor pointer
+    right nil
+    top nil
+    textAlign end
+    paddingRight (em 0.3)
+    paddingTop (em 0.3)
+    boxSizing borderBox
   star # classSelector settingsPopupClass ? do
     position fixed
     left (pct 50)
