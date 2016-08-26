@@ -44,11 +44,11 @@ workerStyle = do
         transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
       workerCommon = do
         opacity 1
-        width (em 4)
+        width (em 3.7)
         margin (em 0.2) (em 0.2) (em 0.2) (em 0.2)
         transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
         display inlineBlock
-        height $ em 4
+        height (em 3.7)
         backgroundSize contain
         backgroundRepeat noRepeat
   keyframes "worker-kf" [

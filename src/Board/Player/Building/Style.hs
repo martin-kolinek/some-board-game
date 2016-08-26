@@ -54,15 +54,13 @@ buildingStyle = do
     top (pct 88)
     cursor pointer
   star # classSelector placeholderTileClass ? do
-    width (em 8)
-    height (em 8)
-    lineHeight (em 8)
     textAlign (alignSide sideCenter)
   star # classSelector occupantContainerClass ? do
-    fontSize (pct 70)
-    lineHeight (em 1)
     verticalAlign middle
     display inlineBlock
+    paddingTop (pct 15)
+    height (pct 85)
+    overflow auto
   star # classSelector occupantErrorClass ? do
     position absolute
     backgroundColor red
