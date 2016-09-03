@@ -50,7 +50,8 @@ findSelectedPlayer playerClicks = do
     let userSelections = switch (current playerClicks)
         displayedPlayerWithCurrentPlayer = (,) <$> current result <*> current currentPlayerDyn
         currentPlayerChangeSelections = attachWithMaybe filterRealPlayerChanges displayedPlayerWithCurrentPlayer (updated currentPlayerDyn)
-        selections = leftmost [userSelections, currentPlayerChangeSelections]
+    delayedCurrentPlayerChangeSelection <- delay (fromRational 0.5) currentPlayerChangeSelections
+    let selections = leftmost [userSelections, delayedCurrentPlayerChangeSelection]
     maybePlayerId <- holdDyn Nothing (Just <$> selections)
     defaultPlayer <- mapDyn head players
     result <- combineDyn fromMaybe defaultPlayer maybePlayerId
