@@ -90,12 +90,12 @@ buildingStyle = do
 oneSixth = 15
 oneQuarter = 20
 
-buildingCss (Grass position) = backgroundColor lightgreen >> positionCss position >> commonBuildingCss
-buildingCss (Forest position) = backgroundColor darkgreen >> positionCss position >> commonBuildingCss
-buildingCss (Rock position) = backgroundColor gray >> positionCss position >> commonBuildingCss
-buildingCss (InitialRoom position) = backgroundColor red >> positionCss position >> commonBuildingCss
+buildingCss (Grass position) = background (url "data/grass.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Forest position) = background (url "data/forest.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Rock position) = background (url "data/rock.svg") >> positionCss position >> commonBuildingCss
+buildingCss (InitialRoom position) = background (url "data/room.svg") >> positionCss position >> commonBuildingCss
 
-commonBuildingCss = width (pct oneSixth) >> height (pct oneQuarter) >> position absolute >> borderWidth 1 >> borderStyle solid
+commonBuildingCss = width (pct oneSixth) >> height (pct oneQuarter) >> position absolute >> backgroundSize cover
 
 positionCss (x, y) = left (pct $ (fromIntegral x)*oneSixth + 5) >> top (pct $ (fromIntegral y)*oneQuarter+5)
 
