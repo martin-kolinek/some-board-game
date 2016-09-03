@@ -73,7 +73,7 @@ buildingStyle = do
     lineHeight (px 27)
     zIndex 10
   star # classSelector occupantErrorClass # hover ? do
-    width auto
+    width (pct 100)
     height auto
     fontSize (px 12)
     padding (em 0.5) (em 0.5) (em 0.5) (em 0.5)
