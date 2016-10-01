@@ -4,7 +4,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/martin-kolinek/some-board-game-rules.git
-    commit: d38d7c6a247d432c02be8e483f93e2be29247db1
+    commit: b0e20a470c8f9ee8f72ec1933da42789fd9c56a6
 extra-deps:
 - reflex-0.4.0
 - reflex-dom-0.3

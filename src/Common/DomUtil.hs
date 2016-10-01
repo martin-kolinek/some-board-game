@@ -140,3 +140,6 @@ instance AttributeLike (M.Map String String) where
 
 instance (AttributeLike a, AttributeLike b) => AttributeLike (a, b) where
   toAttributeMap (a, b) = toAttributeMap a <> toAttributeMap b
+
+instance AttributeLike () where
+  toAttributeMap _ = M.empty

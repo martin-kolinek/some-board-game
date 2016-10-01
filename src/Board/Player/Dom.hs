@@ -83,11 +83,25 @@ askPlayers = join $ mapDyn getPlayers <$> askUniverse
 drawPlayerResources :: (UniverseReader t m x, MonadWidget t m) => PlayerId -> m ()
 drawPlayerResources player = do
   _ <- divAttributeLike' resourcesClass $ do
-    score <- askScore player
-    scoreText <- mapDyn show score
-    text "Score: "
-    dynText scoreText
+    resources <- askResources player
+    forM_ resourceTypes $ \resourceFunc -> do
+      divAttributeLike' () $ do
+        resourceText <- mapDyn (show . resourceFunc) resources
+        dynText resourceText
   return ()
 
-askScore :: (MonadWidget t m, UniverseReader t m x) => PlayerId -> m (Dynamic t Int)
-askScore player = join $ combineDyn getScore <$> askUniverse <*> pure (constDyn player)
+askResources :: (MonadWidget t m, UniverseReader t m x) => PlayerId -> m (Dynamic t Resources)
+askResources player = join $ combineDyn getPlayerResources <$> askUniverse <*> pure (constDyn player)
+
+resourceTypes :: [Resources -> Int]
+resourceTypes = [getWoodAmount,
+                 getStoneAmount,
+                 getGoldAmount,
+                 getIronAmount,
+                 getWheatAmount,
+                 getPotatoAmount,
+                 getDogAmount,
+                 getSheepAmount,
+                 getPigAmount,
+                 getMoney,
+                 getFoodAmount]

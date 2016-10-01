@@ -58,7 +58,7 @@ drawWorkplaces =
     event <- combineEvents `mapDyn` events
     return $ switch (current event)
 
-askWorkplaces :: (UniverseReader t m x, MonadWidget t m) => m (Dynamic t (Map WorkplaceId WorkplaceAction))
+askWorkplaces :: (UniverseReader t m x, MonadWidget t m) => m (Dynamic t (Map WorkplaceId WorkplaceData))
 askWorkplaces = join $ mapDyn getWorkplaces <$> askUniverse
 
 askWorkplaceOccupants :: (UniverseReader t m x, MonadWidget t m) => WorkplaceId -> m (Dynamic t [WorkerId])
