@@ -13,16 +13,10 @@ import Board.Settings.Types
 import Board.Style
 
 import Reflex.Dom
-import Data.Maybe
-import Data.Map.Strict as M
+import Data.Map.Strict as M hiding (map)
 import Control.Monad
 import Control.Monad.Reader
-
-instance ContainsUniverse (Dynamic t Universe, a) t where
-  extractUniverse = fst
-
-instance ContainsPlayerSettings (a, Dynamic t PlayerSettings) t where
-  extractPlayerSettings = snd
+import Prelude hiding (map)
 
 drawBoard :: (UniverseReader t m x, MonadWidget t m) => m (Event t UniverseAction)
 drawBoard = do
@@ -53,12 +47,12 @@ drawWorkplaces :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget
 drawWorkplaces =
   divAttributeLike workplacesClass $ do
     workplaces <- askWorkplaces
-    let drawWorkplace workplaceId workplaceAction = do
+    let drawWorkplace workplaceId _ = do
           workersInWorkplace <- askWorkplaceOccupants workplaceId
-          (el, _) <- divAttributeLike' cardWrapperClass $
+          (element, _) <- divAttributeLike' cardWrapperClass $
             divAttributeLike' cardClass $
               animatedList (fromRational 1) workersInWorkplace (drawWorker $ constDyn Nothing)
-          return $ const workplaceId <$> domEvent Click el
+          return $ const workplaceId <$> domEvent Click element
     events <- listWithKey workplaces drawWorkplace
     let combineEvents map = leftmost (M.elems map)
     event <- combineEvents `mapDyn` events

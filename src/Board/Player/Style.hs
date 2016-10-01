@@ -10,15 +10,23 @@ import Clay
 import Clay.Flexbox as F
 import Data.Monoid
 
+playerClass :: CssClass
 playerClass = CssClass "player"
+selectedPlayerClass :: CssClass
 selectedPlayerClass = CssClass "selected-player"
+playerContainerClass :: CssClass
 playerContainerClass = CssClass "player-container"
 
+freeWorkersClass :: CssClass
 freeWorkersClass = CssClass "free-workers"
+resourcesClass :: CssClass
 resourcesClass = CssClass "resources"
+currentPlayerIconClassInternal :: CssClass
 currentPlayerIconClassInternal = CssClass "current-player-icon"
+currentPlayerIconClass :: CssClass
 currentPlayerIconClass = currentPlayerIconClassInternal <> faClass <> faPlayClass
 
+playerStyle :: Css
 playerStyle = do
   buildingStyle
   star # classSelector freeWorkersClass ? do

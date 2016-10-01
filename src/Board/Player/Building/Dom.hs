@@ -12,7 +12,6 @@ import Board.Settings.Types
 
 import Reflex.Dom
 import Control.Monad
-import Data.Text.Lazy
 import Data.Map as M
 import Data.Maybe
 import Control.Arrow ((***))
@@ -21,6 +20,7 @@ import Data.Monoid
 import Data.AdditiveGroup
 import Data.Either
 import Control.Monad.IO.Class
+import Prelude hiding (error)
 
 drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (PlayerExports t)
 drawBuildingSpace playerId = divAttributeLike buildingSpaceClass $ do
@@ -41,16 +41,16 @@ drawBuildings buildings =
 
 drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
 drawBuildingOccupants playerId = do
-  universe <- askUniverse
-  occupants <- mapDyn (`getBuildingOccupants` playerId) universe
+  universeDyn <- askUniverse
+  occupantsDyn <- mapDyn (`getBuildingOccupants` playerId) universeDyn
   let positionErrorsFunc position errors = Prelude.filter ((== position) . snd) errors
-  occupantErrors <- mapDyn (`getOccupantErrors` playerId) universe
+  occupantErrors <- mapDyn (`getOccupantErrors` playerId) universeDyn
   rec
     clicks <- forM availableBuildingPositions $ \position -> do
       liftIO (putStrLn ("Pos " ++ (show position)))
-      positionOccupants <- mapDyn (findWithDefault [] position) occupants
+      positionOccupants <- mapDyn (findWithDefault [] position) occupantsDyn
       let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
-      filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universe
+      filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universeDyn
       positionErrors <- mapDyn (positionErrorsFunc position) occupantErrors
       (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
         performEvent_ $ (\e -> liftIO (putStrLn ("Errors "++ (show e)))) <$> (updated positionErrors)
@@ -69,7 +69,7 @@ drawBuildingOccupants playerId = do
 
 drawOccupantErrors :: (MonadWidget t m) => [OccupantError] -> m ()
 drawOccupantErrors errors =
-  forM_ errors $ \(error, position) ->
+  forM_ errors $ \(error, _) ->
     divAttributeLike occupantErrorClass $ do
       divAttributeLike occupantErrorIconClass (return ())
       divAttributeLike occupantErrorTextClass (text error)
@@ -87,7 +87,7 @@ drawPositionSelection CuttingForest = do
       let isPositionHighlighted hoveredPosition rotation currentPosition =
               hoveredPosition == Just currentPosition ||
                 Just currentPosition == ((^+^ directionAddition rotation) <$> hoveredPosition)
-          isPositionAllowed (Just position) rotation universe = isRight $ selectPosition position rotation universe
+          isPositionAllowed (Just pos) rotation universe = isRight $ selectPosition pos rotation universe
           isPositionAllowed _ _ _ = False
           styleFunc pos rot un
             | isPositionHighlighted pos rot position && isPositionAllowed pos rot un = highlightedValidPlaceholderTileCss position
@@ -125,16 +125,20 @@ deselectInvalidOccupants occupants = do
   selectedOccupants <- holdDyn Nothing $ leftmost [filteredSelection, justOccupants]
   return (nubDyn selectedOccupants)
 
+isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)
 
-drawWorkplaceOccupant :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
+drawWorkplaceOccupant :: (MonadWidget t m, UniverseReader t m x, PlayerSettingsReader t m x) =>
+  Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
 drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState = do
   selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
   workerEvent <- drawWorker selectedWorker workerId animationState
   return $ WorkerOccupant <$> workerEvent
 
+workerFromOccupant :: BuildingOccupant -> Maybe WorkerId
 workerFromOccupant (WorkerOccupant workerId) = Just workerId
 
+nextDirection :: Direction -> Direction
 nextDirection DirectionUp = DirectionRight
 nextDirection DirectionRight = DirectionDown
 nextDirection DirectionDown = DirectionLeft

@@ -2,17 +2,22 @@
 
 module Errors.Style where
 
-import Common.CssClass hiding (fadeClass)
+import Common.CssClass
 import Common.CommonClasses
 import Data.Monoid
 import Clay
 import Prelude hiding (div)
 
+errorContainerClass :: CssClass
 errorContainerClass = CssClass "error-container"
+errorItemClass :: CssClass
 errorItemClass = CssClass "error-item"
+closeButtonClass :: CssClass
 closeButtonClass = CssClass "close-button"
+closeButtonWithIconClass :: CssClass
 closeButtonWithIconClass = closeButtonClass <> faClass <> faTimesClass
 
+errorStyle :: Css
 errorStyle = do
   star # classSelector errorContainerClass ? do
     position fixed

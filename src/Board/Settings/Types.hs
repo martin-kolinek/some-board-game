@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, ConstraintKinds #-}
 
 module Board.Settings.Types where
@@ -10,6 +11,7 @@ import Control.Monad.Reader
 
 data PlayerColor = PlayerGreen | PlayerBlue | PlayerRed | PlayerCyan | PlayerOrange | PlayerWhite | PlayerBlack deriving (Show, Eq)
 
+allPlayerColors :: [PlayerColor]
 allPlayerColors = [PlayerGreen, PlayerBlue, PlayerRed, PlayerCyan, PlayerOrange, PlayerWhite, PlayerBlack]
 
 data SinglePlayerSettings = SinglePlayerSettings {
@@ -20,6 +22,7 @@ data SinglePlayerSettings = SinglePlayerSettings {
 
 type PlayerSettings = [SinglePlayerSettings]
 
+initialSettings :: PlayerSettings
 initialSettings = []
 
 singlePlayerSettings :: PlayerSettings -> PlayerId -> SinglePlayerSettings
@@ -36,11 +39,16 @@ updatePlayerSettings newSingleSettings oldSettings =
 class ContainsPlayerSettings x t | x -> t where
   extractPlayerSettings :: x -> Dynamic t PlayerSettings
 
+instance ContainsPlayerSettings (a, Dynamic t PlayerSettings) t where
+  extractPlayerSettings = snd
+
 type PlayerSettingsReader t m x = (Reflex t, ContainsPlayerSettings x t, MonadReader x m)
 
 askPlayerSettings :: PlayerSettingsReader t m x => m (Dynamic t PlayerSettings)
 askPlayerSettings = asks extractPlayerSettings
 
+askSinglePlayerSettings :: (MonadWidget t m, PlayerSettingsReader t m x) => PlayerId -> m (Dynamic t SinglePlayerSettings)
 askSinglePlayerSettings player = mapDyn (flip singlePlayerSettings player) =<< askPlayerSettings
 
+askPlayerColor :: (MonadWidget t m, PlayerSettingsReader t m x) => PlayerId -> m (Dynamic t PlayerColor)
 askPlayerColor player = mapDyn playerColor =<< askSinglePlayerSettings player

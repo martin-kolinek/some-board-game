@@ -33,16 +33,17 @@ drawSettingsIcon = do
     settingsDyn <- holdDyn initialSettings allSettingsEvents
   return settingsDyn
 
+createInitialSettings :: Universe -> [SinglePlayerSettings]
 createInitialSettings universe =
-  let playerNames = (("Player " ++) . show) <$> [1..]
+  let playerNames = (("Player " ++) . show) <$> [(1 :: Int)..]
       zipped = zip (zip playerNames (cycle allPlayerColors)) (getPlayers universe)
   in uncurry (uncurry SinglePlayerSettings) <$> zipped
 
 drawShroud :: MonadWidget t m => Bool -> m (Event t ())
 drawShroud False = return never
 drawShroud True = do
-  (el, _) <- divAttributeLike' shroudClass $ return ()
-  return (domEvent Click el)
+  (element, _) <- divAttributeLike' shroudClass $ return ()
+  return (domEvent Click element)
 
 drawSettingsWindow :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => Bool -> m (Event t SinglePlayerSettings, Event t ())
 drawSettingsWindow False = return (never, never)
@@ -57,8 +58,8 @@ drawSettingsWindow True =
 
 drawSettingsClose :: MonadWidget t m => m (Event t ())
 drawSettingsClose = do
-  (el, _) <- divAttributeLike' settingsPopupClose $ return ()
-  return $ domEvent Click el
+  (element, _) <- divAttributeLike' settingsPopupClose $ return ()
+  return $ domEvent Click element
 
 drawPlayerSettings :: (PlayerSettingsReader t m x, MonadWidget t m) => PlayerId -> Dynamic t () -> m (Event t SinglePlayerSettings)
 drawPlayerSettings playerId _ = divAttributeLike settingsLineClass $ do
@@ -88,5 +89,5 @@ drawColor selectedColorDyn color = do
             | selectedColor == color = colorClass color <> activeWorkerClass
             | otherwise = colorClass color
   classToDraw <- mapDyn cls selectedColorDyn
-  (el, _) <- divAttributeLikeDyn' classToDraw $ return ()
-  return $ const color <$> domEvent Click el
+  (element, _) <- divAttributeLikeDyn' classToDraw $ return ()
+  return $ const color <$> domEvent Click element

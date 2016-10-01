@@ -7,23 +7,30 @@ import Common.CommonClasses
 
 import Data.Monoid
 import Clay
-import qualified Clay.Flexbox as F
-import Clay.Stylesheet
 import Prelude hiding ((**))
 
+settingsIconClassSymbol :: CssClass
 settingsIconClassSymbol = CssClass "fa fa-cog"
+settingsIconClassInternal :: CssClass
 settingsIconClassInternal = CssClass "settings-icon"
+settingsIconClass :: CssClass
 settingsIconClass = settingsIconClassSymbol <> settingsIconClassInternal
 
+settingsPopupClass :: CssClass
 settingsPopupClass = CssClass "settings-popup"
 
+settingsPopupCloseInternal :: CssClass
 settingsPopupCloseInternal = CssClass "settings-popup-close"
+settingsPopupClose :: CssClass
 settingsPopupClose = settingsPopupCloseInternal <> faClass <> faTimesClass
 
+shroudClass :: CssClass
 shroudClass = CssClass "shroud"
 
+settingsLineClass :: CssClass
 settingsLineClass = CssClass "settings-line"
 
+boardSettingsStyle :: Css
 boardSettingsStyle = do
   star # classSelector settingsIconClassInternal ? do
     position fixed

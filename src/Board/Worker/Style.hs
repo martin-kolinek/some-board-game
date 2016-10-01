@@ -9,9 +9,12 @@ import Common.CommonClasses
 import Clay
 import Control.Monad
 
+activeWorkerClass :: CssClass
 activeWorkerClass = CssClass "active-worker"
+workerAnimationClass :: CssClass
 workerAnimationClass = CssClass "worker-animation"
 
+colorClass :: PlayerColor -> CssClass
 colorClass PlayerRed = CssClass "worker-red"
 colorClass PlayerBlue = CssClass "worker-blue"
 colorClass PlayerCyan = CssClass "worker-cyan"
@@ -20,6 +23,7 @@ colorClass PlayerWhite = CssClass "worker-white"
 colorClass PlayerOrange = CssClass "worker-orange"
 colorClass PlayerBlack = CssClass "worker-black"
 
+colorUrl :: PlayerColor -> BackgroundImage
 colorUrl PlayerRed = url "data/worker_red.svg"
 colorUrl PlayerBlue = url "data/worker_blue.svg"
 colorUrl PlayerCyan = url "data/worker_cyan.svg"
@@ -28,6 +32,7 @@ colorUrl PlayerWhite = url "data/worker_white.svg"
 colorUrl PlayerOrange = url "data/worker_yellow.svg"
 colorUrl PlayerBlack = url "data/worker_black.svg"
 
+colorGlowingUrl :: PlayerColor -> BackgroundImage
 colorGlowingUrl PlayerRed = url "data/worker_red_glowing.svg"
 colorGlowingUrl PlayerBlue = url "data/worker_blue_glowing.svg"
 colorGlowingUrl PlayerCyan = url "data/worker_cyan_glowing.svg"
@@ -36,6 +41,7 @@ colorGlowingUrl PlayerWhite = url "data/worker_white_glowing.svg"
 colorGlowingUrl PlayerOrange = url "data/worker_yellow_glowing.svg"
 colorGlowingUrl PlayerBlack = url "data/worker_black_glowing.svg"
 
+workerStyle :: Css
 workerStyle = do
   let workerFade = do
         opacity 0
@@ -54,14 +60,14 @@ workerStyle = do
   keyframes "worker-kf" [
       (0, opacity 0),
       (100, opacity 1)]
-  forM_ allPlayerColors $ \color -> do
-    star # classSelector (colorClass color) ? do
-      background $ colorUrl color
+  forM_ allPlayerColors $ \clr -> do
+    star # classSelector (colorClass clr) ? do
+      background $ colorUrl clr
       workerCommon
-    star # classSelector (colorClass color) # classSelector activeWorkerClass ? do
-      background $ colorGlowingUrl color
+    star # classSelector (colorClass clr) # classSelector activeWorkerClass ? do
+      background $ colorGlowingUrl clr
       workerCommon
-    star # classSelector (colorClass color) # classSelector fadeClass ? workerFade
+    star # classSelector (colorClass clr) # classSelector fadeClass ? workerFade
   star # classSelector workerAnimationClass ? do
     animationName "worker-kf"
     animationDuration (sec 1)

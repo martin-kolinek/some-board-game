@@ -5,7 +5,6 @@ module Board.Player.Dom where
 import Rules
 import Types
 import Common.DomUtil
-import Board.Worker.Dom
 import Board.Player.Style
 import Board.Player.Types
 import Board.Player.Building.Dom
@@ -13,16 +12,13 @@ import Board.Settings.Types
 
 import Reflex.Dom
 import Data.Maybe
-import Data.Map.Strict
 import Control.Monad
-import Control.Monad.Reader
-import Control.Lens
-import Control.Arrow
+import Prelude hiding (elem)
 
 drawPlayers :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => m (PlayerExports t)
 drawPlayers = do
   selectedPlayer <- drawPlayerSelection
-  resourcesDrawn <- mapDynExtract drawPlayerResources selectedPlayer
+  _ <- mapDynExtract drawPlayerResources selectedPlayer
   mapDynExtract drawBuildingSpace selectedPlayer
 
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
@@ -66,13 +62,14 @@ drawPlayer selectedPlayerId playerId  = do
   selectedClassDyn <- mapDyn selectedClass isSelected
   isCurrent <- mapDyn (== Just playerId) currentPlayerDyn
   classDyn <- mconcatDyn [constDyn playerClass, selectedClassDyn]
-  (el, settingsVisible) <- divAttributeLikeDyn' classDyn $ do
+  (elem, _) <- divAttributeLikeDyn' classDyn $ do
     displayName <- askPlayerName playerId
     dynText displayName
     mapDynExtract drawCurrentPlayerIcon isCurrent
-  let event = domEvent Click el
+  let event = domEvent Click elem
   return $ const playerId <$> event
 
+askPlayerName :: (MonadWidget t m, PlayerSettingsReader t m x) => PlayerId -> m (Dynamic t String)
 askPlayerName playerId = do
   singlePlayerSettingsDyn <- askSinglePlayerSettings playerId
   mapDyn playerName singlePlayerSettingsDyn
@@ -85,11 +82,12 @@ askPlayers = join $ mapDyn getPlayers <$> askUniverse
 
 drawPlayerResources :: (UniverseReader t m x, MonadWidget t m) => PlayerId -> m ()
 drawPlayerResources player = do
-  divAttributeLike' resourcesClass $ do
+  _ <- divAttributeLike' resourcesClass $ do
     score <- askScore player
     scoreText <- mapDyn show score
     text "Score: "
     dynText scoreText
   return ()
 
+askScore :: (MonadWidget t m, UniverseReader t m x) => PlayerId -> m (Dynamic t Int)
 askScore player = join $ combineDyn getScore <$> askUniverse <*> pure (constDyn player)

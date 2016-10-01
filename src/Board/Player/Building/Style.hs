@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Board.Player.Building.Style where
@@ -10,23 +11,37 @@ import qualified Clay.Flexbox as F
 import Data.Monoid
 import Rules
 
+buildingSpaceClass :: CssClass
 buildingSpaceClass = CssClass "building-space"
+rotateButtonClassInternal :: CssClass
 rotateButtonClassInternal = CssClass "rotate-button"
+rotateButtonClass :: CssClass
 rotateButtonClass = rotateButtonClassInternal <> faClass <> faRotateRightClass
+rotateButtonWrapperClass :: CssClass
 rotateButtonWrapperClass = CssClass "rotate-button-wrapper"
+cancelButtonClassInternal :: CssClass
 cancelButtonClassInternal = CssClass "cancel-button"
+cancelButtonClassIcon :: CssClass
 cancelButtonClassIcon = CssClass "fa fa-times"
+cancelButtonClass :: CssClass
 cancelButtonClass = cancelButtonClassInternal <> faClass <> faTimesClass
+cancelButtonWrapperClass :: CssClass
 cancelButtonWrapperClass = CssClass "cancel-button-wrapper"
 
+occupantErrorClass :: CssClass
 occupantErrorClass = CssClass "occupant-error"
+occupantErrorIconClass :: CssClass
 occupantErrorIconClass = faClass <> faExclamationClass
+occupantErrorTextClass :: CssClass
 occupantErrorTextClass = CssClass "occupant-error-text"
 
+occupantContainerClass :: CssClass
 occupantContainerClass = CssClass "occupant-container"
 
+placeholderTileClass :: CssClass
 placeholderTileClass = CssClass "placeholder-tile"
 
+buildingStyle :: Css
 buildingStyle = do
   star # classSelector buildingSpaceClass ? do
     F.flex 4 1 (pct 50)
@@ -87,20 +102,28 @@ buildingStyle = do
   star # classSelector occupantErrorClass # hover |> Clay.div # classSelector faExclamationClass ?
     display none
 
+oneSixth :: Double
 oneSixth = 15
+oneQuarter :: Double
 oneQuarter = 20
 
+buildingCss :: Building -> Css
 buildingCss (Grass position) = background (url "data/grass.svg") >> positionCss position >> commonBuildingCss
 buildingCss (Forest position) = background (url "data/forest.svg") >> positionCss position >> commonBuildingCss
 buildingCss (Rock position) = background (url "data/rock.svg") >> positionCss position >> commonBuildingCss
 buildingCss (InitialRoom position) = background (url "data/room.svg") >> positionCss position >> commonBuildingCss
 
+commonBuildingCss :: Css
 commonBuildingCss = width (pct oneSixth) >> height (pct oneQuarter) >> position absolute >> backgroundSize cover
 
+positionCss :: (Int, Int) -> Css
 positionCss (x, y) = left (pct $ (fromIntegral x)*oneSixth + 5) >> top (pct $ (fromIntegral y)*oneQuarter+5)
 
+placeholderTileCss :: (Int, Int) -> Css
 placeholderTileCss position = positionCss position >> commonBuildingCss
 
+highlightedPlaceholderTileCss :: (Int, Int) -> Css
 highlightedPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#FFCCCC"
 
+highlightedValidPlaceholderTileCss :: (Int, Int) -> Css
 highlightedValidPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#CCFFCC"

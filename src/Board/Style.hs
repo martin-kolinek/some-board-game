@@ -11,10 +11,14 @@ import Prelude hiding (repeat)
 import Clay
 import qualified Clay.Flexbox as F
 
+cardWrapperClass :: CssClass
 cardWrapperClass = CssClass "cardWrapper"
+cardClass :: CssClass
 cardClass = CssClass "card"
+workplacesClass :: CssClass
 workplacesClass = CssClass "workplaces"
 
+boardStyle :: Css
 boardStyle = do
   playerStyle
   workerStyle

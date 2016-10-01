@@ -2,16 +2,15 @@
 
 module Errors.Dom where
 
-import Rules
 import Types
 import Common.DomUtil
 import Common.CommonClasses
 import Errors.Style
 
 import Reflex.Dom
-import Control.Monad
-import Data.Map.Strict as M
-import Data.List
+import Data.Map.Strict as M hiding (map)
+import Data.List hiding (map)
+import Prelude hiding (map, id)
 
 drawErrors :: (MonadWidget t m, UniverseReader t m x) => Event t UniverseAction -> m ()
 drawErrors actions = divAttributeLike errorContainerClass $ do
@@ -26,7 +25,7 @@ drawErrors actions = divAttributeLike errorContainerClass $ do
       attachIdToEvent (id, event) = const id <$> event
       extractEventsFromMap map = leftmost $ attachIdToEvent <$> assocs map
       drawError :: Reflex t => MonadWidget t m => Int -> Dynamic t (AnimationState, String) -> m (Event t ())
-      drawError key tuple = do
+      drawError _ tuple = do
         err <- snd `mapDyn` tuple
         animState <- fst `mapDyn` tuple
         (_, res) <- animateState (constDyn errorItemClass) (constDyn fadeClass) animState $ do

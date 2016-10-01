@@ -19,16 +19,15 @@ drawWorker selectedWorkerDyn workerId animationStates = do
   (divEl, _) <- animateState mainClass (constDyn fadeClass) animationStates $ return ()
   let clicks = domEvent Click divEl
       filteredClicks = filterByBehavior (/=Fading) (current animationStates) clicks
-  postBuild <- getPostBuild
   return $ const workerId <$> filteredClicks
 
 getWorkerColor :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => WorkerId -> m (Dynamic t PlayerColor)
 getWorkerColor workerId = do
-  universe <- askUniverse
+  universeDyn <- askUniverse
   let getPlayer universe = M.lookup workerId playerMap
           where playerMap = M.fromList [(worker, player) | player <- getPlayers universe, worker <- getWorkers universe player]
       getPlayerColor playerSettings (Just playerId) = playerColor $ singlePlayerSettings playerSettings playerId
       getPlayerColor _ _ = PlayerGreen
-  player <- mapDyn getPlayer universe
+  player <- mapDyn getPlayer universeDyn
   settings <- askPlayerSettings
   combineDyn getPlayerColor settings player

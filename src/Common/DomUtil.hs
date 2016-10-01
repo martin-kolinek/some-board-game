@@ -1,23 +1,16 @@
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# LANGUAGE TupleSections, ScopedTypeVariables, LambdaCase,
    MultiParamTypeClasses, FlexibleInstances, InstanceSigs #-}
 module Common.DomUtil where
 
 import Reflex
 import Reflex.Dom
-import qualified GHCJS.DOM.Document as Doc
-import GHCJS.DOM.Element
-import Control.Monad.IO.Class
 import Common.CssClass
 import Data.Time.Clock
-import Data.List as L
 import Data.Monoid
 import qualified Data.Map.Strict as M
-import Data.Maybe
-import Data.Function
-import Reflex.Host.Class
 import Data.Align
 import Data.These
-import Data.Either
 import Data.Default
 import Clay (Css, renderWith, compact)
 import Data.Text.Lazy as T (unpack, tail, init)
@@ -59,32 +52,37 @@ updatedWithInitialValue input = do
       combined = leftmost [updated input, tagged]
   return combined
 
+fromLeft :: forall t a. Either a t -> Maybe a
 fromLeft (Left a) = Just a
 fromLeft _ = Nothing
 
+fromRight :: forall t a. Either t a -> Maybe a
 fromRight (Right a) = Just a
 fromRight _ = Nothing
 
+filterByBehavior :: forall t c t1. Reflex t1 => (t -> Bool) -> Behavior t1 t -> Event t1 c -> Event t1 c
 filterByBehavior func = attachWithMaybe filter
   where filter a b
           | func a = Just b
           | otherwise = Nothing
 
+divAttributeLike' :: (MonadWidget t m, AttributeLike t1) => t1 -> m a -> m (El t, a)
 divAttributeLike' atr = elAttr' "div" (toAttributeMap atr)
 
 divAttributeLikeDyn' :: (AttributeLike atr, MonadWidget t m) => Dynamic t atr -> m a -> m (El t, a)
 divAttributeLikeDyn' cls inner = do
-  let extractClassName (CssClass className) = className
   attrDyn <- mapDyn toAttributeMap cls
   elDynAttr' "div" attrDyn inner
 
+divAttributeLike :: (MonadWidget t f, AttributeLike t1) => t1 -> f b -> f b
 divAttributeLike atr a = snd <$> divAttributeLike' atr a
 
+classAttribute :: CssClass -> M.Map [Char] String
 classAttribute (CssClass className) = M.singleton "class" className
 
 buttonSpanCssClass :: MonadWidget t m => CssClass -> m a -> m (Event t ())
 buttonSpanCssClass (CssClass className) inside = do
-  (el, a) <- elAttr' "span" ("class" =: className) inside
+  (el, _) <- elAttr' "span" ("class" =: className) inside
   return $ domEvent Click el
 
 class MonadWidget t m => ExtractableFromEvent t m b where
@@ -109,7 +107,7 @@ instance (MonadWidget t m, ExtractableFromEvent t m a, ExtractableFromEvent t m 
     return (a, b)
 
 instance MonadWidget t m => ExtractableFromEvent t m () where
-  extractFromEvent event = return ()
+  extractFromEvent _ = return ()
 
 mapDynExtract :: (ExtractableFromEvent t m b, MonadWidget t m) => (a -> m b) -> Dynamic t a -> m b
 mapDynExtract func dynamic = do

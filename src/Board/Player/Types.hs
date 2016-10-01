@@ -6,8 +6,6 @@ import Rules
 import Common.DomUtil
 
 import Reflex.Dom
-import Control.Monad.Reader
-import Data.Maybe
 
 data PlayerExports t = PlayerExports {
   extractSelectedWorker :: Dynamic t (Maybe WorkerId),
