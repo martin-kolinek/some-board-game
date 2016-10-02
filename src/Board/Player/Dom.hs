@@ -89,27 +89,27 @@ drawPlayerResources :: (UniverseReader t m x, MonadWidget t m) => PlayerId -> m 
 drawPlayerResources player = do
   _ <- divAttributeLike' resourcesClass $ do
     resources <- askResources player
-    forM_ resourceTypes $ \resourceFunc -> do
+    forM_ resourceTypes $ \(resourceFunc, resourceLabel) -> do
       divAttributeLike' () $ do
-        resourceText <- mapDyn (show . resourceFunc) resources
+        resourceText <- mapDyn (((resourceLabel ++ ": ") ++) .show . resourceFunc) resources
         dynText resourceText
   return ()
 
 askResources :: (MonadWidget t m, UniverseReader t m x) => PlayerId -> m (Dynamic t Resources)
 askResources player = join $ combineDyn getPlayerResources <$> askUniverse <*> pure (constDyn player)
 
-resourceTypes :: [Resources -> Int]
-resourceTypes = [getWoodAmount,
-                 getStoneAmount,
-                 getGoldAmount,
-                 getIronAmount,
-                 getWheatAmount,
-                 getPotatoAmount,
-                 getDogAmount,
-                 getSheepAmount,
-                 getPigAmount,
-                 getMoney,
-                 getFoodAmount]
+resourceTypes :: [(Resources -> Int, String)]
+resourceTypes = [(getWoodAmount, "Wood"),
+                 (getStoneAmount, "Stone"),
+                 (getGoldAmount, "Gold"),
+                 (getIronAmount, "Iron"),
+                 (getWheatAmount, "Wheat"),
+                 (getPotatoAmount, "Potato"),
+                 (getDogAmount, "Dog"),
+                 (getSheepAmount, "Sheep"),
+                 (getPigAmount, "Pig"),
+                 (getMoney, "Money"),
+                 (getFoodAmount, "Food")]
 
 drawSelectionOverlay :: MonadWidget t m => PlayerStatus -> m (Event t ChildDesireOptions)
 drawSelectionOverlay (ChoosingChildDesireOption _) = divAttributeLike selectionClass $ do
