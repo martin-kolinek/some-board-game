@@ -33,14 +33,15 @@ drawBuildingSpace playerId = divAttributeLike buildingSpaceClass $ do
   let wholeOccupantChanges = attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
   playerStatus <- mapDyn (`getPlayerStatus` playerId) universe
   (positionSelections, cancels) <- mapDynExtract drawPositionSelection playerStatus
-  return $ PlayerExports selectedWorker wholeOccupantChanges positionSelections cancels
+  return $ PlayerExports selectedWorker wholeOccupantChanges positionSelections cancels never
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
 drawBuildings buildings =
   forM_ buildings $ \building ->
     divAttributeLike (buildingCss building) $ return ()
 
-drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
+drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) =>
+  PlayerId -> m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
 drawBuildingOccupants playerId = do
   universeDyn <- askUniverse
   occupantsDyn <- mapDyn (`getBuildingOccupants` playerId) universeDyn

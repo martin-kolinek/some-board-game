@@ -31,7 +31,8 @@ drawBoard = do
           changeOccupantsActions = uncurry alterOccupants <$> extractOccupantChanges playerExports
           selectPositions = uncurry selectPosition <$> extractPositionSelections playerExports
           cancelActions = const cancelSelection <$> extractCancels playerExports
-      return (leftmost [startWorkingActions, changeOccupantsActions, selectPositions, cancelActions], innerSettings)
+          chooseOptionActions = chooseChildDesireOption <$> extractChoseOption playerExports
+      return (leftmost [startWorkingActions, changeOccupantsActions, selectPositions, cancelActions, chooseOptionActions], innerSettings)
   return result
 
 createWorkAssignments :: Reflex t => Behavior t Universe -> Behavior t (Maybe WorkerId) -> Event t WorkplaceId -> Event t UniverseAction

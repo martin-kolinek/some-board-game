@@ -16,6 +16,8 @@ selectedPlayerClass :: CssClass
 selectedPlayerClass = CssClass "selected-player"
 playerContainerClass :: CssClass
 playerContainerClass = CssClass "player-container"
+selectionClass :: CssClass
+selectionClass = CssClass "selection"
 
 freeWorkersClass :: CssClass
 freeWorkersClass = CssClass "free-workers"
@@ -64,3 +66,20 @@ playerStyle = do
     fontWeight bold
   star # classSelector currentPlayerIconClassInternal ?
     float floatRight
+  star # classSelector selectionClass ? do
+    position fixed
+    display Clay.flex
+    F.justifyContent center
+    F.alignItems center
+    left (pct 30)
+    top (pct 40)
+    width (pct 30)
+    height(em 10)
+    minWidth (em 25)
+    backgroundColor "#8f765f"
+    zIndex 10000
+    borderRadius (em 2) (em 2) (em 2) (em 2)
+  star # classSelector selectionClass Clay.** button ? do
+    margin (em 2) (em 2) (em 2) (em 2)
+    width (em 10)
+    height (em 3)
