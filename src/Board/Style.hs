@@ -2,12 +2,13 @@
 
 module Board.Style where
 
+import Rules
+
 import Common.CssClass
 import Board.Player.Style
 import Board.Worker.Style
 import Board.Settings.Style
 import Prelude hiding (repeat)
-
 import Clay
 import qualified Clay.Flexbox as F
 
@@ -54,3 +55,10 @@ boardStyle = do
     borderWidth (px 4)
     borderStyle solid
     minHeight (pct 90)
+
+cardCss :: WorkplaceData -> (CssClass, Css)
+cardCss workplaceData = (cardClass, backgroundImage $ url $ backgroundCss workplaceData)
+  where backgroundCss (CutForest _) = "data/cut_forest.svg"
+        backgroundCss (DigCave _) = "data/dig_cave.svg"
+        backgroundCss (DigPassage _) = "data/dig_passage.svg"
+        backgroundCss ChildDesire = "data/child_desire.svg"

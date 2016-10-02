@@ -47,10 +47,12 @@ drawWorkplaces :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget
 drawWorkplaces =
   divAttributeLike workplacesClass $ do
     workplaces <- askWorkplaces
-    let drawWorkplace workplaceId _ = do
+    let drawWorkplace workplaceId dataDyn = do
           workersInWorkplace <- askWorkplaceOccupants workplaceId
+          attributesDyn <- mapDyn cardCss dataDyn
           (element, _) <- divAttributeLike' cardWrapperClass $
-            divAttributeLike' cardClass $
+            divAttributeLikeDyn' attributesDyn $ do
+              mapDynExtract cardContents dataDyn
               animatedList (fromRational 1) workersInWorkplace (drawWorker $ constDyn Nothing)
           return $ const workplaceId <$> domEvent Click element
     events <- listWithKey workplaces drawWorkplace
@@ -63,3 +65,9 @@ askWorkplaces = join $ mapDyn getWorkplaces <$> askUniverse
 
 askWorkplaceOccupants :: (UniverseReader t m x, MonadWidget t m) => WorkplaceId -> m (Dynamic t [WorkerId])
 askWorkplaceOccupants workplaceId = join $ mapDyn (flip getWorkplaceOccupants workplaceId) <$> askUniverse
+
+cardContents :: MonadWidget t m => WorkplaceData -> m ()
+cardContents (CutForest n) = text ("Wood: " ++ show n)
+cardContents (DigCave n) = text ("Stone: " ++ show n)
+cardContents (DigPassage n) = text ("Stone: " ++ show n)
+cardContents ChildDesire = return ()
