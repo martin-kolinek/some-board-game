@@ -127,7 +127,7 @@ placeholderTileCss :: (Int, Int) -> Css
 placeholderTileCss position = positionCss position >> commonBuildingCss
 
 highlightedPlaceholderTileCss :: (Int, Int) -> Css
-highlightedPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#FFCCCC"
+highlightedPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#FF4444" >> opacity 0.7
 
 highlightedValidPlaceholderTileCss :: (Int, Int) -> Css
-highlightedValidPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#CCFFCC"
+highlightedValidPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#44FF44" >> opacity 0.4

@@ -17,10 +17,11 @@ import Data.Maybe
 import Control.Arrow ((***))
 import Data.Tuple
 import Data.Monoid
-import Data.AdditiveGroup
 import Data.Either
+import Data.AdditiveGroup
 import Control.Monad.IO.Class
 import Prelude hiding (error)
+import qualified Data.List as L
 
 drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (PlayerExports t)
 drawBuildingSpace playerId = divAttributeLike buildingSpaceClass $ do
@@ -75,7 +76,13 @@ drawOccupantErrors errors =
       divAttributeLike occupantErrorTextClass (text error)
 
 drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction), Event t ())
-drawPositionSelection CuttingForest = do
+drawPositionSelection CuttingForest = drawActivePositionSelection
+drawPositionSelection DiggingCave = drawActivePositionSelection
+drawPositionSelection DiggingPassage = drawActivePositionSelection
+drawPositionSelection _ = return (never, never)
+
+drawActivePositionSelection :: (UniverseReader t m x, MonadWidget t m) => m (Event t (Position, Direction), Event t ())
+drawActivePositionSelection = do
   universeDyn <- askUniverse
   (cancelElement, _) <- divAttributeLike' cancelButtonWrapperClass $ divAttributeLike' cancelButtonClass $ return ()
   let cancelClicks = domEvent Click cancelElement
@@ -83,18 +90,10 @@ drawPositionSelection CuttingForest = do
     (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
     let rotateClicks = domEvent Click rotateElement
     direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
+    combined <- combineDyn3 (,,) universeDyn hoveredPositions direction
+    mapDynExtract drawPotentialBuildings combined
     positionData <- forM availableBuildingPositions $ \position -> do
-      let isPositionHighlighted hoveredPosition rotation currentPosition =
-              hoveredPosition == Just currentPosition ||
-                Just currentPosition == ((^+^ directionAddition rotation) <$> hoveredPosition)
-          isPositionAllowed (Just pos) rotation universe = isRight $ selectPosition pos rotation universe
-          isPositionAllowed _ _ _ = False
-          styleFunc pos rot un
-            | isPositionHighlighted pos rot position && isPositionAllowed pos rot un = highlightedValidPlaceholderTileCss position
-            | isPositionHighlighted pos rot position = highlightedPlaceholderTileCss position
-            | otherwise = placeholderTileCss position
-      styleDyn <- combineDyn3 styleFunc hoveredPositions direction universeDyn
-      (element, _) <- divAttributeLikeDyn' styleDyn $ return ()
+      (element, _) <- divAttributeLike' (placeholderTileCss position) $ return ()
       let positionClicks = const position <$> domEvent Click element
       let positionEnters = const (First (Just position)) <$> domEvent Mouseenter element
       let positionLeaves = const (First Nothing) <$> domEvent Mouseleave element
@@ -102,7 +101,22 @@ drawPositionSelection CuttingForest = do
       return (swap <$> attach (current direction) positionClicks, hoveredPosition)
     hoveredPositions <- mapDyn getFirst =<< mconcatDyn (snd <$> positionData)
   return (leftmost (fst <$> positionData), cancelClicks)
-drawPositionSelection _ = return (never, never)
+
+drawPotentialBuildings :: MonadWidget t m => (Universe, Maybe Position, Direction) -> m ()
+drawPotentialBuildings (universe, (Just position), direction) = case selectPosition position direction universe of
+  Left _ -> do
+    divAttributeLike (highlightedPlaceholderTileCss position) $ return ()
+    divAttributeLike (highlightedPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
+  Right newUniverse -> do
+    let buildings = fromMaybe [] $ do
+          plId <- getCurrentPlayer universe
+          let newBuildings = getBuildingSpace newUniverse plId
+              oldBuildings = getBuildingSpace universe plId
+          return $ newBuildings L.\\ oldBuildings
+    drawBuildings buildings
+    divAttributeLike (highlightedValidPlaceholderTileCss position) $ return ()
+    divAttributeLike (highlightedValidPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
+drawPotentialBuildings _ = return ()
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
 findOccupantChanges selectedOccupant clickedPosition =
