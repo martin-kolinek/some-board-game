@@ -77,13 +77,16 @@ drawOccupantErrors errors =
       divAttributeLike occupantErrorTextClass (text error)
 
 drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction), Event t ())
-drawPositionSelection CuttingForest = drawActivePositionSelection
-drawPositionSelection DiggingCave = drawActivePositionSelection
-drawPositionSelection DiggingPassage = drawActivePositionSelection
+drawPositionSelection CuttingForest = drawActivePositionSelection TwoByOne
+drawPositionSelection DiggingCave = drawActivePositionSelection TwoByOne
+drawPositionSelection DiggingPassage = drawActivePositionSelection TwoByOne
+drawPositionSelection BuildingLivingRoom = drawActivePositionSelection OneByOne
 drawPositionSelection _ = return (never, never)
 
-drawActivePositionSelection :: (UniverseReader t m x, MonadWidget t m) => m (Event t (Position, Direction), Event t ())
-drawActivePositionSelection = do
+data BuildingType = TwoByOne | OneByOne
+
+drawActivePositionSelection :: (UniverseReader t m x, MonadWidget t m) => BuildingType -> m (Event t (Position, Direction), Event t ())
+drawActivePositionSelection buildingType = do
   universeDyn <- askUniverse
   (cancelElement, _) <- divAttributeLike' cancelButtonWrapperClass $ divAttributeLike' cancelButtonClass $ return ()
   let cancelClicks = domEvent Click cancelElement
@@ -92,7 +95,7 @@ drawActivePositionSelection = do
     let rotateClicks = domEvent Click rotateElement
     direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
     combined <- combineDyn3 (,,) universeDyn hoveredPositions direction
-    mapDynExtract drawPotentialBuildings combined
+    mapDynExtract (drawPotentialBuildings buildingType) combined
     positionData <- forM availableBuildingPositions $ \position -> do
       (element, _) <- divAttributeLike' (placeholderTileCss position) $ return ()
       let positionClicks = const position <$> domEvent Click element
@@ -103,11 +106,13 @@ drawActivePositionSelection = do
     hoveredPositions <- mapDyn getFirst =<< mconcatDyn (snd <$> positionData)
   return (leftmost (fst <$> positionData), cancelClicks)
 
-drawPotentialBuildings :: MonadWidget t m => (Universe, Maybe Position, Direction) -> m ()
-drawPotentialBuildings (universe, (Just position), direction) = case selectPosition position direction universe of
+drawPotentialBuildings :: MonadWidget t m => BuildingType -> (Universe, Maybe Position, Direction) -> m ()
+drawPotentialBuildings buildingType (universe, (Just position), direction) = case selectPosition position direction universe of
   Left _ -> do
     divAttributeLike (highlightedPlaceholderTileCss position) $ return ()
-    divAttributeLike (highlightedPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
+    case buildingType of
+      TwoByOne -> divAttributeLike (highlightedPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
+      OneByOne -> return ()
   Right newUniverse -> do
     let buildings = fromMaybe [] $ do
           plId <- getCurrentPlayer universe
@@ -116,8 +121,10 @@ drawPotentialBuildings (universe, (Just position), direction) = case selectPosit
           return $ newBuildings L.\\ oldBuildings
     drawBuildings buildings
     divAttributeLike (highlightedValidPlaceholderTileCss position) $ return ()
-    divAttributeLike (highlightedValidPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
-drawPotentialBuildings _ = return ()
+    case buildingType of
+      TwoByOne -> divAttributeLike (highlightedValidPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
+      OneByOne -> return ()
+drawPotentialBuildings _ _ = return ()
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
 findOccupantChanges selectedOccupant clickedPosition =
