@@ -108,14 +108,14 @@ oneQuarter :: Double
 oneQuarter = 20
 
 buildingCss :: Building -> Css
-buildingCss (Grass position) = background (url "data/grass.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Forest position) = background (url "data/forest.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Rock position) = background (url "data/rock.svg") >> positionCss position >> commonBuildingCss
-buildingCss (InitialRoom position) = background (url "data/init_room.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Cave position) = background (url "data/cave.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Passage position) = background (url "data/passage.svg") >> positionCss position >> commonBuildingCss
-buildingCss (LivingRoom position) = background (url "data/living_room.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Field position) = background (url "data/field.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Building Grass position) = background (url "data/grass.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Building Forest position) = background (url "data/forest.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Building Rock position) = background (url "data/rock.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Building InitialRoom position) = background (url "data/init_room.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Building Cave position) = background (url "data/cave.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Building Passage position) = background (url "data/passage.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Building LivingRoom position) = background (url "data/living_room.svg") >> positionCss position >> commonBuildingCss
+buildingCss (Building Field position) = background (url "data/field.svg") >> positionCss position >> commonBuildingCss
 
 commonBuildingCss :: Css
 commonBuildingCss = width (pct oneSixth) >> height (pct oneQuarter) >> position absolute >> backgroundSize cover

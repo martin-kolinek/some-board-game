@@ -17,6 +17,7 @@ import Data.Map.Strict as M hiding (map)
 import Control.Monad
 import Control.Monad.Reader
 import Prelude hiding (map)
+import Data.Maybe (fromJust)
 
 drawBoard :: (UniverseReader t m x, MonadWidget t m) => m (Event t UniverseAction)
 drawBoard = do
@@ -27,22 +28,21 @@ drawBoard = do
       playerExports <- drawPlayers
       workplaceClicks <- drawWorkplaces
       let selectedWorker = extractSelectedWorker playerExports
-          startWorkingActions = createWorkAssignments (current universeDyn) (current selectedWorker) workplaceClicks
+          selectedPlayer = extractSelectedPlayer playerExports
+          selectPositions = attachWith (\a (b, c, d) -> buildBuildings a b c d) (fromJust <$> current selectedPlayer) (extractPositionSelections playerExports)
+          startWorkingActions = createWorkAssignments (current universeDyn) (current selectedPlayer) (current selectedWorker) workplaceClicks
           changeOccupantsActions = uncurry alterOccupants <$> extractOccupantChanges playerExports
-          selectPositions = uncurry selectPosition <$> extractPositionSelections playerExports
-          cancelActions = const cancelSelection <$> extractCancels playerExports
-          chooseOptionActions = chooseChildDesireOption <$> extractChoseOption playerExports
-      return (leftmost [startWorkingActions, changeOccupantsActions, selectPositions, cancelActions, chooseOptionActions], innerSettings)
+      return (leftmost [startWorkingActions, changeOccupantsActions, selectPositions], innerSettings)
   return result
 
-createWorkAssignments :: Reflex t => Behavior t Universe -> Behavior t (Maybe WorkerId) -> Event t WorkplaceId -> Event t UniverseAction
-createWorkAssignments universeBehavior selectedWorkerBehavior workplaceClicks =
+createWorkAssignments :: Reflex t => Behavior t Universe -> Behavior t (Maybe PlayerId) -> Behavior t (Maybe WorkerId) -> Event t WorkplaceId -> Event t UniverseAction
+createWorkAssignments universeBehavior playerBehavior selectedWorkerBehavior workplaceClicks =
   let workerPlayers universe selectedWorker = [player | player <- getPlayers universe, worker <- getWorkers universe player, selectedWorker == worker]
       playerHasOccupantErrors universe selectedWorker = any (not . Prelude.null . getOccupantErrors universe) (workerPlayers universe selectedWorker)
-      combineFunc (universe, Just selectedWorker) workplace =
-        Just $ if playerHasOccupantErrors universe selectedWorker then const (Left "Fix occupants") else startWorking selectedWorker workplace
+      combineFunc (universe, Just playerId, Just selectedWorker) workplace =
+        Just $ if playerHasOccupantErrors universe selectedWorker then const (Left "Fix occupants") else startWorking playerId selectedWorker workplace
       combineFunc _ _ = Nothing
-      in attachWithMaybe combineFunc ((,) <$> universeBehavior <*> selectedWorkerBehavior) workplaceClicks
+      in attachWithMaybe combineFunc ((,,) <$> universeBehavior <*> playerBehavior <*> selectedWorkerBehavior) workplaceClicks
 
 drawWorkplaces :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => m (Event t WorkplaceId)
 drawWorkplaces =
@@ -68,7 +68,4 @@ askWorkplaceOccupants :: (UniverseReader t m x, MonadWidget t m) => WorkplaceId 
 askWorkplaceOccupants workplaceId = join $ mapDyn (flip getWorkplaceOccupants workplaceId) <$> askUniverse
 
 cardContents :: MonadWidget t m => WorkplaceData -> m ()
-cardContents (CutForest n) = text ("Wood: " ++ show n)
-cardContents (DigCave n) = text ("Stone: " ++ show n)
-cardContents (DigPassage n) = text ("Stone: " ++ show n)
-cardContents ChildDesire = return ()
+cardContents workplaceData = text $ show $ getWorkplaceResources workplaceData

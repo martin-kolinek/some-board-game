@@ -4,11 +4,13 @@ packages:
 - '.'
 - location:
     git: https://github.com/martin-kolinek/some-board-game-rules.git
-    commit: b0e20a470c8f9ee8f72ec1933da42789fd9c56a6
+    commit: cd4a42a5562b08e420c9e6cee7091db0218bb3f7
+  extra-dep: true
 extra-deps:
 - reflex-0.4.0
 - reflex-dom-0.3
 - ghcjs-dom-0.2.4.0
 - ref-tf-0.4.0.1
 - clay-0.11
+- some-board-game-rules-0.2.0.0
 resolver: lts-6.19

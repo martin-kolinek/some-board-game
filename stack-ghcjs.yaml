@@ -8,7 +8,8 @@ packages:
 - '.'
 - location:
     git: https://github.com/martin-kolinek/some-board-game-rules.git
-    commit: b0e20a470c8f9ee8f72ec1933da42789fd9c56a6
+    commit: cd4a42a5562b08e420c9e6cee7091db0218bb3f7
+  extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:

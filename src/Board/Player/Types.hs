@@ -8,11 +8,11 @@ import Common.DomUtil
 import Reflex.Dom
 
 data PlayerExports t = PlayerExports {
+  extractSelectedPlayer :: Dynamic t (Maybe PlayerId),
   extractSelectedWorker :: Dynamic t (Maybe WorkerId),
   extractOccupantChanges :: Event t (PlayerId, BuildingOccupants),
-  extractPositionSelections :: Event t (Position, Direction),
-  extractCancels :: Event t (),
-  extractChoseOption :: Event t ChildDesireOptions
+  extractPositionSelections :: Event t (Position, Direction, [BuildingType]),
+  extractFinishAction :: Event t ()
 }
 
 instance MonadWidget t m => ExtractableFromEvent t m (PlayerExports t) where

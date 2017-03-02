@@ -31,9 +31,9 @@ drawBuildingSpace playerId = divAttributeLike buildingSpaceClass $ do
   (selectedWorker, occupantChanges) <- drawBuildingOccupants playerId
   currentBuildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
   let wholeOccupantChanges = attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
-  playerStatus <- mapDyn (`getPlayerStatus` playerId) universe
-  (positionSelections, cancels) <- mapDynExtract drawPositionSelection playerStatus
-  return $ PlayerExports selectedWorker wholeOccupantChanges positionSelections cancels never
+  possibleBuildings <- mapDyn (`currentlyBuiltBuildings` playerId) universe
+  (positionSelections, cancels) <- mapDynExtract (drawPositionSelection playerId) possibleBuildings
+  return $ PlayerExports (constDyn (Just playerId)) selectedWorker wholeOccupantChanges positionSelections cancels
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
 drawBuildings buildings =
@@ -76,17 +76,9 @@ drawOccupantErrors errors =
       divAttributeLike occupantErrorIconClass (return ())
       divAttributeLike occupantErrorTextClass (text error)
 
-drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerStatus -> m (Event t (Position, Direction), Event t ())
-drawPositionSelection CuttingForest = drawActivePositionSelection TwoByOne
-drawPositionSelection DiggingCave = drawActivePositionSelection TwoByOne
-drawPositionSelection DiggingPassage = drawActivePositionSelection TwoByOne
-drawPositionSelection BuildingLivingRoom = drawActivePositionSelection OneByOne
-drawPositionSelection _ = return (never, never)
-
-data BuildingType = TwoByOne | OneByOne
-
-drawActivePositionSelection :: (UniverseReader t m x, MonadWidget t m) => BuildingType -> m (Event t (Position, Direction), Event t ())
-drawActivePositionSelection buildingType = do
+drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerId -> [[BuildingType]] -> m (Event t (Position, Direction, [BuildingType]), Event t ())
+drawPositionSelection _ [] = return (never, never)
+drawPositionSelection playerId possibleBuildings = do
   universeDyn <- askUniverse
   (cancelElement, _) <- divAttributeLike' cancelButtonWrapperClass $ divAttributeLike' cancelButtonClass $ return ()
   let cancelClicks = domEvent Click cancelElement
@@ -95,24 +87,24 @@ drawActivePositionSelection buildingType = do
     let rotateClicks = domEvent Click rotateElement
     direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
     combined <- combineDyn3 (,,) universeDyn hoveredPositions direction
-    mapDynExtract (drawPotentialBuildings buildingType) combined
+    mapDynExtract (drawPotentialBuildings playerId $ head possibleBuildings) combined
     positionData <- forM availableBuildingPositions $ \position -> do
       (element, _) <- divAttributeLike' (placeholderTileCss position) $ return ()
       let positionClicks = const position <$> domEvent Click element
       let positionEnters = const (First (Just position)) <$> domEvent Mouseenter element
       let positionLeaves = const (First Nothing) <$> domEvent Mouseleave element
       hoveredPosition <- holdDyn (First Nothing) (positionEnters <> positionLeaves)
-      return (swap <$> attach (current direction) positionClicks, hoveredPosition)
+      return ((\(a, b) -> (b, a, head possibleBuildings)) <$> attach (current direction) positionClicks, hoveredPosition)
     hoveredPositions <- mapDyn getFirst =<< mconcatDyn (snd <$> positionData)
   return (leftmost (fst <$> positionData), cancelClicks)
 
-drawPotentialBuildings :: MonadWidget t m => BuildingType -> (Universe, Maybe Position, Direction) -> m ()
-drawPotentialBuildings buildingType (universe, (Just position), direction) = case selectPosition position direction universe of
+drawPotentialBuildings :: MonadWidget t m => PlayerId -> [BuildingType] -> (Universe, Maybe Position, Direction) -> m ()
+drawPotentialBuildings playerId building (universe, (Just position), direction) = case buildBuildings playerId position direction building universe of
   Left _ -> do
     divAttributeLike (highlightedPlaceholderTileCss position) $ return ()
-    case buildingType of
-      TwoByOne -> divAttributeLike (highlightedPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
-      OneByOne -> return ()
+    if length building > 1
+      then divAttributeLike (highlightedPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
+      else return ()
   Right newUniverse -> do
     let buildings = fromMaybe [] $ do
           plId <- getCurrentPlayer universe
@@ -121,10 +113,10 @@ drawPotentialBuildings buildingType (universe, (Just position), direction) = cas
           return $ newBuildings L.\\ oldBuildings
     drawBuildings buildings
     divAttributeLike (highlightedValidPlaceholderTileCss position) $ return ()
-    case buildingType of
-      TwoByOne -> divAttributeLike (highlightedValidPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
-      OneByOne -> return ()
-drawPotentialBuildings _ _ = return ()
+    if length building > 1
+      then divAttributeLike (highlightedValidPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
+      else return ()
+drawPotentialBuildings _ _ _ = return ()
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
 findOccupantChanges selectedOccupant clickedPosition =
@@ -149,6 +141,7 @@ deselectInvalidOccupants occupants = do
 
 isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)
+isOccupantValid _ _ = True
 
 drawWorkplaceOccupant :: (MonadWidget t m, UniverseReader t m x, PlayerSettingsReader t m x) =>
   Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
@@ -156,9 +149,11 @@ drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState 
   selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
   workerEvent <- drawWorker selectedWorker workerId animationState
   return $ WorkerOccupant <$> workerEvent
+drawWorkplaceOccupant _ _ _ = return never
 
 workerFromOccupant :: BuildingOccupant -> Maybe WorkerId
 workerFromOccupant (WorkerOccupant workerId) = Just workerId
+workerFromOccupant _ = Nothing
 
 nextDirection :: Direction -> Direction
 nextDirection DirectionUp = DirectionRight

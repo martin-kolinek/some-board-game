@@ -57,8 +57,15 @@ boardStyle = do
     minHeight (pct 90)
 
 cardCss :: WorkplaceData -> (CssClass, Css)
-cardCss workplaceData = (cardClass, backgroundImage $ url $ backgroundCss workplaceData)
-  where backgroundCss (CutForest _) = "data/cut_forest.svg"
-        backgroundCss (DigCave _) = "data/dig_cave.svg"
-        backgroundCss (DigPassage _) = "data/dig_passage.svg"
-        backgroundCss ChildDesire = "data/child_desire.svg"
+cardCss workplaceData = (cardClass, backgroundImage $ url $ backgroundCss (getWorkplaceType workplaceData))
+  where backgroundCss CutForest = "data/cut_forest.svg"
+        backgroundCss DigCave = "data/dig_cave.svg"
+        backgroundCss DigPassage = "data/dig_passage.svg"
+        backgroundCss WorkerNeed = "data/child_desire.svg"
+        backgroundCss ResourceAddition = "data/card.svg"
+        backgroundCss HouseWork = "data/card.svg"
+        backgroundCss GatherWood = "data/card.svg"
+        backgroundCss GatherFood = "data/card.svg"
+        backgroundCss MakeStartPlayer = "data/card.svg"
+        backgroundCss Farming = "data/card.svg"
+        backgroundCss WeaponMaking = "data/card.svg"

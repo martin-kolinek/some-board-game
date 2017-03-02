@@ -20,11 +20,7 @@ drawPlayers = do
   selectedPlayer <- drawPlayerSelection
   _ <- mapDynExtract drawPlayerResources selectedPlayer
   playerExports <- mapDynExtract drawBuildingSpace selectedPlayer
-  let getSelectedPlayerStatus universe selectedPlayerId = getPlayerStatus universe selectedPlayerId
-  universeDyn <- askUniverse
-  playerStatus <- combineDyn getSelectedPlayerStatus universeDyn selectedPlayer
-  option <- mapDynExtract drawSelectionOverlay playerStatus
-  return $ playerExports {extractChoseOption = option}
+  return $ playerExports
 
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
 
@@ -105,15 +101,6 @@ resourceTypes = [(getWoodAmount, "Wood"),
                  (getIronAmount, "Iron"),
                  (getWheatAmount, "Wheat"),
                  (getPotatoAmount, "Potato"),
-                 (getDogAmount, "Dog"),
-                 (getSheepAmount, "Sheep"),
-                 (getPigAmount, "Pig"),
-                 (getMoney, "Money"),
+                 (getMoneyAmount, "Money"),
                  (getFoodAmount, "Food")]
 
-drawSelectionOverlay :: MonadWidget t m => PlayerStatus -> m (Event t ChildDesireOptions)
-drawSelectionOverlay (ChoosingChildDesireOption _) = divAttributeLike selectionClass $ do
-  childClicks <- button "Child"
-  buildingClicks <- button "Building"
-  return $ leftmost [const BuildRoom <$> buildingClicks, const MakeChild <$> childClicks]
-drawSelectionOverlay _ = return never
