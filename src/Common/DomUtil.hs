@@ -77,6 +77,9 @@ divAttributeLikeDyn' cls inner = do
 divAttributeLike :: (MonadWidget t f, AttributeLike t1) => t1 -> f b -> f b
 divAttributeLike atr a = snd <$> divAttributeLike' atr a
 
+divAttributeLikeDyn :: (MonadWidget t f, AttributeLike atr) => Dynamic t atr -> f b -> f b
+divAttributeLikeDyn atr a = snd <$> divAttributeLikeDyn' atr a
+
 classAttribute :: CssClass -> M.Map [Char] String
 classAttribute (CssClass className) = M.singleton "class" className
 

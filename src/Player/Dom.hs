@@ -14,14 +14,18 @@ import Data.Maybe
 import Control.Monad
 import Control.Monad.Reader
 import Prelude hiding (elem)
+import qualified Clay as C
 
 drawPlayersNew :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
 drawPlayersNew universeDyn settingsDyn = do
   playersDyn <- mapDyn getPlayers universeDyn
+  selectedPlayerDyn <- drawPlayerSelection settingsDyn universeDyn
   forDynExtract playersDyn $ \players -> fmap leftmost $ forM players $ \playerId -> do
     singlePlayerSettingsDyn <- mapDyn (flip singlePlayerSettings playerId) settingsDyn
     playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId singlePlayerSettingsDyn) $ do
-      drawPlayerNew
+      let style selPlId = if selPlId == playerId then C.display C.none else C.display C.block
+      styleDyn <- mapDyn style selectedPlayerDyn
+      divAttributeLikeDyn styleDyn drawPlayerNew
     return $ ($ playerId) <$> playerActionEvent
 
 drawPlayerNew :: PlayerWidget t m => m (Event t PlayerAction)
