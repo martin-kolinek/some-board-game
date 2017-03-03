@@ -7,7 +7,6 @@ import Types
 import Common.DomUtil
 import Player.Building.Style
 import Player.Types
-import Player.Worker.Dom
 import Settings.Types
 
 import Reflex.Dom
@@ -145,10 +144,10 @@ isOccupantValid _ _ = True
 
 drawWorkplaceOccupant :: (MonadWidget t m, UniverseReader t m x, PlayerSettingsReader t m x) =>
   Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
-drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState = do
-  selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
-  workerEvent <- drawWorker selectedWorker workerId animationState
-  return $ WorkerOccupant <$> workerEvent
+drawWorkplaceOccupant _ (WorkerOccupant _) _ = do
+  -- selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
+  -- workerEvent <- drawWorker selectedWorker workerId animationState
+  return $ WorkerOccupant <$> never --workerEvent
 drawWorkplaceOccupant _ _ _ = return never
 
 workerFromOccupant :: BuildingOccupant -> Maybe WorkerId

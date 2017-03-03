@@ -7,7 +7,6 @@ import Types
 import Common.DomUtil
 import Player.Style
 import Player.Types
-import Player.Building.Dom
 import Settings.Types
 
 import Reflex.Dom
@@ -28,29 +27,22 @@ drawPlayersNew universeDyn settingsDyn = do
 drawPlayerNew :: PlayerWidget t m => m (Event t PlayerAction)
 drawPlayerNew = return never
 
-drawPlayers :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => m (PlayerExports t)
-drawPlayers = do
-  selectedPlayer <- drawPlayerSelection
-  _ <- mapDynExtract drawPlayerResources selectedPlayer
-  playerExports <- mapDynExtract drawBuildingSpace selectedPlayer
-  return $ playerExports
-
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
 
-drawPlayerSelection :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => m (Dynamic t PlayerId)
-drawPlayerSelection =
+drawPlayerSelection :: MonadWidget t m => Dynamic t PlayerSettings -> Dynamic t Universe -> m (Dynamic t PlayerId)
+drawPlayerSelection settingsDyn universeDyn =
   divAttributeLike playerContainerClass $ do
     rec
-      players <- askPlayers
-      listOfEvents <- simpleList players $ mapDynExtract (drawPlayer selectedPlayer)
+      players <- mapDyn getPlayers universeDyn
+      listOfEvents <- simpleList players $ mapDynExtract (drawPlayer universeDyn settingsDyn selectedPlayer)
       playerClicks <- mapDyn leftmost listOfEvents
-      selectedPlayer <- findSelectedPlayer playerClicks
+      selectedPlayer <- findSelectedPlayer universeDyn playerClicks
     return selectedPlayer
 
-findSelectedPlayer :: (MonadWidget t m, UniverseReader t m x) => Dynamic t (Event t PlayerId) -> m (Dynamic t PlayerId)
-findSelectedPlayer playerClicks = do
-  currentPlayerDyn <- askCurrentPlayer
-  players <- askPlayers
+findSelectedPlayer :: MonadWidget t m => Dynamic t Universe -> Dynamic t (Event t PlayerId) -> m (Dynamic t PlayerId)
+findSelectedPlayer universeDyn playerClicks = do
+  currentPlayerDyn <- mapDyn getCurrentPlayer universeDyn
+  playersDyn <- mapDyn getPlayers universeDyn
   let filterRealPlayerChanges (displayedPlayer, maybeLastPlayer) maybeNextPlayer = do
         nextPlayer <- maybeNextPlayer
         guard $ Just nextPlayer /= maybeLastPlayer
@@ -63,13 +55,13 @@ findSelectedPlayer playerClicks = do
     delayedCurrentPlayerChangeSelection <- delay (fromRational 0.5) currentPlayerChangeSelections
     let selections = leftmost [userSelections, delayedCurrentPlayerChangeSelection]
     maybePlayerId <- holdDyn Nothing (Just <$> selections)
-    defaultPlayer <- mapDyn head players
+    defaultPlayer <- mapDyn head playersDyn
     result <- combineDyn fromMaybe defaultPlayer maybePlayerId
   return $ nubDyn result
 
-drawPlayer :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
-drawPlayer selectedPlayerId playerId  = do
-  currentPlayerDyn <- askCurrentPlayer
+drawPlayer :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
+drawPlayer universeDyn settingsDyn selectedPlayerId playerId  = do
+  currentPlayerDyn <- mapDyn getCurrentPlayer universeDyn
   let selectedClass isSelected = if isSelected then selectedPlayerClass else mempty
       drawCurrentPlayerIcon isCurrent = when isCurrent $ divAttributeLike currentPlayerIconClass (return ())
   isSelected <- mapDyn (== playerId) selectedPlayerId
@@ -77,7 +69,7 @@ drawPlayer selectedPlayerId playerId  = do
   isCurrent <- mapDyn (== Just playerId) currentPlayerDyn
   classDyn <- mconcatDyn [constDyn playerClass, selectedClassDyn]
   (elem, _) <- divAttributeLikeDyn' classDyn $ do
-    displayName <- askPlayerName playerId
+    displayName <- mapDyn (playerName . (flip singlePlayerSettings playerId)) settingsDyn
     dynText displayName
     mapDynExtract drawCurrentPlayerIcon isCurrent
   let event = domEvent Click elem
