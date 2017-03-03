@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 
-module Board.Player.Types where
+module Player.Types where
 
 import Rules
 import Common.DomUtil

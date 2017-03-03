@@ -1,14 +1,14 @@
 {-# LANGUAGE RecursiveDo, TupleSections #-}
 
-module Board.Settings.Dom where
+module Settings.Dom where
 
 import Rules
 
 import Types
-import Board.Settings.Types
-import Board.Settings.Style
-import Board.Player.Dom
-import Board.Worker.Style
+import Settings.Types
+import Settings.Style
+import Player.Dom
+import Player.Worker.Style
 import Common.DomUtil
 
 import Reflex.Dom

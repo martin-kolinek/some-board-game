@@ -3,7 +3,7 @@
 import Rules
 import Common.DomUtil
 import Types
-import Board.Dom
+import Player.Board.Dom
 import Errors.Dom
 import Style
 

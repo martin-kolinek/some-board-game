@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Board.Style where
+module Player.Board.Style where
 
 import Rules
 
 import Common.CssClass
-import Board.Player.Style
-import Board.Worker.Style
-import Board.Settings.Style
+import Player.Style
+import Player.Worker.Style
+import Settings.Style
 import Prelude hiding (repeat)
 import Clay
 import qualified Clay.Flexbox as F

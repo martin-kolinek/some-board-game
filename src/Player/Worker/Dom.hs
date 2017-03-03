@@ -1,11 +1,11 @@
-module Board.Worker.Dom where
+module Player.Worker.Dom where
 
 import Rules
 import Common.DomUtil
 import Common.CommonClasses
-import Board.Worker.Style
+import Player.Worker.Style
 import Types
-import Board.Settings.Types
+import Settings.Types
 
 import Reflex.Dom
 import Data.Monoid

@@ -1,14 +1,14 @@
 {-# LANGUAGE RecursiveDo, TupleSections, OverloadedStrings #-}
 
-module Board.Player.Building.Dom where
+module Player.Building.Dom where
 
 import Rules
 import Types
 import Common.DomUtil
-import Board.Player.Building.Style
-import Board.Player.Types
-import Board.Worker.Dom
-import Board.Settings.Types
+import Player.Building.Style
+import Player.Types
+import Player.Worker.Dom
+import Settings.Types
 
 import Reflex.Dom
 import Control.Monad

@@ -1,16 +1,16 @@
 {-# LANGUAGE RecursiveDo, FlexibleContexts, FlexibleInstances, MultiParamTypeClasses  #-}
 
-module Board.Dom where
+module Player.Board.Dom where
 
 import Rules
 import Types
 import Common.DomUtil
-import Board.Player.Dom
-import Board.Player.Types
-import Board.Worker.Dom
-import Board.Settings.Dom
-import Board.Settings.Types
-import Board.Style
+import Player.Dom
+import Player.Types
+import Player.Worker.Dom
+import Settings.Dom
+import Settings.Types
+import Player.Board.Style
 
 import Reflex.Dom
 import Data.Map.Strict as M hiding (map)

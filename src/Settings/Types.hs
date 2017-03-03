@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, ConstraintKinds #-}
 
-module Board.Settings.Types where
+module Settings.Types where
 
 import Rules
 

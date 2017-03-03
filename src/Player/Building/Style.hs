@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Board.Player.Building.Style where
+module Player.Building.Style where
 
 import Common.CssClass
 import Common.CommonClasses

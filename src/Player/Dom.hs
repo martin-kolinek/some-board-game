@@ -1,14 +1,14 @@
 {-# LANGUAGE RecursiveDo, FlexibleContexts, AllowAmbiguousTypes, FlexibleInstances, MultiParamTypeClasses, TupleSections #-}
 
-module Board.Player.Dom where
+module Player.Dom where
 
 import Rules
 import Types
 import Common.DomUtil
-import Board.Player.Style
-import Board.Player.Types
-import Board.Player.Building.Dom
-import Board.Settings.Types
+import Player.Style
+import Player.Types
+import Player.Building.Dom
+import Settings.Types
 
 import Reflex.Dom
 import Data.Maybe

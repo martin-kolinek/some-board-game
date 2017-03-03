@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Board.Settings.Style where
+module Settings.Style where
 
 import Common.CssClass
 import Common.CommonClasses

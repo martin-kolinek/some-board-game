@@ -4,7 +4,7 @@ module Style where
 
 import Common.CssClass
 import Errors.Style
-import Board.Style
+import Player.Board.Style
 
 import Clay
 import qualified Clay.Flexbox as F

@@ -20,11 +20,11 @@ executable some-board-game
   other-modules:       Style, Types,
                        Common.CssClass, Common.DomUtil, Common.CommonClasses
                        Errors.Style, Errors.Dom,
-                       Board.Player.Building.Dom, Board.Player.Building.Style,
-                       Board.Player.Dom, Board.Player.Style, Board.Player.Types,
-                       Board.Settings.Dom, Board.Settings.Style, Board.Settings.Types,
-                       Board.Worker.Dom, Board.Worker.Style,
-                       Board.Dom, Board.Style
+                       Player.Building.Dom, Player.Building.Style,
+                       Player.Dom, Player.Style, Player.Types,
+                       Settings.Dom, Settings.Style, Settings.Types,
+                       Player.Worker.Dom, Player.Worker.Style,
+                       Player.Board.Dom, Player.Board.Style
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9,
                        reflex,

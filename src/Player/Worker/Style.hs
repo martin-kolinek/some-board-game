@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Board.Worker.Style where
+module Player.Worker.Style where
 
-import Board.Settings.Types
+import Settings.Types
 import Common.CssClass
 import Common.CommonClasses
 
