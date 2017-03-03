@@ -11,12 +11,12 @@ import Reflex.Dom
 import Data.Map.Strict as M hiding (map)
 import Data.List hiding (map)
 import Prelude hiding (map, id)
+import Rules
 
-drawErrors :: (MonadWidget t m, UniverseReader t m x) => Event t UniverseAction -> m ()
-drawErrors actions = divAttributeLike errorContainerClass $ do
-  universe <- askUniverse
+drawErrors :: MonadWidget t m => Dynamic t Universe -> Event t UniverseAction -> m ()
+drawErrors universeDyn actions = divAttributeLike errorContainerClass $ do
   let extractError (un, act) = fromLeft $ act un
-      attached = attach (current universe) actions
+      attached = attach (current universeDyn) actions
       errorEvents = fmapMaybe extractError attached
       addToMap :: String -> Map Int String -> Map Int String
       addToMap err map = if M.null map then singleton 1 err else M.insert newIndex err map

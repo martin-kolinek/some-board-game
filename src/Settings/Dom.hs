@@ -4,10 +4,8 @@ module Settings.Dom where
 
 import Rules
 
-import Types
 import Settings.Types
 import Settings.Style
-import Player.Dom
 import Player.Worker.Style
 import Common.DomUtil
 
@@ -16,18 +14,17 @@ import Control.Monad
 import Data.Map.Strict
 import Data.Monoid
 
-drawSettingsIcon :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => m (Dynamic t PlayerSettings)
-drawSettingsIcon = do
+drawSettingsIcon :: MonadWidget t m => Dynamic t Universe -> m (Dynamic t PlayerSettings)
+drawSettingsIcon universeDyn = do
   rec
     (el, _) <- divAttributeLike' settingsIconClass $ return ()
     let settingsIconClicks = domEvent Click el
         combinedEvents = leftmost [settingsIconClicks, shroudClicks, closePopupClicks]
     settingsVisible <- toggle False combinedEvents
-    (settingsChanges, closePopupClicks) <- mapDynExtract drawSettingsWindow settingsVisible
+    (settingsChanges, closePopupClicks) <- mapDynExtract (drawSettingsWindow universeDyn settingsDyn) settingsVisible
     shroudClicks <- mapDynExtract drawShroud settingsVisible
     postBuild <- getPostBuild
-    universe <- askUniverse
-    let postBuildSettings = createInitialSettings <$> tag (current universe) postBuild
+    let postBuildSettings = createInitialSettings <$> tag (current universeDyn) postBuild
         settingsEvents = attachWith (flip updatePlayerSettings) (current settingsDyn) settingsChanges
         allSettingsEvents = leftmost [settingsEvents, postBuildSettings]
     settingsDyn <- holdDyn initialSettings allSettingsEvents
@@ -45,14 +42,14 @@ drawShroud True = do
   (element, _) <- divAttributeLike' shroudClass $ return ()
   return (domEvent Click element)
 
-drawSettingsWindow :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => Bool -> m (Event t SinglePlayerSettings, Event t ())
-drawSettingsWindow False = return (never, never)
-drawSettingsWindow True =
+drawSettingsWindow :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Bool -> m (Event t SinglePlayerSettings, Event t ())
+drawSettingsWindow _ _ False = return (never, never)
+drawSettingsWindow universeDyn playerSettingsDyn True =
   divAttributeLike settingsPopupClass $ do
     closeClicks <- drawSettingsClose
-    players <- askPlayers
+    players <- mapDyn getPlayers universeDyn
     playersAsMap <- mapDyn (fromList . fmap (, ())) players
-    listOfEvents <- listWithKey playersAsMap drawPlayerSettings
+    listOfEvents <- listWithKey playersAsMap (drawPlayerSettings playerSettingsDyn)
     events <- mapDyn (leftmost . elems) listOfEvents
     return (switch (current events), closeClicks)
 
@@ -61,13 +58,13 @@ drawSettingsClose = do
   (element, _) <- divAttributeLike' settingsPopupClose $ return ()
   return $ domEvent Click element
 
-drawPlayerSettings :: (PlayerSettingsReader t m x, MonadWidget t m) => PlayerId -> Dynamic t () -> m (Event t SinglePlayerSettings)
-drawPlayerSettings playerId _ = divAttributeLike settingsLineClass $ do
-  currentSettings <- askSinglePlayerSettings playerId
+drawPlayerSettings :: MonadWidget t m => Dynamic t PlayerSettings -> PlayerId -> Dynamic t () -> m (Event t SinglePlayerSettings)
+drawPlayerSettings playerSettingsDyn playerId _ = divAttributeLike settingsLineClass $ do
+  currentSettings <- mapDyn (flip singlePlayerSettings playerId) playerSettingsDyn
   postBuild <- getPostBuild
   nameInput <- textInput $ def
                         & setValue .~ tag (playerName <$> current currentSettings) postBuild
-  colorSelections <- drawColorSelection playerId
+  colorSelections <- drawColorSelection currentSettings
   let nameDyn = value nameInput
       createSinglePlayerSettingsWithName oldSettings name = SinglePlayerSettings name (playerColor oldSettings) playerId
       createSinglePlayerSettingsWithColor oldSettings color = SinglePlayerSettings (playerName oldSettings) color playerId
@@ -76,9 +73,8 @@ drawPlayerSettings playerId _ = divAttributeLike settingsLineClass $ do
       filteredChanges = ffilter (uncurry (/=)) $ attach (current currentSettings) (leftmost [nameChanges, colorChanges])
   return $ snd <$> filteredChanges
 
-drawColorSelection :: (PlayerSettingsReader t m x, MonadWidget t m) => PlayerId -> m (Event t PlayerColor)
-drawColorSelection playerId = do
-  playerSettings <- askSinglePlayerSettings playerId
+drawColorSelection :: MonadWidget t m => Dynamic t SinglePlayerSettings -> m (Event t PlayerColor)
+drawColorSelection playerSettings = do
   currentColor <- mapDyn playerColor playerSettings
   events <- forM allPlayerColors $ drawColor currentColor
   return $ leftmost events

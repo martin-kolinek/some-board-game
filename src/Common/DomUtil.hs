@@ -115,6 +115,9 @@ mapDynExtract func dynamic = do
   dyned <- dyn mapped
   extractFromEvent dyned
 
+forDynExtract :: (ExtractableFromEvent t m b, MonadWidget t m) => Dynamic t a -> (a -> m b) -> m b
+forDynExtract = flip mapDynExtract
+
 leftmostPair :: Reflex t => [(Event t a, Event t b)] -> (Event t a, Event t b)
 leftmostPair events = (leftmost (fst <$> events), leftmost (snd <$> events))
 

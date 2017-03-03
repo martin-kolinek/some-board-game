@@ -13,7 +13,20 @@ import Settings.Types
 import Reflex.Dom
 import Data.Maybe
 import Control.Monad
+import Control.Monad.Reader
 import Prelude hiding (elem)
+
+drawPlayersNew :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
+drawPlayersNew universeDyn settingsDyn = do
+  playersDyn <- mapDyn getPlayers universeDyn
+  forDynExtract playersDyn $ \players -> fmap leftmost $ forM players $ \playerId -> do
+    singlePlayerSettingsDyn <- mapDyn (flip singlePlayerSettings playerId) settingsDyn
+    playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId singlePlayerSettingsDyn) $ do
+      drawPlayerNew
+    return $ ($ playerId) <$> playerActionEvent
+
+drawPlayerNew :: PlayerWidget t m => m (Event t PlayerAction)
+drawPlayerNew = return never
 
 drawPlayers :: (UniverseReader t m x, PlayerSettingsReader t m x, MonadWidget t m) => m (PlayerExports t)
 drawPlayers = do

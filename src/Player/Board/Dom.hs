@@ -24,7 +24,7 @@ drawBoard = do
   universeDyn <- askUniverse
   rec
     (result, settings) <- flip runReaderT (universeDyn, settings) $ do
-      innerSettings <- drawSettingsIcon
+      innerSettings <- drawSettingsIcon universeDyn
       playerExports <- drawPlayers
       workplaceClicks <- drawWorkplaces
       let selectedWorker = extractSelectedWorker playerExports
