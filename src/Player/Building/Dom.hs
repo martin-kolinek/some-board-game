@@ -1,13 +1,13 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecursiveDo, TupleSections, OverloadedStrings #-}
 
 module Player.Building.Dom where
 
 import Rules
-import Types
 import Common.DomUtil
 import Player.Building.Style
 import Player.Types
-import Settings.Types
+import Player.Worker.Dom
 
 import Reflex.Dom
 import Control.Monad
@@ -22,27 +22,28 @@ import Control.Monad.IO.Class
 import Prelude hiding (error)
 import qualified Data.List as L
 
-drawBuildingSpace :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) => PlayerId -> m (PlayerExports t)
-drawBuildingSpace playerId = divAttributeLike buildingSpaceClass $ do
-  universe <- askUniverse
+drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
+drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
+  universe <- askUniverseDyn
+  playerId <- askPlayerId
   buildings <- mapDyn (`getBuildingSpace` playerId) universe
   mapDynExtract drawBuildings buildings
-  (selectedWorker, occupantChanges) <- drawBuildingOccupants playerId
-  currentBuildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
-  let wholeOccupantChanges = attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
-  possibleBuildings <- mapDyn (`currentlyBuiltBuildings` playerId) universe
-  (positionSelections, cancels) <- mapDynExtract (drawPositionSelection playerId) possibleBuildings
-  return $ PlayerExports (constDyn (Just playerId)) selectedWorker wholeOccupantChanges positionSelections cancels
+  (selectedWorker, _) <- drawBuildingOccupants
+  -- currentBuildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
+  -- let wholeOccupantChanges = attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
+  -- possibleBuildings <- mapDyn (`currentlyBuiltBuildings` playerId) universe
+  -- (positionSelections, cancels) <- mapDynExtract drawPositionSelection possibleBuildings
+  return $ PlayerExports selectedWorker never
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
 drawBuildings buildings =
   forM_ buildings $ \building ->
     divAttributeLike (buildingCss building) $ return ()
 
-drawBuildingOccupants :: (PlayerSettingsReader t m x, UniverseReader t m x, MonadWidget t m) =>
-  PlayerId -> m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
-drawBuildingOccupants playerId = do
-  universeDyn <- askUniverse
+drawBuildingOccupants :: PlayerWidget t m => m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
+drawBuildingOccupants = do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
   occupantsDyn <- mapDyn (`getBuildingOccupants` playerId) universeDyn
   let positionErrorsFunc position errors = Prelude.filter ((== position) . snd) errors
   occupantErrors <- mapDyn (`getOccupantErrors` playerId) universeDyn
@@ -75,10 +76,11 @@ drawOccupantErrors errors =
       divAttributeLike occupantErrorIconClass (return ())
       divAttributeLike occupantErrorTextClass (text error)
 
-drawPositionSelection :: (UniverseReader t m x, MonadWidget t m) => PlayerId -> [[BuildingType]] -> m (Event t (Position, Direction, [BuildingType]), Event t ())
-drawPositionSelection _ [] = return (never, never)
-drawPositionSelection playerId possibleBuildings = do
-  universeDyn <- askUniverse
+drawPositionSelection :: PlayerWidget t m => [[BuildingType]] -> m (Event t (Position, Direction, [BuildingType]), Event t ())
+drawPositionSelection [] = return (never, never)
+drawPositionSelection possibleBuildings = do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
   (cancelElement, _) <- divAttributeLike' cancelButtonWrapperClass $ divAttributeLike' cancelButtonClass $ return ()
   let cancelClicks = domEvent Click cancelElement
   rec
@@ -125,7 +127,7 @@ findOccupantChanges selectedOccupant clickedPosition =
       modifyMap _ _ = id
   in attachWith modifyMap (current selectedOccupant) clickedPosition
 
-deselectInvalidOccupants :: (UniverseReader t m x, MonadWidget t m) => Event t BuildingOccupant -> m (Dynamic t (Maybe BuildingOccupant))
+deselectInvalidOccupants :: PlayerWidget t m => Event t BuildingOccupant -> m (Dynamic t (Maybe BuildingOccupant))
 deselectInvalidOccupants occupants = do
   let removeInvalidOccupants maybeOccupant universe = do
           occupant <- maybeOccupant
@@ -133,7 +135,7 @@ deselectInvalidOccupants occupants = do
           return occupant
       justOccupants = Just <$> occupants
   heldOccupants <- hold Nothing justOccupants
-  universeChangeEvents <- updated <$> askUniverse
+  universeChangeEvents <- updated <$> askUniverseDyn
   let filteredSelection = attachWith removeInvalidOccupants heldOccupants universeChangeEvents
   selectedOccupants <- holdDyn Nothing $ leftmost [filteredSelection, justOccupants]
   return (nubDyn selectedOccupants)
@@ -142,12 +144,12 @@ isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)
 isOccupantValid _ _ = True
 
-drawWorkplaceOccupant :: (MonadWidget t m, UniverseReader t m x, PlayerSettingsReader t m x) =>
+drawWorkplaceOccupant :: PlayerWidget t m =>
   Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
-drawWorkplaceOccupant _ (WorkerOccupant _) _ = do
-  -- selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
-  -- workerEvent <- drawWorker selectedWorker workerId animationState
-  return $ WorkerOccupant <$> never --workerEvent
+drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState = do
+  selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
+  workerEvent <- drawWorker selectedWorker workerId animationState
+  return $ WorkerOccupant <$> workerEvent
 drawWorkplaceOccupant _ _ _ = return never
 
 workerFromOccupant :: BuildingOccupant -> Maybe WorkerId

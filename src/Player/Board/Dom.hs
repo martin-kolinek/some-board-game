@@ -3,21 +3,15 @@
 module Player.Board.Dom where
 
 import Rules
-import Types
 import Common.DomUtil
-import Player.Dom
 import Player.Types
 import Player.Worker.Dom
-import Settings.Dom
-import Settings.Types
 import Player.Board.Style
 
 import Reflex.Dom
 import Data.Map.Strict as M hiding (map)
 import Control.Monad
-import Control.Monad.Reader
 import Prelude hiding (map)
-import Data.Maybe (fromJust)
 
 drawWorkplaces :: PlayerWidget t m => m (Event t WorkplaceId)
 drawWorkplaces =

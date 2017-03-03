@@ -13,17 +13,14 @@ import Reflex.Dom
 import Control.Monad.Reader
 
 data PlayerExports t = PlayerExports {
-  extractSelectedPlayer :: Dynamic t (Maybe PlayerId),
   extractSelectedWorker :: Dynamic t (Maybe WorkerId),
-  extractOccupantChanges :: Event t (PlayerId, BuildingOccupants),
-  extractPositionSelections :: Event t (Position, Direction, [BuildingType]),
-  extractFinishAction :: Event t ()
+  extractActions :: Event t PlayerAction
 }
 
 instance MonadWidget t m => ExtractableFromEvent t m (PlayerExports t) where
   extractFromEvent ev =
-    let toTuple (PlayerExports a b c d e) = ((((a, b), c), d), e)
-        fromTuple ((((a, b), c), d), e) = PlayerExports a b c d e
+    let toTuple (PlayerExports a b) = (a, b)
+        fromTuple (a, b) = PlayerExports a b
         tupleEvent = toTuple <$> ev
         extracted = extractFromEvent tupleEvent
     in fromTuple <$> extracted

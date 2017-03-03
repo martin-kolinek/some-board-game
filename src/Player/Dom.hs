@@ -8,6 +8,8 @@ import Common.DomUtil
 import Player.Style
 import Player.Types
 import Settings.Types
+import Player.Board.Dom
+import Player.Building.Dom
 
 import Reflex.Dom
 import Data.Maybe
@@ -29,7 +31,13 @@ drawPlayersNew universeDyn settingsDyn = do
     return $ ($ playerId) <$> playerActionEvent
 
 drawPlayerNew :: PlayerWidget t m => m (Event t PlayerAction)
-drawPlayerNew = return never
+drawPlayerNew = do
+  workplaceClicks <- drawWorkplaces
+  PlayerExports selectedWorker action <- drawBuildingSpace
+  let startWorkerAction (Just worker) workplace = Just $ \player -> startWorking player worker workplace
+      startWorkerAction _ _ = Nothing
+      startWorkerActionEvent = attachWithMaybe startWorkerAction (current selectedWorker) workplaceClicks
+  return $ leftmost [startWorkerActionEvent, action]
 
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
 
