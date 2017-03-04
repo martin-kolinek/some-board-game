@@ -16,7 +16,6 @@ import Data.Maybe
 import Control.Monad
 import Control.Monad.Reader
 import Prelude hiding (elem)
-import qualified Clay as C
 import qualified Data.Text as T
 import Data.Monoid
 
@@ -27,9 +26,9 @@ drawPlayersNew universeDyn settingsDyn = do
   forDynExtract playersDyn $ \players -> fmap leftmost $ forM players $ \playerId -> do
     let singlePlayerSettingsDyn = (flip singlePlayerSettings playerId) <$> settingsDyn
     playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId singlePlayerSettingsDyn) $ do
-      let style selPlId = if selPlId == playerId then C.display C.none else C.display C.block
-          styleDyn = style <$> selectedPlayerDyn
-      divAttributeLikeDyn styleDyn drawPlayerNew
+      let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
+          clsDyn = cls <$> selectedPlayerDyn
+      divAttributeLikeDyn clsDyn drawPlayerNew
     return $ ($ playerId) <$> playerActionEvent
 
 drawPlayerNew :: PlayerWidget t m => m (Event t PlayerAction)

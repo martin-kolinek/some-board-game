@@ -18,6 +18,10 @@ playerContainerClass :: CssClass
 playerContainerClass = CssClass "player-container"
 selectionClass :: CssClass
 selectionClass = CssClass "selection"
+playerDataContainerClass :: CssClass
+playerDataContainerClass = CssClass "player-data-container"
+hiddenPlayerData :: CssClass
+hiddenPlayerData = CssClass "hidden-player-data"
 
 freeWorkersClass :: CssClass
 freeWorkersClass = CssClass "free-workers"
@@ -31,6 +35,13 @@ currentPlayerIconClass = currentPlayerIconClassInternal <> faClass <> faPlayClas
 playerStyle :: Css
 playerStyle = do
   buildingStyle
+  star # classSelector playerDataContainerClass ? do
+    display Clay.flex
+    flexFlow row F.wrap
+    margin nil nil nil nil
+    padding nil nil nil nil
+  star # classSelector hiddenPlayerData ? do
+    display none
   star # classSelector freeWorkersClass ? do
     position fixed
     bottom (em 2)
