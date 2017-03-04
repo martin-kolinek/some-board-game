@@ -54,12 +54,14 @@ drawBuildingOccupants = do
           occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
           filteredPositionOccupants = occupantsFilter <$> positionOccupants <*> universeDyn
           positionErrors = (positionErrorsFunc position) <$> occupantErrors
+          toMap :: Reflex t2 => Dynamic t2 [BuildingOccupant] -> Dynamic t2 (Map Int BuildingOccupant)
+          toMap lst = fromList <$> zip [1..] <$> lst
       (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
         performEvent_ $ (\e -> liftIO (putStrLn ("Errors "++ (show e)))) <$> (updated positionErrors)
         mapDynExtract drawOccupantErrors positionErrors
         divAttributeLike occupantContainerClass $ do
           let combineOccupantClicks workers = leftmost $ elems workers
-          occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
+          occupantClicks <- list (toMap filteredPositionOccupants) (drawWorkplaceOccupant selectedOccupant)
           let combinedClicks = combineOccupantClicks <$> occupantClicks
           return $ switch (current combinedClicks)
       return (insideClicks, const position <$> domEvent Click positionDiv)
@@ -144,13 +146,15 @@ isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)
 isOccupantValid _ _ = True
 
-drawWorkplaceOccupant :: PlayerWidget t m =>
-  Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
-drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState = do
-  let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
-  workerEvent <- drawWorker selectedWorker workerId animationState
-  return $ WorkerOccupant <$> workerEvent
-drawWorkplaceOccupant _ _ _ = return never
+drawWorkplaceOccupant :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> (Dynamic t BuildingOccupant) -> m (Event t BuildingOccupant)
+drawWorkplaceOccupant selectedOccupant occupantDyn = do
+  mapDynExtract (drawWorkplaceOccupantStatic selectedOccupant) occupantDyn
+  where drawWorkplaceOccupantStatic :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> m (Event t BuildingOccupant)
+        drawWorkplaceOccupantStatic selOccupant (WorkerOccupant workerId) = do
+          let selectedWorker = (workerFromOccupant =<<) <$> selOccupant
+          workerEvent <- drawWorker selectedWorker (constDyn workerId)
+          return $ WorkerOccupant <$> workerEvent
+        drawWorkplaceOccupantStatic _ _ = return never
 
 workerFromOccupant :: BuildingOccupant -> Maybe WorkerId
 workerFromOccupant (WorkerOccupant workerId) = Just workerId

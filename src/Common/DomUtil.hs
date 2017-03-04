@@ -6,50 +6,13 @@ module Common.DomUtil where
 import Reflex
 import Reflex.Dom
 import Common.CssClass
-import Data.Time.Clock
 import Data.Monoid
 import qualified Data.Map.Strict as M
-import Data.Align
-import Data.These
 import Data.Default
 import Clay (Css, renderWith, compact)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import Control.Monad (join)
-
-data AnimationState = Initial | Standard | Fading deriving (Show, Eq)
-
-animated :: (MonadWidget t m, Ord k) => NominalDiffTime -> Dynamic t (M.Map k a) -> (k -> Dynamic t (AnimationState, a) -> m b) -> m (Dynamic t (M.Map k b))
-animated time input draw = do
-  postBuild <- getPostBuild
-  delayed <- delay time $ leftmost [updated input, tag (current input) postBuild]
-  delayedInput <- holdDyn M.empty delayed
-  let aligned = align <$> input <*> delayedInput
-      extractTuple (This a) = (Standard, a)
-      extractTuple (That a) = (Fading, a)
-      extractTuple (These a _) = (Standard, a)
-      tupleMapDyn = M.map extractTuple <$> aligned
-  listWithKey tupleMapDyn draw
-
-animatedList :: (MonadWidget t m, Ord k) => NominalDiffTime -> Dynamic t [k] -> (k -> Dynamic t AnimationState -> m b) -> m (Dynamic t (M.Map k b))
-animatedList time input draw = do
-  let draw2 key dyn = draw key (fst <$> dyn)
-      mapFromList = (\x -> M.fromList $ (, ()) <$> x) <$> input
-  animated time mapFromList draw2
-
-animateState :: MonadWidget t m => Dynamic t CssClass -> Dynamic t CssClass -> Dynamic t AnimationState -> m a -> m (El t, a)
-animateState alwaysOnDyn fadeDyn dynamic inner = do
-  let combineAll Standard alwaysOn _ = alwaysOn
-      combineAll _ alwaysOn fade = alwaysOn <> fade
-      y = combineAll <$> dynamic <*> alwaysOnDyn <*> fadeDyn
-  divAttributeLikeDyn' y inner
-
-updatedWithInitialValue :: MonadWidget t m => Dynamic t a -> m (Event t a)
-updatedWithInitialValue input = do
-  postBuild <- getPostBuild
-  let tagged = tag (current input) postBuild
-      combined = leftmost [updated input, tagged]
-  return combined
 
 fromLeft :: forall t a. Either a t -> Maybe a
 fromLeft (Left a) = Just a
@@ -58,12 +21,6 @@ fromLeft _ = Nothing
 fromRight :: forall t a. Either t a -> Maybe a
 fromRight (Right a) = Just a
 fromRight _ = Nothing
-
-filterByBehavior :: forall t c t1. Reflex t1 => (t -> Bool) -> Behavior t1 t -> Event t1 c -> Event t1 c
-filterByBehavior func = attachWithMaybe filter
-  where filter a b
-          | func a = Just b
-          | otherwise = Nothing
 
 divAttributeLike' :: (MonadWidget t m, AttributeLike t1) => t1 -> m a -> m (El t, a)
 divAttributeLike' atr = elAttr' "div" (toAttributeMap atr)

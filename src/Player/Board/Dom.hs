@@ -22,9 +22,11 @@ drawWorkplaces =
         drawWorkplace workplaceId dataDyn = do
           workersInWorkplace <- askWorkplaceOccupants workplaceId
           (wrapperElem, _) <- divAttributeLike' cardWrapperClass $
-            divAttributeLikeDyn' (cardCss <$> dataDyn) $ do
+            divAttributeLikeDyn (cardCss <$> dataDyn) $ do
               mapDynExtract cardContents dataDyn
-              animatedList (fromRational 1) workersInWorkplace (drawWorker $ constDyn Nothing)
+              let toMap :: Reflex t2 => Dynamic t2 [WorkerId] -> Dynamic t2 (Map Int WorkerId)
+                  toMap workerIds = (fromList . zip [1..] <$> workerIds)
+              list (toMap workersInWorkplace) (drawWorker $ constDyn Nothing)
           return $ const workplaceId <$> domEvent Click wrapperElem
     events <- listWithKey workplaces drawWorkplace
     let combineEvents map = leftmost (M.elems map)
