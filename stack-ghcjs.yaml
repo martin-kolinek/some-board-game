@@ -1,7 +1,7 @@
 # For more information, see: http://docs.haskellstack.org/en/stable/yaml_configuration.html
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-6.19
+resolver: lts-7.19
 
 # Local packages, usually specified by relative directory name
 packages:
@@ -10,28 +10,39 @@ packages:
     git: https://github.com/martin-kolinek/some-board-game-rules.git
     commit: cd4a42a5562b08e420c9e6cee7091db0218bb3f7
   extra-dep: true
+- location:
+    git: https://github.com/reflex-frp/reflex
+    commit: 02cf9dbc89ba20b6e93622e0910a76d5e9d06669
+  extra-dep: true
+- location:
+    git: https://github.com/reflex-frp/reflex-dom
+    commit: 59100d61282fe02aa39be602f0a73daf31e28f63
+  extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
+- clay-0.12.1
 - ghcjs-dom-0.2.4.0
-- reflex-0.4.0
-- reflex-dom-0.3
-- ref-tf-0.4
-- clay-0.11
+- prim-uniq-0.1.0.1
+- ref-tf-0.4.0.1
+- zenc-0.1.1
+- MemoTrie-0.6.7
+- newtype-generics-0.5
 
 # Override default flag values for local packages and extra-deps
 flags: {}
 
 # Extra package databases containing global packages
 extra-package-dbs: []
-
-compiler: ghcjs-0.2.0.9006019_ghc-7.10.3
+compiler: ghcjs-0.2.1.9007019_ghc-8.0.1
 compiler-check: match-exact
+
 setup-info:
- ghcjs:
-  source:
-   ghcjs-0.2.0.9006019_ghc-7.10.3:
-    url: "http://tolysz.org/ghcjs/lts-6.19-9006019.tar.gz"
+  ghcjs:
+    source:
+      ghcjs-0.2.1.9007019_ghc-8.0.1:
+           url: http://ghcjs.tolysz.org/ghc-8.0-2017-02-05-lts-7.19-9007019.tar.gz
+           sha1: d2cfc25f9cda32a25a87d9af68891b2186ee52f9
 
 # Control whether we use the GHC we find on the path
 # system-ghc: true

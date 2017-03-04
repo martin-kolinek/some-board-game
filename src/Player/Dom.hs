@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, FlexibleContexts, AllowAmbiguousTypes, FlexibleInstances, MultiParamTypeClasses, TupleSections #-}
+{-# LANGUAGE RecursiveDo, FlexibleContexts, AllowAmbiguousTypes, FlexibleInstances, MultiParamTypeClasses, TupleSections, TypeFamilies, OverloadedStrings #-}
 
 module Player.Dom where
 
@@ -17,16 +17,18 @@ import Control.Monad
 import Control.Monad.Reader
 import Prelude hiding (elem)
 import qualified Clay as C
+import qualified Data.Text as T
+import Data.Monoid
 
 drawPlayersNew :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
 drawPlayersNew universeDyn settingsDyn = do
-  playersDyn <- mapDyn getPlayers universeDyn
+  let playersDyn = getPlayers <$> universeDyn
   selectedPlayerDyn <- drawPlayerSelection settingsDyn universeDyn
   forDynExtract playersDyn $ \players -> fmap leftmost $ forM players $ \playerId -> do
-    singlePlayerSettingsDyn <- mapDyn (flip singlePlayerSettings playerId) settingsDyn
+    let singlePlayerSettingsDyn = (flip singlePlayerSettings playerId) <$> settingsDyn
     playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId singlePlayerSettingsDyn) $ do
       let style selPlId = if selPlId == playerId then C.display C.none else C.display C.block
-      styleDyn <- mapDyn style selectedPlayerDyn
+          styleDyn = style <$> selectedPlayerDyn
       divAttributeLikeDyn styleDyn drawPlayerNew
     return $ ($ playerId) <$> playerActionEvent
 
@@ -45,17 +47,17 @@ drawPlayerSelection :: MonadWidget t m => Dynamic t PlayerSettings -> Dynamic t 
 drawPlayerSelection settingsDyn universeDyn =
   divAttributeLike playerContainerClass $ do
     rec
-      players <- mapDyn getPlayers universeDyn
+      let players = getPlayers <$> universeDyn
       listOfEvents <- simpleList players $ mapDynExtract (drawPlayer universeDyn settingsDyn selectedPlayer)
-      playerClicks <- mapDyn leftmost listOfEvents
+      let playerClicks = leftmost <$> listOfEvents
       selectedPlayer <- findSelectedPlayer universeDyn playerClicks
     return selectedPlayer
 
 findSelectedPlayer :: MonadWidget t m => Dynamic t Universe -> Dynamic t (Event t PlayerId) -> m (Dynamic t PlayerId)
 findSelectedPlayer universeDyn playerClicks = do
-  currentPlayerDyn <- mapDyn getCurrentPlayer universeDyn
-  playersDyn <- mapDyn getPlayers universeDyn
-  let filterRealPlayerChanges (displayedPlayer, maybeLastPlayer) maybeNextPlayer = do
+  let currentPlayerDyn = getCurrentPlayer <$> universeDyn
+      playersDyn = getPlayers <$> universeDyn
+      filterRealPlayerChanges (displayedPlayer, maybeLastPlayer) maybeNextPlayer = do
         nextPlayer <- maybeNextPlayer
         guard $ Just nextPlayer /= maybeLastPlayer
         guard $ Just displayedPlayer == maybeLastPlayer
@@ -67,36 +69,36 @@ findSelectedPlayer universeDyn playerClicks = do
     delayedCurrentPlayerChangeSelection <- delay (fromRational 0.5) currentPlayerChangeSelections
     let selections = leftmost [userSelections, delayedCurrentPlayerChangeSelection]
     maybePlayerId <- holdDyn Nothing (Just <$> selections)
-    defaultPlayer <- mapDyn head playersDyn
-    result <- combineDyn fromMaybe defaultPlayer maybePlayerId
-  return $ nubDyn result
+    let defaultPlayer = head <$> playersDyn
+        result = fromMaybe <$> defaultPlayer <*> maybePlayerId
+  return $ uniqDyn result
 
 drawPlayer :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
 drawPlayer universeDyn settingsDyn selectedPlayerId playerId  = do
-  currentPlayerDyn <- mapDyn getCurrentPlayer universeDyn
-  let selectedClass isSelected = if isSelected then selectedPlayerClass else mempty
-      drawCurrentPlayerIcon isCurrent = when isCurrent $ divAttributeLike currentPlayerIconClass (return ())
-  isSelected <- mapDyn (== playerId) selectedPlayerId
-  selectedClassDyn <- mapDyn selectedClass isSelected
-  isCurrent <- mapDyn (== Just playerId) currentPlayerDyn
-  classDyn <- mconcatDyn [constDyn playerClass, selectedClassDyn]
+  let currentPlayerDyn = getCurrentPlayer <$> universeDyn
+      selectedClass isSel = if isSel then selectedPlayerClass else mempty
+      drawCurrentPlayerIcon isCur = when isCur $ divAttributeLike currentPlayerIconClass (return ())
+      isSelected = (== playerId) <$> selectedPlayerId
+      selectedClassDyn = selectedClass <$> isSelected
+      isCurrent = (== Just playerId) <$> currentPlayerDyn
+      classDyn = mconcat [constDyn playerClass, selectedClassDyn]
   (elem, _) <- divAttributeLikeDyn' classDyn $ do
-    displayName <- mapDyn (playerName . (flip singlePlayerSettings playerId)) settingsDyn
+    let displayName = (playerName . (flip singlePlayerSettings playerId)) <$> settingsDyn
     dynText displayName
     mapDynExtract drawCurrentPlayerIcon isCurrent
   let event = domEvent Click elem
   return $ const playerId <$> event
 
-askPlayerName :: (MonadWidget t m, PlayerSettingsReader t m x) => PlayerId -> m (Dynamic t String)
+askPlayerName :: (MonadWidget t m, PlayerSettingsReader t m x) => PlayerId -> m (Dynamic t T.Text)
 askPlayerName playerId = do
   singlePlayerSettingsDyn <- askSinglePlayerSettings playerId
-  mapDyn playerName singlePlayerSettingsDyn
+  return $ playerName <$> singlePlayerSettingsDyn
 
-askCurrentPlayer :: (UniverseReader t m x, MonadWidget t m) => m (Dynamic t (Maybe PlayerId))
-askCurrentPlayer = join $ mapDyn getCurrentPlayer <$> askUniverse
+askCurrentPlayer :: (UniverseReader t m x) => m (Dynamic t (Maybe PlayerId))
+askCurrentPlayer = fmap getCurrentPlayer <$> askUniverse
 
-askPlayers :: (UniverseReader t m x, MonadWidget t m) => m (Dynamic t [PlayerId])
-askPlayers = join $ mapDyn getPlayers <$> askUniverse
+askPlayers :: (UniverseReader t m x) => m (Dynamic t [PlayerId])
+askPlayers = fmap getPlayers <$> askUniverse
 
 drawPlayerResources :: (UniverseReader t m x, MonadWidget t m) => PlayerId -> m ()
 drawPlayerResources player = do
@@ -104,14 +106,16 @@ drawPlayerResources player = do
     resources <- askResources player
     forM_ resourceTypes $ \(resourceFunc, resourceLabel) -> do
       divAttributeLike' () $ do
-        resourceText <- mapDyn (((resourceLabel ++ ": ") ++) .show . resourceFunc) resources
+        let resourceText = (((resourceLabel <> ": ") <>) . T.pack . show . resourceFunc) <$> resources
         dynText resourceText
   return ()
 
 askResources :: (MonadWidget t m, UniverseReader t m x) => PlayerId -> m (Dynamic t Resources)
-askResources player = join $ combineDyn getPlayerResources <$> askUniverse <*> pure (constDyn player)
+askResources player = do
+  u <- askUniverse
+  return $ getPlayerResources <$> u <*> constDyn player
 
-resourceTypes :: [(Resources -> Int, String)]
+resourceTypes :: [(Resources -> Int, T.Text)]
 resourceTypes = [(getWoodAmount, "Wood"),
                  (getStoneAmount, "Stone"),
                  (getGoldAmount, "Gold"),

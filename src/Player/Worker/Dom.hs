@@ -15,7 +15,7 @@ drawWorker :: PlayerWidget t m => Dynamic t (Maybe WorkerId) -> WorkerId -> Dyna
 drawWorker selectedWorkerDyn workerId animationStates = do
   colorDyn <- getWorkerColor
   let addHighlight color selectedWorker = if selectedWorker == Just workerId then colorClass color <> activeWorkerClass <> workerAnimationClass else colorClass color <> workerAnimationClass
-  mainClass <- combineDyn addHighlight colorDyn selectedWorkerDyn
+      mainClass = addHighlight <$> colorDyn <*> selectedWorkerDyn
   (divEl, _) <- animateState mainClass (constDyn fadeClass) animationStates $ return ()
   let clicks = domEvent Click divEl
       filteredClicks = filterByBehavior (/=Fading) (current animationStates) clicks
@@ -24,4 +24,4 @@ drawWorker selectedWorkerDyn workerId animationStates = do
 getWorkerColor :: PlayerWidget t m => m (Dynamic t PlayerColor)
 getWorkerColor = do
   settings <- Player.Types.askPlayerSettings
-  mapDyn playerColor settings
+  return $ playerColor <$> settings

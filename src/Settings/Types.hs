@@ -8,6 +8,7 @@ import Rules
 import Data.Maybe
 import Reflex.Dom
 import Control.Monad.Reader
+import qualified Data.Text as T
 
 data PlayerColor = PlayerGreen | PlayerBlue | PlayerRed | PlayerCyan | PlayerOrange | PlayerWhite | PlayerBlack deriving (Show, Eq)
 
@@ -15,7 +16,7 @@ allPlayerColors :: [PlayerColor]
 allPlayerColors = [PlayerGreen, PlayerBlue, PlayerRed, PlayerCyan, PlayerOrange, PlayerWhite, PlayerBlack]
 
 data SinglePlayerSettings = SinglePlayerSettings {
-  playerName :: String,
+  playerName :: T.Text,
   playerColor :: PlayerColor,
   settingsPlayerId :: PlayerId
 } deriving (Show, Eq)
@@ -29,7 +30,7 @@ singlePlayerSettings :: PlayerSettings -> PlayerId -> SinglePlayerSettings
 singlePlayerSettings settings playerId =
   let filtered = filter ((== playerId) . settingsPlayerId) settings
       maybeSettings = listToMaybe filtered
-  in fromMaybe (SinglePlayerSettings (show playerId) PlayerGreen playerId) maybeSettings
+  in fromMaybe (SinglePlayerSettings (T.pack $ show playerId) PlayerGreen playerId) maybeSettings
 
 updatePlayerSettings :: SinglePlayerSettings -> PlayerSettings -> PlayerSettings
 updatePlayerSettings newSingleSettings oldSettings =
@@ -48,7 +49,7 @@ askPlayerSettings :: PlayerSettingsReader t m x => m (Dynamic t PlayerSettings)
 askPlayerSettings = asks extractPlayerSettings
 
 askSinglePlayerSettings :: (MonadWidget t m, PlayerSettingsReader t m x) => PlayerId -> m (Dynamic t SinglePlayerSettings)
-askSinglePlayerSettings player = mapDyn (flip singlePlayerSettings player) =<< askPlayerSettings
+askSinglePlayerSettings player = fmap (flip singlePlayerSettings player) <$> askPlayerSettings
 
 askPlayerColor :: (MonadWidget t m, PlayerSettingsReader t m x) => PlayerId -> m (Dynamic t PlayerColor)
-askPlayerColor player = mapDyn playerColor =<< askSinglePlayerSettings player
+askPlayerColor player = fmap playerColor <$> askSinglePlayerSettings player

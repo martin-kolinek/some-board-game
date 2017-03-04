@@ -21,12 +21,13 @@ import Data.AdditiveGroup
 import Control.Monad.IO.Class
 import Prelude hiding (error)
 import qualified Data.List as L
+import qualified Data.Text as T
 
 drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   universe <- askUniverseDyn
   playerId <- askPlayerId
-  buildings <- mapDyn (`getBuildingSpace` playerId) universe
+  let buildings = (`getBuildingSpace` playerId) <$> universe
   mapDynExtract drawBuildings buildings
   (selectedWorker, _) <- drawBuildingOccupants
   -- currentBuildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
@@ -44,29 +45,29 @@ drawBuildingOccupants :: PlayerWidget t m => m (Dynamic t (Maybe WorkerId), Even
 drawBuildingOccupants = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  occupantsDyn <- mapDyn (`getBuildingOccupants` playerId) universeDyn
-  let positionErrorsFunc position errors = Prelude.filter ((== position) . snd) errors
-  occupantErrors <- mapDyn (`getOccupantErrors` playerId) universeDyn
+  let occupantsDyn = (`getBuildingOccupants` playerId) <$> universeDyn
+      positionErrorsFunc position errors = Prelude.filter ((== position) . snd) errors
+      occupantErrors = (`getOccupantErrors` playerId) <$> universeDyn
   rec
     clicks <- forM availableBuildingPositions $ \position -> do
       liftIO (putStrLn ("Pos " ++ (show position)))
-      positionOccupants <- mapDyn (findWithDefault [] position) occupantsDyn
-      let occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
-      filteredPositionOccupants <- combineDyn occupantsFilter positionOccupants universeDyn
-      positionErrors <- mapDyn (positionErrorsFunc position) occupantErrors
+      let positionOccupants = (findWithDefault [] position) <$> occupantsDyn
+          occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
+          filteredPositionOccupants = occupantsFilter <$> positionOccupants <*> universeDyn
+          positionErrors = (positionErrorsFunc position) <$> occupantErrors
       (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
         performEvent_ $ (\e -> liftIO (putStrLn ("Errors "++ (show e)))) <$> (updated positionErrors)
         mapDynExtract drawOccupantErrors positionErrors
         divAttributeLike occupantContainerClass $ do
           let combineOccupantClicks workers = leftmost $ elems workers
           occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
-          combinedClicks <- combineOccupantClicks `mapDyn` occupantClicks
+          let combinedClicks = combineOccupantClicks <$> occupantClicks
           return $ switch (current combinedClicks)
       return (insideClicks, const position <$> domEvent Click positionDiv)
     let (lastClickedOccupant, lastClickedPosition) = (leftmost *** leftmost) $ unzip clicks
     selectedOccupant <- deselectInvalidOccupants lastClickedOccupant
-    selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
-    let occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
+    let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
+        occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
   return (selectedWorker, occupantChanges)
 
 drawOccupantErrors :: (MonadWidget t m) => [OccupantError] -> m ()
@@ -74,7 +75,7 @@ drawOccupantErrors errors =
   forM_ errors $ \(error, _) ->
     divAttributeLike occupantErrorClass $ do
       divAttributeLike occupantErrorIconClass (return ())
-      divAttributeLike occupantErrorTextClass (text error)
+      divAttributeLike occupantErrorTextClass (text $ T.pack error)
 
 drawPositionSelection :: PlayerWidget t m => [[BuildingType]] -> m (Event t (Position, Direction, [BuildingType]), Event t ())
 drawPositionSelection [] = return (never, never)
@@ -87,16 +88,16 @@ drawPositionSelection possibleBuildings = do
     (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
     let rotateClicks = domEvent Click rotateElement
     direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
-    combined <- combineDyn3 (,,) universeDyn hoveredPositions direction
+    let combined = (,,) <$> universeDyn <*> hoveredPositions <*> direction
     mapDynExtract (drawPotentialBuildings playerId $ head possibleBuildings) combined
     positionData <- forM availableBuildingPositions $ \position -> do
-      (element, _) <- divAttributeLike' (placeholderTileCss position) $ return ()
-      let positionClicks = const position <$> domEvent Click element
-      let positionEnters = const (First (Just position)) <$> domEvent Mouseenter element
-      let positionLeaves = const (First Nothing) <$> domEvent Mouseleave element
+      (placeholderElem, _) <- divAttributeLike' (placeholderTileCss position) $ return ()
+      let positionClicks = const position <$> domEvent Click placeholderElem
+      let positionEnters = const (First (Just position)) <$> domEvent Mouseenter placeholderElem
+      let positionLeaves = const (First Nothing) <$> domEvent Mouseleave placeholderElem
       hoveredPosition <- holdDyn (First Nothing) (positionEnters <> positionLeaves)
       return ((\(a, b) -> (b, a, head possibleBuildings)) <$> attach (current direction) positionClicks, hoveredPosition)
-    hoveredPositions <- mapDyn getFirst =<< mconcatDyn (snd <$> positionData)
+    let hoveredPositions = getFirst <$> mconcat (snd <$> positionData)
   return (leftmost (fst <$> positionData), cancelClicks)
 
 drawPotentialBuildings :: MonadWidget t m => PlayerId -> [BuildingType] -> (Universe, Maybe Position, Direction) -> m ()
@@ -138,7 +139,7 @@ deselectInvalidOccupants occupants = do
   universeChangeEvents <- updated <$> askUniverseDyn
   let filteredSelection = attachWith removeInvalidOccupants heldOccupants universeChangeEvents
   selectedOccupants <- holdDyn Nothing $ leftmost [filteredSelection, justOccupants]
-  return (nubDyn selectedOccupants)
+  return (uniqDyn selectedOccupants)
 
 isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)
@@ -147,7 +148,7 @@ isOccupantValid _ _ = True
 drawWorkplaceOccupant :: PlayerWidget t m =>
   Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
 drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState = do
-  selectedWorker <- mapDyn (workerFromOccupant =<<) selectedOccupant
+  let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
   workerEvent <- drawWorker selectedWorker workerId animationState
   return $ WorkerOccupant <$> workerEvent
 drawWorkplaceOccupant _ _ _ = return never

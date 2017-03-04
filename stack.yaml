@@ -1,16 +1,30 @@
 flags: {}
+
 extra-package-dbs: []
+
 packages:
 - '.'
 - location:
     git: https://github.com/martin-kolinek/some-board-game-rules.git
     commit: cd4a42a5562b08e420c9e6cee7091db0218bb3f7
   extra-dep: true
+- location:
+    git: https://github.com/reflex-frp/reflex
+    commit: 02cf9dbc89ba20b6e93622e0910a76d5e9d06669
+  extra-dep: true
+- location:
+    git: https://github.com/reflex-frp/reflex-dom
+    commit: 59100d61282fe02aa39be602f0a73daf31e28f63
+  extra-dep: true
+
 extra-deps:
-- reflex-0.4.0
-- reflex-dom-0.3
-- ghcjs-dom-0.2.4.0
-- ref-tf-0.4.0.1
 - clay-0.11
-- some-board-game-rules-0.2.0.0
-resolver: lts-6.19
+- ghcjs-dom-0.2.4.0
+- prim-uniq-0.1.0.1
+- ref-tf-0.4.0.1
+- zenc-0.1.1
+- webkitgtk3-javascriptcore-0.13.2.0
+- MemoTrie-0.6.7
+- newtype-generics-0.5
+
+resolver: lts-7.19

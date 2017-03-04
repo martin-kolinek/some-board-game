@@ -26,7 +26,7 @@ executable some-board-game
                        Player.Worker.Dom, Player.Worker.Style,
                        Player.Board.Dom, Player.Board.Style
   -- other-extensions:
-  build-depends:       base >=4.8 && <4.9,
+  build-depends:       base >=4.8 && <5,
                        reflex,
                        reflex-dom,
                        clay,

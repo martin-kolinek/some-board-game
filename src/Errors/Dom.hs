@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, FlexibleContexts #-}
+{-# LANGUAGE RecursiveDo, FlexibleContexts, OverloadedStrings #-}
 
 module Errors.Dom where
 
@@ -12,6 +12,7 @@ import Data.Map.Strict as M hiding (map)
 import Data.List hiding (map)
 import Prelude hiding (map, id)
 import Rules
+import qualified Data.Text as T
 
 drawErrors :: MonadWidget t m => Dynamic t Universe -> Event t UniverseAction -> m ()
 drawErrors universeDyn actions = divAttributeLike errorContainerClass $ do
@@ -26,8 +27,8 @@ drawErrors universeDyn actions = divAttributeLike errorContainerClass $ do
       extractEventsFromMap map = leftmost $ attachIdToEvent <$> assocs map
       drawError :: Reflex t => MonadWidget t m => Int -> Dynamic t (AnimationState, String) -> m (Event t ())
       drawError _ tuple = do
-        err <- snd `mapDyn` tuple
-        animState <- fst `mapDyn` tuple
+        let err = T.pack <$> snd <$> tuple
+            animState = fst <$> tuple
         (_, res) <- animateState (constDyn errorItemClass) (constDyn fadeClass) animState $ do
           el "div" $ dynText err
           el "div" $ buttonSpanCssClass closeButtonWithIconClass (return ())
@@ -42,6 +43,6 @@ drawErrors universeDyn actions = divAttributeLike errorContainerClass $ do
     let closeKeyEvents = switch $ extractEventsFromMap <$> current closeEvents
         modifyMap (Left ids) mp = Data.List.foldl' (flip M.delete) mp ids
         modifyMap (Right err) mp = addToMap err mp
-        allRemovals = appendEvents (return <$> closeKeyEvents) timedRemovals
+        allRemovals = mappend (return <$> closeKeyEvents) timedRemovals
         addAndRemoveEvents = leftmost [Right <$> errorEvents, Left <$> allRemovals]
   return ()

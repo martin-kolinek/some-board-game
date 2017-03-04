@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# LANGUAGE TupleSections, ScopedTypeVariables, LambdaCase,
-   MultiParamTypeClasses, FlexibleInstances, InstanceSigs #-}
+   MultiParamTypeClasses, FlexibleInstances, InstanceSigs, OverloadedStrings #-}
 module Common.DomUtil where
 
 import Reflex
@@ -13,36 +13,35 @@ import Data.Align
 import Data.These
 import Data.Default
 import Clay (Css, renderWith, compact)
-import Data.Text.Lazy as T (unpack, tail, init)
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import Control.Monad (join)
 
 data AnimationState = Initial | Standard | Fading deriving (Show, Eq)
 
-animated :: (MonadWidget t m, Ord k, Show k, Show a) => NominalDiffTime -> Dynamic t (M.Map k a) -> (k -> Dynamic t (AnimationState, a) -> m b) -> m (Dynamic t (M.Map k b))
+animated :: (MonadWidget t m, Ord k) => NominalDiffTime -> Dynamic t (M.Map k a) -> (k -> Dynamic t (AnimationState, a) -> m b) -> m (Dynamic t (M.Map k b))
 animated time input draw = do
   postBuild <- getPostBuild
   delayed <- delay time $ leftmost [updated input, tag (current input) postBuild]
   delayedInput <- holdDyn M.empty delayed
-  aligned <- combineDyn align input delayedInput
-  let extractTuple (This a) = (Standard, a)
+  let aligned = align <$> input <*> delayedInput
+      extractTuple (This a) = (Standard, a)
       extractTuple (That a) = (Fading, a)
       extractTuple (These a _) = (Standard, a)
-  tupleMapDyn <- mapDyn (M.map extractTuple) aligned
+      tupleMapDyn = M.map extractTuple <$> aligned
   listWithKey tupleMapDyn draw
 
-animatedList :: (MonadWidget t m, Ord k, Show k) => NominalDiffTime -> Dynamic t [k] -> (k -> Dynamic t AnimationState -> m b) -> m (Dynamic t (M.Map k b))
+animatedList :: (MonadWidget t m, Ord k) => NominalDiffTime -> Dynamic t [k] -> (k -> Dynamic t AnimationState -> m b) -> m (Dynamic t (M.Map k b))
 animatedList time input draw = do
-  let draw2 key dyn = do
-        fstDyn <- mapDyn fst dyn
-        draw key fstDyn
-  mapFromList <- mapDyn (\x -> M.fromList $ (, ()) <$> x) input
+  let draw2 key dyn = draw key (fst <$> dyn)
+      mapFromList = (\x -> M.fromList $ (, ()) <$> x) <$> input
   animated time mapFromList draw2
 
 animateState :: MonadWidget t m => Dynamic t CssClass -> Dynamic t CssClass -> Dynamic t AnimationState -> m a -> m (El t, a)
 animateState alwaysOnDyn fadeDyn dynamic inner = do
   let combineAll Standard alwaysOn _ = alwaysOn
       combineAll _ alwaysOn fade = alwaysOn <> fade
-  x <- combineDyn combineAll dynamic alwaysOnDyn
-  y <- combineDyn id x fadeDyn
+      y = combineAll <$> dynamic <*> alwaysOnDyn <*> fadeDyn
   divAttributeLikeDyn' y inner
 
 updatedWithInitialValue :: MonadWidget t m => Dynamic t a -> m (Event t a)
@@ -70,9 +69,8 @@ divAttributeLike' :: (MonadWidget t m, AttributeLike t1) => t1 -> m a -> m (El t
 divAttributeLike' atr = elAttr' "div" (toAttributeMap atr)
 
 divAttributeLikeDyn' :: (AttributeLike atr, MonadWidget t m) => Dynamic t atr -> m a -> m (El t, a)
-divAttributeLikeDyn' cls inner = do
-  attrDyn <- mapDyn toAttributeMap cls
-  elDynAttr' "div" attrDyn inner
+divAttributeLikeDyn' cls inner =
+  elDynAttr' "div" (toAttributeMap <$> cls) inner
 
 divAttributeLike :: (MonadWidget t f, AttributeLike t1) => t1 -> f b -> f b
 divAttributeLike atr a = snd <$> divAttributeLike' atr a
@@ -85,7 +83,7 @@ classAttribute (CssClass className) = M.singleton "class" className
 
 buttonSpanCssClass :: MonadWidget t m => CssClass -> m a -> m (Event t ())
 buttonSpanCssClass (CssClass className) inside = do
-  (el, _) <- elAttr' "span" ("class" =: className) inside
+  (el, _) <- elAttr' "span" ("class" =: (T.pack className)) inside
   return $ domEvent Click el
 
 class MonadWidget t m => ExtractableFromEvent t m b where
@@ -99,7 +97,7 @@ instance MonadWidget t m => ExtractableFromEvent t m (Event t b) where
 instance (MonadWidget t m, Default b) => ExtractableFromEvent t m (Dynamic t b) where
   extractFromEvent event = do
     held <- holdDyn (constDyn def) event
-    return $ joinDyn held
+    return $ join held
 
 instance (MonadWidget t m, ExtractableFromEvent t m a, ExtractableFromEvent t m b) => ExtractableFromEvent t m (a, b) where
   extractFromEvent event = do
@@ -112,36 +110,30 @@ instance (MonadWidget t m, ExtractableFromEvent t m a, ExtractableFromEvent t m 
 instance MonadWidget t m => ExtractableFromEvent t m () where
   extractFromEvent _ = return ()
 
-mapDynExtract :: (ExtractableFromEvent t m b, MonadWidget t m) => (a -> m b) -> Dynamic t a -> m b
+mapDynExtract :: (ExtractableFromEvent t m b) => (a -> m b) -> Dynamic t a -> m b
 mapDynExtract func dynamic = do
-  mapped <- mapDyn func dynamic
-  dyned <- dyn mapped
+  dyned <- dyn $ func <$> dynamic
   extractFromEvent dyned
 
-forDynExtract :: (ExtractableFromEvent t m b, MonadWidget t m) => Dynamic t a -> (a -> m b) -> m b
+forDynExtract :: (ExtractableFromEvent t m b) => Dynamic t a -> (a -> m b) -> m b
 forDynExtract = flip mapDynExtract
 
 leftmostPair :: Reflex t => [(Event t a, Event t b)] -> (Event t a, Event t b)
 leftmostPair events = (leftmost (fst <$> events), leftmost (snd <$> events))
 
-styleStringFromCss :: Css -> String
-styleStringFromCss = unpack . T.tail . T.init . renderWith compact []
-
-combineDyn3 :: (Reflex t, MonadHold t m) => (a -> b -> c -> d) -> Dynamic t a -> Dynamic t b -> Dynamic t c -> m (Dynamic t d)
-combineDyn3 f a b c = do
-  x <- combineDyn f a b
-  combineDyn id x c
+styleStringFromCss :: Css -> T.Text
+styleStringFromCss = T.tail . T.init . LT.toStrict . renderWith compact []
 
 class AttributeLike t where
-  toAttributeMap :: t -> M.Map String String
+  toAttributeMap :: t -> M.Map T.Text T.Text
 
 instance AttributeLike CssClass where
-  toAttributeMap (CssClass cls) = "class" =: cls
+  toAttributeMap (CssClass cls) = (T.pack "class") =: (T.pack cls)
 
 instance AttributeLike Css where
-  toAttributeMap css = "style" =: styleStringFromCss css
+  toAttributeMap css = (T.pack "style") =: styleStringFromCss css
 
-instance AttributeLike (M.Map String String) where
+instance AttributeLike (M.Map T.Text T.Text) where
   toAttributeMap = id
 
 instance (AttributeLike a, AttributeLike b) => AttributeLike (a, b) where
