@@ -89,11 +89,6 @@ drawPlayer universeDyn settingsDyn selectedPlayerId playerId  = do
   let event = domEvent Click elem
   return $ const playerId <$> event
 
-askPlayerName :: (MonadWidget t m, PlayerSettingsReader t m x) => PlayerId -> m (Dynamic t T.Text)
-askPlayerName playerId = do
-  singlePlayerSettingsDyn <- askSinglePlayerSettings playerId
-  return $ playerName <$> singlePlayerSettingsDyn
-
 drawPlayerResources :: PlayerWidget t m => PlayerId -> m ()
 drawPlayerResources player = do
   _ <- divAttributeLike' resourcesClass $ do
