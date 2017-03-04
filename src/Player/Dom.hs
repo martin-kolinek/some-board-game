@@ -94,13 +94,7 @@ askPlayerName playerId = do
   singlePlayerSettingsDyn <- askSinglePlayerSettings playerId
   return $ playerName <$> singlePlayerSettingsDyn
 
-askCurrentPlayer :: (UniverseReader t m x) => m (Dynamic t (Maybe PlayerId))
-askCurrentPlayer = fmap getCurrentPlayer <$> askUniverse
-
-askPlayers :: (UniverseReader t m x) => m (Dynamic t [PlayerId])
-askPlayers = fmap getPlayers <$> askUniverse
-
-drawPlayerResources :: (UniverseReader t m x, MonadWidget t m) => PlayerId -> m ()
+drawPlayerResources :: PlayerWidget t m => PlayerId -> m ()
 drawPlayerResources player = do
   _ <- divAttributeLike' resourcesClass $ do
     resources <- askResources player
@@ -110,9 +104,9 @@ drawPlayerResources player = do
         dynText resourceText
   return ()
 
-askResources :: (MonadWidget t m, UniverseReader t m x) => PlayerId -> m (Dynamic t Resources)
+askResources :: PlayerWidget t m => PlayerId -> m (Dynamic t Resources)
 askResources player = do
-  u <- askUniverse
+  u <- askUniverseDyn
   return $ getPlayerResources <$> u <*> constDyn player
 
 resourceTypes :: [(Resources -> Int, T.Text)]
