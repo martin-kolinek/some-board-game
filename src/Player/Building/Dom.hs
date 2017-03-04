@@ -50,7 +50,6 @@ drawBuildingOccupants = do
       occupantErrors = (`getOccupantErrors` playerId) <$> universeDyn
   rec
     clicks <- forM availableBuildingPositions $ \position -> do
-      liftIO (putStrLn ("Pos " ++ (show position)))
       let positionOccupants = (findWithDefault [] position) <$> occupantsDyn
           occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
           filteredPositionOccupants = occupantsFilter <$> positionOccupants <*> universeDyn
