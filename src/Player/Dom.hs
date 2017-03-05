@@ -13,6 +13,7 @@ import Player.Building.Dom
 
 import Reflex.Dom
 import Data.Maybe
+import Data.Map (fromList, foldl')
 import Control.Monad
 import Control.Monad.Reader
 import Prelude hiding (elem)
@@ -23,13 +24,14 @@ drawPlayersNew :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSetti
 drawPlayersNew universeDyn settingsDyn = do
   let playersDyn = getPlayers <$> universeDyn
   selectedPlayerDyn <- drawPlayerSelection settingsDyn universeDyn
-  forDynExtract playersDyn $ \players -> fmap leftmost $ forM players $ \playerId -> do
+  mapEvent <- listViewWithKey (fromList . (fmap (, Nothing)) <$> playersDyn) $ \playerId _ -> do
     let singlePlayerSettingsDyn = (flip singlePlayerSettings playerId) <$> settingsDyn
     playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId singlePlayerSettingsDyn) $ do
       let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
           clsDyn = cls <$> selectedPlayerDyn
       divAttributeLikeDyn clsDyn drawPlayerNew
     return $ ($ playerId) <$> playerActionEvent
+  return $ foldl' (>=>) return <$> mapEvent
 
 drawPlayerNew :: PlayerWidget t m => m (Event t PlayerAction)
 drawPlayerNew = do
