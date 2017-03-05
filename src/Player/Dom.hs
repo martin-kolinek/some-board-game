@@ -20,8 +20,8 @@ import Prelude hiding (elem)
 import qualified Data.Text as T
 import Data.Monoid
 
-drawPlayersNew :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
-drawPlayersNew universeDyn settingsDyn = do
+drawPlayers :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
+drawPlayers universeDyn settingsDyn = do
   let playersDyn = getPlayers <$> universeDyn
   selectedPlayerDyn <- drawPlayerSelection settingsDyn universeDyn
   mapEvent <- listViewWithKey (fromList . (fmap (, Nothing)) <$> playersDyn) $ \playerId _ -> do
@@ -29,12 +29,12 @@ drawPlayersNew universeDyn settingsDyn = do
     playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId singlePlayerSettingsDyn) $ do
       let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
           clsDyn = cls <$> selectedPlayerDyn
-      divAttributeLikeDyn clsDyn drawPlayerNew
+      divAttributeLikeDyn clsDyn drawPlayer
     return $ ($ playerId) <$> playerActionEvent
   return $ foldl' (>=>) return <$> mapEvent
 
-drawPlayerNew :: PlayerWidget t m => m (Event t PlayerAction)
-drawPlayerNew = do
+drawPlayer :: PlayerWidget t m => m (Event t PlayerAction)
+drawPlayer = do
   workplaceClicks <- drawWorkplaces
   PlayerExports selectedWorker action <- drawBuildingSpace
   let startWorkerAction (Just worker) workplace = Just $ \player -> startWorking player worker workplace
@@ -49,7 +49,7 @@ drawPlayerSelection settingsDyn universeDyn =
   divAttributeLike playerContainerClass $ do
     rec
       let players = getPlayers <$> universeDyn
-      listOfEvents <- simpleList players $ mapDynExtract (drawPlayer universeDyn settingsDyn selectedPlayer)
+      listOfEvents <- simpleList players $ mapDynExtract (drawPlayerInSelection universeDyn settingsDyn selectedPlayer)
       let playerClicks = leftmost <$> listOfEvents
       selectedPlayer <- findSelectedPlayer universeDyn playerClicks
     return selectedPlayer
@@ -74,8 +74,8 @@ findSelectedPlayer universeDyn playerClicks = do
         result = fromMaybe <$> defaultPlayer <*> maybePlayerId
   return $ uniqDyn result
 
-drawPlayer :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
-drawPlayer universeDyn settingsDyn selectedPlayerId playerId  = do
+drawPlayerInSelection :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
+drawPlayerInSelection universeDyn settingsDyn selectedPlayerId playerId  = do
   let currentPlayerDyn = getCurrentPlayer <$> universeDyn
       selectedClass isSel = if isSel then selectedPlayerClass else mempty
       drawCurrentPlayerIcon isCur = when isCur $ divAttributeLike currentPlayerIconClass (return ())

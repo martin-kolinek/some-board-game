@@ -19,7 +19,7 @@ main = mainWidgetWithCss mainStyleByteString $ do
           withActionApplied <- action universe
           catchError (finishTurn withActionApplied) (const $ return withActionApplied)
     settingsDyn <- drawSettingsIcon universeDyn
-    actionsDyn <- drawPlayersNew universeDyn settingsDyn
+    actionsDyn <- drawPlayers universeDyn settingsDyn
     drawErrors universeDyn actionsDyn
     let actionsApplied = attachWith applyActionWithTryFinishTurn (current universeDyn) actionsDyn
         correctMoves = fmapMaybe fromRight actionsApplied
