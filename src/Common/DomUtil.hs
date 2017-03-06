@@ -78,12 +78,12 @@ divAttributeLike atr a = snd <$> divAttributeLike' atr a
 divAttributeLikeDyn :: (MonadWidget t f, AttributeLike atr) => Dynamic t atr -> f b -> f b
 divAttributeLikeDyn atr a = snd <$> divAttributeLikeDyn' atr a
 
-classAttribute :: CssClass -> M.Map [Char] String
+classAttribute :: CssClass -> M.Map T.Text T.Text
 classAttribute (CssClass className) = M.singleton "class" className
 
 buttonSpanCssClass :: MonadWidget t m => CssClass -> m a -> m (Event t ())
 buttonSpanCssClass (CssClass className) inside = do
-  (el, _) <- elAttr' "span" ("class" =: (T.pack className)) inside
+  (el, _) <- elAttr' "span" ("class" =: className) inside
   return $ domEvent Click el
 
 class MonadWidget t m => ExtractableFromEvent t m b where
@@ -128,7 +128,7 @@ class AttributeLike t where
   toAttributeMap :: t -> M.Map T.Text T.Text
 
 instance AttributeLike CssClass where
-  toAttributeMap (CssClass cls) = (T.pack "class") =: (T.pack cls)
+  toAttributeMap (CssClass cls) = "class" =: cls
 
 instance AttributeLike Css where
   toAttributeMap css = (T.pack "style") =: styleStringFromCss css

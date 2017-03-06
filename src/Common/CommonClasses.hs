@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Common.CommonClasses where
 
 import Common.CssClass
