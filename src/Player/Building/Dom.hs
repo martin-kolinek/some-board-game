@@ -18,7 +18,6 @@ import Data.Tuple
 import Data.Monoid
 import Data.Either
 import Data.AdditiveGroup
-import Control.Monad.IO.Class
 import Prelude hiding (error)
 import qualified Data.List as L
 import qualified Data.Text as T
@@ -58,7 +57,6 @@ drawBuildingOccupants = do
           filteredPositionOccupants = occupantsFilter <$> positionOccupants <*> universeDyn
           positionErrors = (positionErrorsFunc position) <$> occupantErrors
       (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
-        performEvent_ $ (\e -> liftIO (putStrLn ("Errors "++ (show e)))) <$> (updated positionErrors)
         mapDynExtract drawOccupantErrors positionErrors
         divAttributeLike occupantContainerClass $ do
           let combineOccupantClicks workers = leftmost $ elems workers
