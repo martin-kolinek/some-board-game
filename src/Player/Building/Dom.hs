@@ -29,12 +29,15 @@ drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   playerId <- askPlayerId
   let buildings = (`getBuildingSpace` playerId) <$> universe
   mapDynExtract drawBuildings buildings
-  (selectedWorker, _) <- drawBuildingOccupants
-  -- currentBuildingOccupants <- mapDyn (`getBuildingOccupants` playerId) universe
-  -- let wholeOccupantChanges = attachWith (\a b -> (playerId, b a)) (current currentBuildingOccupants) occupantChanges
-  -- possibleBuildings <- mapDyn (`currentlyBuiltBuildings` playerId) universe
-  -- (positionSelections, cancels) <- mapDynExtract drawPositionSelection possibleBuildings
-  return $ PlayerExports selectedWorker never
+  (selectedWorker, occupantChanges) <- drawBuildingOccupants
+  let currentBuildingOccupants = (`getBuildingOccupants` playerId) <$> universe
+      wholeOccupantChanges = attachWith (&) (current currentBuildingOccupants) occupantChanges
+      occupantChangeActions = flip alterOccupants <$> wholeOccupantChanges
+      possibleBuildings = (`currentlyBuiltBuildings` playerId) <$> universe
+  (positionSelections, _) <- mapDynExtract drawPositionSelection possibleBuildings
+  let createBuildAction (pos, dir, selectedBuildings) = \plId -> buildBuildings plId pos dir selectedBuildings
+      buildActions = createBuildAction <$> positionSelections
+  return $ PlayerExports selectedWorker $ leftmost [occupantChangeActions, buildActions]
 
 drawBuildings :: MonadWidget t m => [Building] -> m ()
 drawBuildings buildings =
