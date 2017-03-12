@@ -90,9 +90,7 @@ class MonadWidget t m => ExtractableFromEvent t m b where
    extractFromEvent :: Event t b -> m b
 
 instance MonadWidget t m => ExtractableFromEvent t m (Event t b) where
-  extractFromEvent event = do
-    held <- hold never event
-    return $ switch held
+  extractFromEvent event = switchPromptly never event
 
 instance (MonadWidget t m, Default b) => ExtractableFromEvent t m (Dynamic t b) where
   extractFromEvent event = do
