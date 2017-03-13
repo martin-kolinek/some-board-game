@@ -11,11 +11,9 @@ import Data.Monoid
 import qualified Data.Map.Strict as M
 import Data.Align
 import Data.These
-import Data.Default
 import Clay (Css, renderWith, compact)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import Control.Monad (join)
 
 data AnimationState = Initial | Standard | Fading deriving (Show, Eq)
 
@@ -86,36 +84,6 @@ buttonSpanCssClass (CssClass className) inside = do
   (el, _) <- elAttr' "span" ("class" =: className) inside
   return $ domEvent Click el
 
-class MonadWidget t m => ExtractableFromEvent t m b where
-   extractFromEvent :: Event t b -> m b
-
-instance MonadWidget t m => ExtractableFromEvent t m (Event t b) where
-  extractFromEvent event = switchPromptly never event
-
-instance (MonadWidget t m, Default b) => ExtractableFromEvent t m (Dynamic t b) where
-  extractFromEvent event = do
-    held <- holdDyn (constDyn def) event
-    return $ join held
-
-instance (MonadWidget t m, ExtractableFromEvent t m a, ExtractableFromEvent t m b) => ExtractableFromEvent t m (a, b) where
-  extractFromEvent event = do
-    let aev = fst <$> event
-    let bev = snd <$> event
-    a <- extractFromEvent aev
-    b <- extractFromEvent bev
-    return (a, b)
-
-instance MonadWidget t m => ExtractableFromEvent t m () where
-  extractFromEvent _ = return ()
-
-mapDynExtract :: (ExtractableFromEvent t m b) => (a -> m b) -> Dynamic t a -> m b
-mapDynExtract func dynamic = do
-  dyned <- dyn $ func <$> dynamic
-  extractFromEvent dyned
-
-forDynExtract :: (ExtractableFromEvent t m b) => Dynamic t a -> (a -> m b) -> m b
-forDynExtract = flip mapDynExtract
-
 leftmostPair :: Reflex t => [(Event t a, Event t b)] -> (Event t a, Event t b)
 leftmostPair events = (leftmost (fst <$> events), leftmost (snd <$> events))
 
@@ -139,3 +107,14 @@ instance (AttributeLike a, AttributeLike b) => AttributeLike (a, b) where
 
 instance AttributeLike () where
   toAttributeMap _ = M.empty
+
+whenClass :: (Monoid b, Functor f) => f Bool -> b -> f b
+whenClass cond cls = classDyn <$> cond
+  where classDyn True = cls
+        classDyn False = mempty
+
+simpleListOrd :: (MonadWidget t m, Ord a) => Dynamic t [a] -> (a -> m  b) -> m (Dynamic t [b])
+simpleListOrd listDyn itemFunc =
+  let toMap = M.fromList . fmap (, 1 :: Int)
+      applyFunc k _ = itemFunc k
+  in fmap M.elems <$> listWithKey (toMap <$> listDyn) applyFunc

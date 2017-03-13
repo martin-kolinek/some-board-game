@@ -6,7 +6,6 @@
 module Player.Types where
 
 import Rules
-import Common.DomUtil
 import Settings.Types
 
 import Reflex.Dom
@@ -16,14 +15,6 @@ data PlayerExports t = PlayerExports {
   extractSelectedWorker :: Dynamic t (Maybe WorkerId),
   extractActions :: Event t PlayerAction
 }
-
-instance MonadWidget t m => ExtractableFromEvent t m (PlayerExports t) where
-  extractFromEvent ev =
-    let toTuple (PlayerExports a b) = (a, b)
-        fromTuple (a, b) = PlayerExports a b
-        tupleEvent = toTuple <$> ev
-        extracted = extractFromEvent tupleEvent
-    in fromTuple <$> extracted
 
 data PlayerWidgetData t = PlayerWidgetData {
     playerWidgetUniverse :: Dynamic t Universe,

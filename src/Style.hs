@@ -4,6 +4,8 @@ module Style where
 
 import Errors.Style
 import Player.Board.Style
+import Common.CommonClasses
+import Common.CssClass
 
 import Clay
 import Data.ByteString.Lazy hiding (repeat, ByteString)
@@ -24,6 +26,7 @@ mainStyle = do
     margin nil nil nil nil
     padding nil nil nil nil
   div ? margin nil nil nil nil
+  star # classSelector hideClass ? display none
 
 mainStyleByteString :: ByteString
 mainStyleByteString = toStrict $ encodeUtf8 $ render mainStyle

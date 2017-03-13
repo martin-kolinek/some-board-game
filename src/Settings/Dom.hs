@@ -8,6 +8,8 @@ import Settings.Types
 import Settings.Style
 import Player.Worker.Style
 import Common.DomUtil
+import Common.CommonClasses
+import Common.CssClass
 
 import Reflex.Dom
 import Control.Monad
@@ -20,10 +22,9 @@ drawSettingsIcon universeDyn = do
   rec
     (el, _) <- divAttributeLike' settingsIconClass $ return ()
     let settingsIconClicks = domEvent Click el
-        combinedEvents = leftmost [settingsIconClicks, shroudClicks, closePopupClicks]
+        combinedEvents = leftmost [settingsIconClicks, closePopupClicks]
     settingsVisible <- toggle False combinedEvents
-    (settingsChanges, closePopupClicks) <- mapDynExtract (drawSettingsWindow universeDyn settingsDyn) settingsVisible
-    shroudClicks <- mapDynExtract drawShroud settingsVisible
+    (settingsChanges, closePopupClicks) <- drawSettingsWindow universeDyn settingsDyn settingsVisible
     postBuild <- getPostBuild
     let postBuildSettings = createInitialSettings <$> tag (current universeDyn) postBuild
         settingsEvents = attachWith (flip updatePlayerSettings) (current settingsDyn) settingsChanges
@@ -37,21 +38,21 @@ createInitialSettings universe =
       zipped = zip (zip playerNames (cycle allPlayerColors)) (getPlayers universe)
   in uncurry (uncurry SinglePlayerSettings) <$> zipped
 
-drawShroud :: MonadWidget t m => Bool -> m (Event t ())
-drawShroud False = return never
-drawShroud True = do
-  (shroudElem, _) <- divAttributeLike' shroudClass $ return ()
+drawShroud :: MonadWidget t m => Dynamic t CssClass -> m (Event t ())
+drawShroud classDyn = do
+  (shroudElem, _) <- divAttributeLikeDyn' (classDyn <> constDyn shroudClass) $ return ()
   return (domEvent Click shroudElem)
 
-drawSettingsWindow :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Bool -> m (Event t SinglePlayerSettings, Event t ())
-drawSettingsWindow _ _ False = return (never, never)
-drawSettingsWindow universeDyn playerSettingsDyn True =
-  divAttributeLike settingsPopupClass $ do
+drawSettingsWindow :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Dynamic t Bool -> m (Event t SinglePlayerSettings, Event t ())
+drawSettingsWindow universeDyn playerSettingsDyn visibleDyn = do
+  let hideClassDyn = whenClass (not <$> visibleDyn) hideClass
+  shroudClicks <- drawShroud hideClassDyn
+  divAttributeLikeDyn (constDyn settingsPopupClass <> hideClassDyn) $ do
     closeClicks <- drawSettingsClose
     let players = getPlayers <$> universeDyn
         playersAsMap = (fromList . fmap (, ())) <$> players
     listOfEvents <- listWithKey playersAsMap (drawPlayerSettings playerSettingsDyn)
-    return (switch (leftmost . elems <$> current listOfEvents), closeClicks)
+    return (switch (leftmost . elems <$> current listOfEvents), closeClicks <> shroudClicks)
 
 drawSettingsClose :: MonadWidget t m => m (Event t ())
 drawSettingsClose = do

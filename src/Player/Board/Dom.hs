@@ -23,7 +23,7 @@ drawWorkplaces =
           workersInWorkplace <- askWorkplaceOccupants workplaceId
           (wrapperElem, _) <- divAttributeLike' cardWrapperClass $
             divAttributeLikeDyn' (cardCss <$> dataDyn) $ do
-              mapDynExtract cardContents dataDyn
+              cardContents dataDyn
               animatedList (fromRational 1) workersInWorkplace (drawWorker $ constDyn Nothing)
           return $ const workplaceId <$> domEvent Click wrapperElem
     events <- listWithKey workplaces drawWorkplace
@@ -37,5 +37,5 @@ askWorkplaces = fmap getWorkplaces <$> askUniverseDyn
 askWorkplaceOccupants :: PlayerWidget t m => WorkplaceId -> m (Dynamic t [WorkerId])
 askWorkplaceOccupants workplaceId = fmap (flip getWorkplaceOccupants workplaceId) <$> askUniverseDyn
 
-cardContents :: MonadWidget t m => WorkplaceData -> m ()
-cardContents workplaceData = text $ T.pack $ show $ getWorkplaceResources workplaceData
+cardContents :: MonadWidget t m => Dynamic t WorkplaceData -> m ()
+cardContents workplaceData = dynText $ T.pack <$> show <$> getWorkplaceResources <$> workplaceData

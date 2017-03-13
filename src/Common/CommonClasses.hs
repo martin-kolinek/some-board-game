@@ -17,3 +17,5 @@ faPlayClass :: CssClass
 faPlayClass = CssClass "fa-play"
 faTimesClass :: CssClass
 faTimesClass = CssClass "fa-times"
+hideClass :: CssClass
+hideClass = CssClass "display-none"

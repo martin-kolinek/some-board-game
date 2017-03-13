@@ -49,7 +49,7 @@ drawPlayerSelection settingsDyn universeDyn =
   divAttributeLike playerContainerClass $ do
     rec
       let players = getPlayers <$> universeDyn
-      listOfEvents <- simpleList players $ mapDynExtract (drawPlayerInSelection universeDyn settingsDyn selectedPlayer)
+      listOfEvents <- simpleListOrd players $ (drawPlayerInSelection universeDyn settingsDyn selectedPlayer)
       let playerClicks = leftmost <$> listOfEvents
       selectedPlayer <- findSelectedPlayer universeDyn playerClicks
     return selectedPlayer
@@ -86,7 +86,7 @@ drawPlayerInSelection universeDyn settingsDyn selectedPlayerId playerId  = do
   (elem, _) <- divAttributeLikeDyn' classDyn $ do
     let displayName = (playerName . (flip singlePlayerSettings playerId)) <$> settingsDyn
     dynText displayName
-    mapDynExtract drawCurrentPlayerIcon isCurrent
+    dyn $ drawCurrentPlayerIcon <$> isCurrent
   let event = domEvent Click elem
   return $ const playerId <$> event
 
