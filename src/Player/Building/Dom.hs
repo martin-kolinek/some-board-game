@@ -11,7 +11,7 @@ import Player.Worker.Dom
 
 import Reflex.Dom
 import Control.Monad
-import Data.Map as M
+import qualified Data.Map as M
 import Data.Maybe
 import Control.Arrow ((***))
 import Data.Tuple
@@ -21,6 +21,22 @@ import Data.AdditiveGroup
 import Prelude hiding (error)
 import qualified Data.List as L
 import qualified Data.Text as T
+import qualified Clay as C
+
+data TileInfo = TileInfo
+  {
+    tileClass :: C.Css,
+    tileOccupants :: [BuildingOccupant],
+    tileOccupantErrors :: [String]
+  }
+
+createTiles :: Universe -> PlayerId -> M.Map Position TileInfo
+createTiles universe playerId =
+  let buildings = getBuildingSpace universe playerId
+      getTileOccupants position = M.findWithDefault [] position $ getBuildingOccupants universe playerId
+      getTileOccupantErrors position = fst <$> (filter ((== position) . snd) $ getOccupantErrors universe playerId)
+      getBuildingTile building@(Building _ pos) = (pos, TileInfo (buildingCss building) (getTileOccupants pos) (getTileOccupantErrors pos))
+  in M.fromList $ getBuildingTile <$> buildings
 
 drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
@@ -52,14 +68,14 @@ drawBuildingOccupants = do
       occupantErrors = (`getOccupantErrors` playerId) <$> universeDyn
   rec
     clicks <- forM availableBuildingPositions $ \position -> do
-      let positionOccupants = (findWithDefault [] position) <$> occupantsDyn
+      let positionOccupants = (M.findWithDefault [] position) <$> occupantsDyn
           occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
           filteredPositionOccupants = occupantsFilter <$> positionOccupants <*> universeDyn
           positionErrors = (positionErrorsFunc position) <$> occupantErrors
       (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
         _ <- dyn $ drawOccupantErrors <$> positionErrors
         divAttributeLike occupantContainerClass $ do
-          let combineOccupantClicks workers = leftmost $ elems workers
+          let combineOccupantClicks workers = leftmost $ M.elems workers
           occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
           let combinedClicks = combineOccupantClicks <$> occupantClicks
           return $ switch (current combinedClicks)
@@ -121,7 +137,7 @@ drawPotentialBuildings _ _ _ = return ()
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
 findOccupantChanges selectedOccupant clickedPosition =
   let removeOccupant occupant = M.map (Prelude.filter (/= occupant))
-      addOccupant occupant = alter (pure . (occupant:) . fromMaybe [])
+      addOccupant occupant = M.alter (pure . (occupant:) . fromMaybe [])
       modifyMap (Just occ) pos = addOccupant occ pos . removeOccupant occ
       modifyMap _ _ = id
   in attachWith modifyMap (current selectedOccupant) clickedPosition
