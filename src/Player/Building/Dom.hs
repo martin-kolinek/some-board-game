@@ -21,21 +21,28 @@ import Data.AdditiveGroup
 import Prelude hiding (error)
 import qualified Data.List as L
 import qualified Data.Text as T
-import qualified Clay as C
+
+data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding
 
 data TileInfo = TileInfo
   {
-    tileClass :: C.Css,
+    tileBuilding :: BuildingType,
     tileOccupants :: [BuildingOccupant],
-    tileOccupantErrors :: [String]
+    tileOccupantErrors :: [String],
+    tilePotentialBuilding :: PotentialBuilding
   }
 
-createTiles :: Universe -> PlayerId -> M.Map Position TileInfo
-createTiles universe playerId =
+createTiles :: Universe -> PlayerId -> Position -> Direction -> [BuildingType] -> M.Map Position TileInfo
+createTiles universe playerId hoveredPosition hoveredDirection currentBuildings =
   let buildings = getBuildingSpace universe playerId
       getTileOccupants position = M.findWithDefault [] position $ getBuildingOccupants universe playerId
+      getBuiltBuildingIndex position = if position == hoveredPosition then 0 else if position == hoveredPosition ^+^ directionAddition hoveredDirection then 1 else 2
+      getPotentialBuildingType position = listToMaybe $ drop (getBuiltBuildingIndex position) currentBuildings
+      getPotentialBuilding position = case getPotentialBuildingType position of
+        Nothing -> NoBuilding
+        Just bt -> if isLeft (buildBuildings playerId hoveredPosition hoveredDirection currentBuildings universe) then InvalidBuilding bt else ValidBuilding bt
       getTileOccupantErrors position = fst <$> (filter ((== position) . snd) $ getOccupantErrors universe playerId)
-      getBuildingTile building@(Building _ pos) = (pos, TileInfo (buildingCss building) (getTileOccupants pos) (getTileOccupantErrors pos))
+      getBuildingTile (Building buildingType pos) = (pos, TileInfo buildingType (getTileOccupants pos) (getTileOccupantErrors pos) (getPotentialBuilding pos))
   in M.fromList $ getBuildingTile <$> buildings
 
 drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
