@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecursiveDo, TupleSections, OverloadedStrings #-}
 
@@ -19,6 +21,7 @@ import Data.Monoid
 import Data.Either
 import Data.AdditiveGroup
 import Prelude hiding (error)
+import Data.Foldable (fold)
 import qualified Data.List as L
 import qualified Data.Text as T
 
@@ -29,21 +32,67 @@ data TileInfo = TileInfo
     tileBuilding :: BuildingType,
     tileOccupants :: [BuildingOccupant],
     tileOccupantErrors :: [String],
-    tilePotentialBuilding :: PotentialBuilding
+    tilePotentialBuildings :: PotentialBuilding
   }
 
-createTiles :: Universe -> PlayerId -> Position -> Direction -> [BuildingType] -> M.Map Position TileInfo
-createTiles universe playerId hoveredPosition hoveredDirection currentBuildings =
+createTiles :: Universe -> PlayerId -> Maybe Position -> Direction -> [BuildingType] -> M.Map Position TileInfo
+createTiles universe playerId hoveredPositionMaybe hoveredDirection currentBuildings =
   let buildings = getBuildingSpace universe playerId
-      getTileOccupants position = M.findWithDefault [] position $ getBuildingOccupants universe playerId
-      getBuiltBuildingIndex position = if position == hoveredPosition then 0 else if position == hoveredPosition ^+^ directionAddition hoveredDirection then 1 else 2
+      getBuiltBuildingIndex position = if Just position == hoveredPositionMaybe then 0 else if Just (position ^-^ directionAddition hoveredDirection) == hoveredPositionMaybe then 1 else 2
       getPotentialBuildingType position = listToMaybe $ drop (getBuiltBuildingIndex position) currentBuildings
-      getPotentialBuilding position = case getPotentialBuildingType position of
-        Nothing -> NoBuilding
-        Just bt -> if isLeft (buildBuildings playerId hoveredPosition hoveredDirection currentBuildings universe) then InvalidBuilding bt else ValidBuilding bt
+      getPotentialBuilding position = case (getPotentialBuildingType position, hoveredPositionMaybe) of
+        (Just bt, Just hoveredPosition) -> if isLeft (buildBuildings playerId hoveredPosition hoveredDirection currentBuildings universe) then InvalidBuilding bt else ValidBuilding bt
+        _ -> NoBuilding
+      getTileOccupants position = M.findWithDefault [] position $ getBuildingOccupants universe playerId
       getTileOccupantErrors position = fst <$> (filter ((== position) . snd) $ getOccupantErrors universe playerId)
       getBuildingTile (Building buildingType pos) = (pos, TileInfo buildingType (getTileOccupants pos) (getTileOccupantErrors pos) (getPotentialBuilding pos))
   in M.fromList $ getBuildingTile <$> buildings
+
+data TileResults t = TileResults
+  {
+    clickedPositions :: Event t [Position],
+    clickedOccupants :: Event t [BuildingOccupant],
+    hoveredPositions :: Dynamic t [Position]
+  }
+
+extractTileResultsFromDynamic :: MonadWidget t m => Dynamic t (TileResults t) -> m (TileResults t)
+extractTileResultsFromDynamic resultsDyn = do
+  let posEvents = switchPromptlyDyn $ clickedPositions <$> resultsDyn
+      occupantEvents = switchPromptlyDyn $ clickedOccupants <$> resultsDyn
+  hoveredPos <- holdDyn [] $ switch (current $ updated <$> hoveredPositions <$> resultsDyn)
+  return $ TileResults posEvents occupantEvents hoveredPos
+
+instance Reflex t => Monoid (TileResults t) where
+  mempty = TileResults mempty mempty mempty
+  mappend (TileResults a1 b1 c1) (TileResults a2 b2 c2) = TileResults (a1 <> a2) (b1 <> b2) (c1 <> c2)
+
+drawTileInfo :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Position -> Dynamic t TileInfo -> m (TileResults t)
+drawTileInfo selectedOccupantDyn position tileInfoDyn = do
+  (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss2 position <$> tileBuilding <$> tileInfoDyn) $ do
+    divAttributeLike occupantContainerClass $ do
+      let combineOccupantClicks workers = M.elems <$> mergeMap workers
+      occupantClicks <- animatedList (fromRational 1) (tileOccupants <$> tileInfoDyn) (drawWorkplaceOccupant selectedOccupantDyn)
+      let combinedClicks = combineOccupantClicks <$> occupantClicks
+      return $ switch (current combinedClicks)
+  hoveredPos <- holdDyn [] (leftmost [const [] <$> domEvent Mouseleave divEl, const [position] <$> domEvent Mouseenter divEl])
+  return $ TileResults (const [position] <$> domEvent Click divEl) inner hoveredPos
+
+drawBuildingSpaceNew :: PlayerWidget t m => m (PlayerExports t)
+drawBuildingSpaceNew = divAttributeLike buildingSpaceClass $ do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
+  directionDyn <- drawRotationButton
+  let buildingDyn = fmap (fromMaybe []) $ fmap listToMaybe $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId
+  rec
+    let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> directionDyn <*> buildingDyn
+    result <- listWithKey tiles (drawTileInfo selectedOccupant)
+    (TileResults clickedPos clickedOcc hoveredPositionDyn) <- extractTileResultsFromDynamic $ fold <$> result
+    selectedOccupant <- deselectInvalidOccupants (fmapMaybe listToMaybe clickedOcc)
+    let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
+        occupantChanges = findOccupantChanges selectedOccupant (fmapMaybe listToMaybe clickedPos)
+        wholeOccupantChanges = attachWith (&) (current (getBuildingOccupants <$> universeDyn <*> pure playerId)) occupantChanges
+        occupantChangeActions = flip alterOccupants <$> wholeOccupantChanges
+  return $ PlayerExports selectedWorker occupantChangeActions
 
 drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
@@ -100,6 +149,12 @@ drawOccupantErrors errors =
       divAttributeLike occupantErrorIconClass (return ())
       divAttributeLike occupantErrorTextClass (text $ T.pack error)
 
+drawRotationButton :: MonadWidget t m => m (Dynamic t Direction)
+drawRotationButton = do
+  (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
+  let rotateClicks = domEvent Click rotateElement
+  foldDyn (const nextDirection) DirectionDown rotateClicks
+
 drawPositionSelection :: PlayerWidget t m => [[BuildingType]] -> m (Event t (Position, Direction, [BuildingType]))
 drawPositionSelection [] = return never
 drawPositionSelection possibleBuildings = do
@@ -109,7 +164,7 @@ drawPositionSelection possibleBuildings = do
     (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
     let rotateClicks = domEvent Click rotateElement
     direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
-    let combined = (,,) <$> universeDyn <*> hoveredPositions <*> direction
+    let combined = (,,) <$> universeDyn <*> hoveredPos <*> direction
     _ <- dyn $ (drawPotentialBuildings playerId $ head possibleBuildings) <$> combined
     positionData <- forM availableBuildingPositions $ \position -> do
       (placeholderElem, _) <- divAttributeLike' (placeholderTileCss position) $ return ()
@@ -118,7 +173,7 @@ drawPositionSelection possibleBuildings = do
       let positionLeaves = const (First Nothing) <$> domEvent Mouseleave placeholderElem
       hoveredPosition <- holdDyn (First Nothing) (positionEnters <> positionLeaves)
       return ((\(a, b) -> (b, a, head possibleBuildings)) <$> attach (current direction) positionClicks, hoveredPosition)
-    let hoveredPositions = getFirst <$> mconcat (snd <$> positionData)
+    let hoveredPos = getFirst <$> mconcat (snd <$> positionData)
   return $ leftmost (fst <$> positionData)
 
 drawPotentialBuildings :: MonadWidget t m => PlayerId -> [BuildingType] -> (Universe, Maybe Position, Direction) -> m ()

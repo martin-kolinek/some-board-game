@@ -117,6 +117,16 @@ buildingCss (Building Passage position) = background (url "data/passage.svg") >>
 buildingCss (Building LivingRoom position) = background (url "data/living_room.svg") >> positionCss position >> commonBuildingCss
 buildingCss (Building Field position) = background (url "data/field.svg") >> positionCss position >> commonBuildingCss
 
+buildingCss2 :: BuildingType -> Rules.Position -> Css
+buildingCss2 Grass position = background (url "data/grass.svg") >> positionCss position >> commonBuildingCss
+buildingCss2 Forest position = background (url "data/forest.svg") >> positionCss position >> commonBuildingCss
+buildingCss2 Rock position = background (url "data/rock.svg") >> positionCss position >> commonBuildingCss
+buildingCss2 InitialRoom position = background (url "data/init_room.svg") >> positionCss position >> commonBuildingCss
+buildingCss2 Cave position = background (url "data/cave.svg") >> positionCss position >> commonBuildingCss
+buildingCss2 Passage position = background (url "data/passage.svg") >> positionCss position >> commonBuildingCss
+buildingCss2 LivingRoom position = background (url "data/living_room.svg") >> positionCss position >> commonBuildingCss
+buildingCss2 Field position = background (url "data/field.svg") >> positionCss position >> commonBuildingCss
+
 commonBuildingCss :: Css
 commonBuildingCss = width (pct oneSixth) >> height (pct oneQuarter) >> position absolute >> backgroundSize cover
 

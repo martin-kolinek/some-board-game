@@ -36,7 +36,7 @@ drawPlayers universeDyn settingsDyn = do
 drawPlayer :: PlayerWidget t m => m (Event t PlayerAction)
 drawPlayer = do
   workplaceClicks <- drawWorkplaces
-  PlayerExports selectedWorker action <- drawBuildingSpace
+  PlayerExports selectedWorker action <- drawBuildingSpaceNew
   let startWorkerAction (Just worker) workplace = Just $ \player -> startWorking player worker workplace
       startWorkerAction _ _ = Nothing
       startWorkerActionEvent = attachWithMaybe startWorkerAction (current selectedWorker) workplaceClicks
