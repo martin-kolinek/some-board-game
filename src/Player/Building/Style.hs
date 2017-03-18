@@ -136,8 +136,17 @@ positionCss (x, y) = left (pct $ (fromIntegral x)*oneSixth + 5) >> top (pct $ (f
 placeholderTileCss :: (Int, Int) -> Css
 placeholderTileCss position = positionCss position >> commonBuildingCss
 
-highlightedPlaceholderTileCss :: (Int, Int) -> Css
-highlightedPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#FF4444" >> opacity 0.7
+highlightedPlaceholderTileCss :: Css
+highlightedPlaceholderTileCss = do
+  backgroundColor "#FF4444" >> opacity 0.7
+  width (pct 100)
+  height (pct 100)
 
-highlightedValidPlaceholderTileCss :: (Int, Int) -> Css
-highlightedValidPlaceholderTileCss position = placeholderTileCss position >> backgroundColor "#44FF44" >> opacity 0.4
+highlightedValidPlaceholderTileCss :: Css
+highlightedValidPlaceholderTileCss = do
+  backgroundColor "#44FF44" >> opacity 0.4
+  width (pct 100)
+  height (pct 100)
+
+hiddenPlaceholderTileCss :: Css
+hiddenPlaceholderTileCss = display block

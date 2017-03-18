@@ -15,14 +15,12 @@ import Reflex.Dom
 import Control.Monad
 import qualified Data.Map as M
 import Data.Maybe
-import Control.Arrow ((***))
 import Data.Tuple
 import Data.Monoid
 import Data.Either
 import Data.AdditiveGroup
 import Prelude hiding (error)
 import Data.Foldable (fold)
-import qualified Data.List as L
 import qualified Data.Text as T
 
 data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding
@@ -43,10 +41,16 @@ createTiles universe playerId hoveredPositionMaybe hoveredDirection currentBuild
       getPotentialBuilding position = case (getPotentialBuildingType position, hoveredPositionMaybe) of
         (Just bt, Just hoveredPosition) -> if isLeft (buildBuildings playerId hoveredPosition hoveredDirection currentBuildings universe) then InvalidBuilding bt else ValidBuilding bt
         _ -> NoBuilding
-      getTileOccupants position = M.findWithDefault [] position $ getBuildingOccupants universe playerId
+      getTileOccupants position = findVisibleOccupants universe playerId position
       getTileOccupantErrors position = fst <$> (filter ((== position) . snd) $ getOccupantErrors universe playerId)
       getBuildingTile (Building buildingType pos) = (pos, TileInfo buildingType (getTileOccupants pos) (getTileOccupantErrors pos) (getPotentialBuilding pos))
   in M.fromList $ getBuildingTile <$> buildings
+
+findVisibleOccupants :: Universe -> PlayerId -> Position -> [BuildingOccupant]
+findVisibleOccupants universe playerId position = filter isOccupantVisible $ M.findWithDefault [] position $ getBuildingOccupants universe playerId
+  where isOccupantVisible (WorkerOccupant workerId) = isNothing $ getWorkerWorkplace universe workerId
+        isOccupantVisible _ = True
+
 
 data TileResults t = TileResults
   {
@@ -68,12 +72,21 @@ instance Reflex t => Monoid (TileResults t) where
 
 drawTileInfo :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Position -> Dynamic t TileInfo -> m (TileResults t)
 drawTileInfo selectedOccupantDyn position tileInfoDyn = do
-  (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss2 position <$> tileBuilding <$> tileInfoDyn) $ do
-    divAttributeLike occupantContainerClass $ do
-      let combineOccupantClicks workers = M.elems <$> mergeMap workers
-      occupantClicks <- animatedList (fromRational 1) (tileOccupants <$> tileInfoDyn) (drawWorkplaceOccupant selectedOccupantDyn)
-      let combinedClicks = combineOccupantClicks <$> occupantClicks
-      return $ switch (current combinedClicks)
+  let getBuildingToDraw tileInfo = case tilePotentialBuildings tileInfo of
+        NoBuilding -> tileBuilding tileInfo
+        ValidBuilding b -> b
+        InvalidBuilding b -> b
+      getOverlayCss tileInfo = case tilePotentialBuildings tileInfo of
+        NoBuilding -> hiddenPlaceholderTileCss
+        ValidBuilding _ -> highlightedValidPlaceholderTileCss
+        InvalidBuilding _ -> highlightedPlaceholderTileCss
+  (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss2 position <$> getBuildingToDraw <$> tileInfoDyn) $ do
+    divAttributeLikeDyn (getOverlayCss <$> tileInfoDyn) $ do
+      divAttributeLike occupantContainerClass $ do
+        let combineOccupantClicks workers = M.elems <$> mergeMap workers
+        occupantClicks <- animatedList (fromRational 1) (tileOccupants <$> tileInfoDyn) (drawWorkplaceOccupant selectedOccupantDyn)
+        let combinedClicks = combineOccupantClicks <$> occupantClicks
+        return $ switch (current combinedClicks)
   hoveredPos <- holdDyn [] (leftmost [const [] <$> domEvent Mouseleave divEl, const [position] <$> domEvent Mouseenter divEl])
   return $ TileResults (const [position] <$> domEvent Click divEl) inner hoveredPos
 
@@ -94,54 +107,6 @@ drawBuildingSpaceNew = divAttributeLike buildingSpaceClass $ do
         occupantChangeActions = flip alterOccupants <$> wholeOccupantChanges
   return $ PlayerExports selectedWorker occupantChangeActions
 
-drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
-drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
-  universe <- askUniverseDyn
-  playerId <- askPlayerId
-  let buildings = (`getBuildingSpace` playerId) <$> universe
-  _ <- dyn $ drawBuildings <$> buildings
-  (selectedWorker, occupantChanges) <- drawBuildingOccupants
-  let currentBuildingOccupants = (`getBuildingOccupants` playerId) <$> universe
-      wholeOccupantChanges = attachWith (&) (current currentBuildingOccupants) occupantChanges
-      occupantChangeActions = flip alterOccupants <$> wholeOccupantChanges
-      possibleBuildings = (`currentlyBuiltBuildings` playerId) <$> universe
-  positionSelections <- switchPromptly never =<< (dyn $ drawPositionSelection <$> possibleBuildings)
-  let createBuildAction (pos, dir, selectedBuildings) = \plId -> buildBuildings plId pos dir selectedBuildings
-      buildActions = createBuildAction <$> positionSelections
-  return $ PlayerExports selectedWorker $ leftmost [occupantChangeActions, buildActions]
-
-drawBuildings :: MonadWidget t m => [Building] -> m ()
-drawBuildings buildings =
-  forM_ buildings $ \building ->
-    divAttributeLike (buildingCss building) $ return ()
-
-drawBuildingOccupants :: PlayerWidget t m => m (Dynamic t (Maybe WorkerId), Event t (BuildingOccupants -> BuildingOccupants))
-drawBuildingOccupants = do
-  universeDyn <- askUniverseDyn
-  playerId <- askPlayerId
-  let occupantsDyn = (`getBuildingOccupants` playerId) <$> universeDyn
-      positionErrorsFunc position errors = Prelude.filter ((== position) . snd) errors
-      occupantErrors = (`getOccupantErrors` playerId) <$> universeDyn
-  rec
-    clicks <- forM availableBuildingPositions $ \position -> do
-      let positionOccupants = (M.findWithDefault [] position) <$> occupantsDyn
-          occupantsFilter occupants universe = [occupant | occupant <- occupants, isOccupantValid occupant universe]
-          filteredPositionOccupants = occupantsFilter <$> positionOccupants <*> universeDyn
-          positionErrors = (positionErrorsFunc position) <$> occupantErrors
-      (positionDiv, insideClicks) <- divAttributeLike' (placeholderTileCss position, placeholderTileClass) $ do
-        _ <- dyn $ drawOccupantErrors <$> positionErrors
-        divAttributeLike occupantContainerClass $ do
-          let combineOccupantClicks workers = leftmost $ M.elems workers
-          occupantClicks <- animatedList (fromRational 1) filteredPositionOccupants (drawWorkplaceOccupant selectedOccupant)
-          let combinedClicks = combineOccupantClicks <$> occupantClicks
-          return $ switch (current combinedClicks)
-      return (insideClicks, const position <$> domEvent Click positionDiv)
-    let (lastClickedOccupant, lastClickedPosition) = (leftmost *** leftmost) $ unzip clicks
-    selectedOccupant <- deselectInvalidOccupants lastClickedOccupant
-    let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
-        occupantChanges = findOccupantChanges selectedOccupant lastClickedPosition
-  return (selectedWorker, occupantChanges)
-
 drawOccupantErrors :: (MonadWidget t m) => [OccupantError] -> m ()
 drawOccupantErrors errors =
   forM_ errors $ \(error, _) ->
@@ -154,47 +119,6 @@ drawRotationButton = do
   (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
   let rotateClicks = domEvent Click rotateElement
   foldDyn (const nextDirection) DirectionDown rotateClicks
-
-drawPositionSelection :: PlayerWidget t m => [[BuildingType]] -> m (Event t (Position, Direction, [BuildingType]))
-drawPositionSelection [] = return never
-drawPositionSelection possibleBuildings = do
-  universeDyn <- askUniverseDyn
-  playerId <- askPlayerId
-  rec
-    (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
-    let rotateClicks = domEvent Click rotateElement
-    direction <- foldDyn (const nextDirection) DirectionDown rotateClicks
-    let combined = (,,) <$> universeDyn <*> hoveredPos <*> direction
-    _ <- dyn $ (drawPotentialBuildings playerId $ head possibleBuildings) <$> combined
-    positionData <- forM availableBuildingPositions $ \position -> do
-      (placeholderElem, _) <- divAttributeLike' (placeholderTileCss position) $ return ()
-      let positionClicks = const position <$> domEvent Click placeholderElem
-      let positionEnters = const (First (Just position)) <$> domEvent Mouseenter placeholderElem
-      let positionLeaves = const (First Nothing) <$> domEvent Mouseleave placeholderElem
-      hoveredPosition <- holdDyn (First Nothing) (positionEnters <> positionLeaves)
-      return ((\(a, b) -> (b, a, head possibleBuildings)) <$> attach (current direction) positionClicks, hoveredPosition)
-    let hoveredPos = getFirst <$> mconcat (snd <$> positionData)
-  return $ leftmost (fst <$> positionData)
-
-drawPotentialBuildings :: MonadWidget t m => PlayerId -> [BuildingType] -> (Universe, Maybe Position, Direction) -> m ()
-drawPotentialBuildings playerId building (universe, (Just position), direction) = case buildBuildings playerId position direction building universe of
-  Left _ -> do
-    divAttributeLike (highlightedPlaceholderTileCss position) $ return ()
-    if length building > 1
-      then divAttributeLike (highlightedPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
-      else return ()
-  Right newUniverse -> do
-    let buildings = fromMaybe [] $ do
-          plId <- getCurrentPlayer universe
-          let newBuildings = getBuildingSpace newUniverse plId
-              oldBuildings = getBuildingSpace universe plId
-          return $ newBuildings L.\\ oldBuildings
-    drawBuildings buildings
-    divAttributeLike (highlightedValidPlaceholderTileCss position) $ return ()
-    if length building > 1
-      then divAttributeLike (highlightedValidPlaceholderTileCss (position ^+^ directionAddition direction)) $ return ()
-      else return ()
-drawPotentialBuildings _ _ _ = return ()
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
 findOccupantChanges selectedOccupant clickedPosition =
