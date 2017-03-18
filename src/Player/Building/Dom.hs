@@ -82,6 +82,7 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
         InvalidBuilding _ -> highlightedPlaceholderTileCss
   (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss2 position <$> getBuildingToDraw <$> tileInfoDyn) $ do
     divAttributeLikeDyn (getOverlayCss <$> tileInfoDyn) $ do
+      drawOccupantErrors $ tileOccupantErrors <$> tileInfoDyn
       divAttributeLike occupantContainerClass $ do
         let combineOccupantClicks workers = M.elems <$> mergeMap workers
         occupantClicks <- animatedList (fromRational 1) (tileOccupants <$> tileInfoDyn) (drawWorkplaceOccupant selectedOccupantDyn)
@@ -109,14 +110,15 @@ drawBuildingSpaceNew = divAttributeLike buildingSpaceClass $ do
         createBuildAction :: [BuildingType] -> Direction -> Position -> PlayerAction
         createBuildAction buildingType direction position plId = buildBuildings plId position direction buildingType
         buildBuildingActions = attachWith ($) (createBuildAction <$> (current buildingDyn) <*> (current directionDyn)) clickedPosition
-  return $ PlayerExports selectedWorker (leftmost [buildBuildingActions, occupantChangeActions])
+        validBuildBuildingActions = gate (not . null <$> current buildingDyn) buildBuildingActions
+  return $ PlayerExports selectedWorker (leftmost [validBuildBuildingActions, occupantChangeActions])
 
-drawOccupantErrors :: (MonadWidget t m) => [OccupantError] -> m ()
+drawOccupantErrors :: (MonadWidget t m) => Dynamic t [String] -> m ()
 drawOccupantErrors errors =
-  forM_ errors $ \(error, _) ->
+  void $ simpleList errors $ \errorDyn ->
     divAttributeLike occupantErrorClass $ do
       divAttributeLike occupantErrorIconClass (return ())
-      divAttributeLike occupantErrorTextClass (text $ T.pack error)
+      divAttributeLike occupantErrorTextClass (dynText $ T.pack <$> errorDyn)
 
 drawRotationButton :: MonadWidget t m => m (Dynamic t Direction)
 drawRotationButton = do
