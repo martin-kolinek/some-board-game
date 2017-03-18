@@ -102,10 +102,14 @@ drawBuildingSpaceNew = divAttributeLike buildingSpaceClass $ do
     (TileResults clickedPos clickedOcc hoveredPositionDyn) <- extractTileResultsFromDynamic $ fold <$> result
     selectedOccupant <- deselectInvalidOccupants (fmapMaybe listToMaybe clickedOcc)
     let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
-        occupantChanges = findOccupantChanges selectedOccupant (fmapMaybe listToMaybe clickedPos)
+        clickedPosition = fmapMaybe listToMaybe clickedPos
+        occupantChanges = findOccupantChanges selectedOccupant clickedPosition
         wholeOccupantChanges = attachWith (&) (current (getBuildingOccupants <$> universeDyn <*> pure playerId)) occupantChanges
         occupantChangeActions = flip alterOccupants <$> wholeOccupantChanges
-  return $ PlayerExports selectedWorker occupantChangeActions
+        createBuildAction :: [BuildingType] -> Direction -> Position -> PlayerAction
+        createBuildAction buildingType direction position plId = buildBuildings plId position direction buildingType
+        buildBuildingActions = attachWith ($) (createBuildAction <$> (current buildingDyn) <*> (current directionDyn)) clickedPosition
+  return $ PlayerExports selectedWorker (leftmost [buildBuildingActions, occupantChangeActions])
 
 drawOccupantErrors :: (MonadWidget t m) => [OccupantError] -> m ()
 drawOccupantErrors errors =
