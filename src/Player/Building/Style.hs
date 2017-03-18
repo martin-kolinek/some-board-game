@@ -73,7 +73,8 @@ buildingStyle = do
   star # classSelector occupantContainerClass ? do
     verticalAlign middle
     display inlineBlock
-    paddingTop (pct 15)
+    paddingTop (pct 25)
+    paddingLeft (pct 10)
     height (pct 85)
     overflow auto
   star # classSelector occupantErrorClass ? do
