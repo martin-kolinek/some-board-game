@@ -23,7 +23,7 @@ import Data.Monoid
 drawPlayers :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
 drawPlayers universeDyn settingsDyn = do
   let playersDyn = getPlayers <$> universeDyn
-  selectedPlayerDyn <- drawPlayerSelection settingsDyn universeDyn
+  selectedPlayerDyn <- uniqDyn <$> drawPlayerSelection settingsDyn universeDyn
   mapEvent <- listViewWithKey (fromList . (fmap (, Nothing)) <$> playersDyn) $ \playerId _ -> do
     let singlePlayerSettingsDyn = (flip singlePlayerSettings playerId) <$> settingsDyn
     playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId singlePlayerSettingsDyn) $ do

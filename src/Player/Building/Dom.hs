@@ -23,7 +23,7 @@ import Prelude hiding (error)
 import Data.Foldable (fold)
 import qualified Data.Text as T
 
-data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding
+data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding deriving Show
 
 data TileInfo = TileInfo
   {
@@ -31,7 +31,7 @@ data TileInfo = TileInfo
     tileOccupants :: [BuildingOccupant],
     tileOccupantErrors :: [String],
     tilePotentialBuildings :: PotentialBuilding
-  }
+  } deriving Show
 
 createTiles :: Universe -> PlayerId -> Maybe Position -> Direction -> [BuildingType] -> M.Map Position TileInfo
 createTiles universe playerId hoveredPositionMaybe hoveredDirection currentBuildings =
@@ -50,7 +50,6 @@ findVisibleOccupants :: Universe -> PlayerId -> Position -> [BuildingOccupant]
 findVisibleOccupants universe playerId position = filter isOccupantVisible $ M.findWithDefault [] position $ getBuildingOccupants universe playerId
   where isOccupantVisible (WorkerOccupant workerId) = isNothing $ getWorkerWorkplace universe workerId
         isOccupantVisible _ = True
-
 
 data TileResults t = TileResults
   {
@@ -80,7 +79,7 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
         NoBuilding -> hiddenPlaceholderTileCss
         ValidBuilding _ -> highlightedValidPlaceholderTileCss
         InvalidBuilding _ -> highlightedPlaceholderTileCss
-  (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss2 position <$> getBuildingToDraw <$> tileInfoDyn) $ do
+  (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss position <$> getBuildingToDraw <$> tileInfoDyn) $ do
     divAttributeLikeDyn (getOverlayCss <$> tileInfoDyn) $ do
       drawOccupantErrors $ tileOccupantErrors <$> tileInfoDyn
       divAttributeLike occupantContainerClass $ do
@@ -95,8 +94,10 @@ drawBuildingSpaceNew :: PlayerWidget t m => m (PlayerExports t)
 drawBuildingSpaceNew = divAttributeLike buildingSpaceClass $ do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  directionDyn <- drawRotationButton
-  buildingDyn <- drawBuildingSelection
+  (directionDyn, buildingDyn) <- divAttributeLike buildingOptionsClass $ do
+    dirDyn <- drawRotationButton
+    buildDyn <- drawBuildingSelection
+    return (dirDyn, buildDyn)
   rec
     let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> directionDyn <*> buildingDyn
     result <- listWithKey tiles (drawTileInfo selectedOccupant)
@@ -120,9 +121,14 @@ drawOccupantErrors errors =
       divAttributeLike occupantErrorIconClass (return ())
       divAttributeLike occupantErrorTextClass (dynText $ T.pack <$> errorDyn)
 
-drawRotationButton :: MonadWidget t m => m (Dynamic t Direction)
+drawRotationButton :: PlayerWidget t m => m (Dynamic t Direction)
 drawRotationButton = do
-  (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
+  let currentBuildingDyn = (uniqDyn $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
+      getClass [] = hiddenRotateButtonClass
+      getClass _ = rotateButtonClass
+  (rotateElement, _) <- divAttributeLikeDyn' (getClass <$> currentBuildingDyn) $ return ()
   let rotateClicks = domEvent Click rotateElement
   foldDyn (const nextDirection) DirectionDown rotateClicks
 
@@ -140,9 +146,9 @@ drawSelectionForPossibilities [] = return $ pure []
 drawSelectionForPossibilities possibilities = do
   let possibilitiesCount = length possibilities
   rec
-    (leftEl, _) <- divAttributeLike' switchBuildingLeftClass $ text "Left"
-    dynText (T.pack <$> show <$> currentBuilding)
-    (rightEl, _) <- divAttributeLike' switchBuildingRightClass $ text "Right"
+    (leftEl, _) <- divAttributeLike' switchBuildingLeftClass $ return ()
+    void $ simpleList currentBuilding $ \buildingTypeDyn -> divAttributeLikeDyn (buildingSelectionCss <$> buildingTypeDyn) $ return ()
+    (rightEl, _) <- divAttributeLike' switchBuildingRightClass $ return ()
     let switchEvent = leftmost [const (-1 :: Int) <$> domEvent Click leftEl, const (1 :: Int) <$> domEvent Click rightEl]
     currentIndex <- foldDyn (\x y -> mod (x + y) possibilitiesCount) (0 :: Int) switchEvent
     let currentBuilding = (possibilities !!) <$> currentIndex

@@ -17,8 +17,10 @@ rotateButtonClassInternal :: CssClass
 rotateButtonClassInternal = CssClass "rotate-button"
 rotateButtonClass :: CssClass
 rotateButtonClass = rotateButtonClassInternal <> faClass <> faRotateRightClass
-rotateButtonWrapperClass :: CssClass
-rotateButtonWrapperClass = CssClass "rotate-button-wrapper"
+hiddenRotateButtonClass :: CssClass
+hiddenRotateButtonClass = CssClass "hidden-rotate-button"
+buildingOptionsClass :: CssClass
+buildingOptionsClass = CssClass "building-options"
 cancelButtonClassInternal :: CssClass
 cancelButtonClassInternal = CssClass "cancel-button"
 cancelButtonClassIcon :: CssClass
@@ -28,10 +30,15 @@ cancelButtonClass = cancelButtonClassInternal <> faClass <> faTimesClass
 cancelButtonWrapperClass :: CssClass
 cancelButtonWrapperClass = CssClass "cancel-button-wrapper"
 
+switchBuildingLeftClassInternal  :: CssClass
+switchBuildingLeftClassInternal = CssClass "switch-left"
 switchBuildingLeftClass :: CssClass
-switchBuildingLeftClass = CssClass "switch-left"
+switchBuildingLeftClass = switchBuildingLeftClassInternal <> faClass <> faCaretLeftClass
+switchBuildingRightClassInternal  :: CssClass
+switchBuildingRightClassInternal = CssClass "switch-right"
 switchBuildingRightClass :: CssClass
-switchBuildingRightClass = CssClass "switch-right"
+switchBuildingRightClass = switchBuildingRightClassInternal <> faClass <> faCaretRightClass
+
 
 occupantErrorClass :: CssClass
 occupantErrorClass = CssClass "occupant-error"
@@ -59,13 +66,38 @@ buildingStyle = do
     paddingBottom (pct 75)
     display block
     content $ stringContent ""
-  star # classSelector rotateButtonClassInternal ?
-    fontSize (em 2)
-  star # classSelector rotateButtonWrapperClass ? do
+  star # classSelector hiddenRotateButtonClass ? do
+    visibility hidden
+    height (em 4)
+  star # classSelector rotateButtonClassInternal ? do
+    cursor pointer
+    display inlineBlock
+    height (em 4)
+    lineHeight (em 4)
+    verticalAlign middle
+    marginLeft (em 1)
+    marginRight (em 1)
+  star # classSelector buildingOptionsClass ? do
     position absolute
+    fontSize (em 2)
     left (pct 6)
     top (pct 88)
+  star # classSelector switchBuildingLeftClassInternal ? do
     cursor pointer
+    height (em 4)
+    display inlineBlock
+    lineHeight (em 4)
+    verticalAlign middle
+    marginLeft (em 1)
+    marginRight (em 0.5)
+  star # classSelector switchBuildingRightClassInternal ? do
+    cursor pointer
+    height (em 4)
+    display inlineBlock
+    lineHeight (em 4)
+    verticalAlign middle
+    marginLeft (em 0.5)
+    marginRight (em 1)
   star # classSelector cancelButtonClassInternal ?
     fontSize (em 2)
   star # classSelector cancelButtonWrapperClass ? do
@@ -113,28 +145,31 @@ oneSixth = 15
 oneQuarter :: Double
 oneQuarter = 20
 
-buildingCss :: Building -> Css
-buildingCss (Building Grass position) = background (url "data/grass.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Building Forest position) = background (url "data/forest.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Building Rock position) = background (url "data/rock.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Building InitialRoom position) = background (url "data/init_room.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Building Cave position) = background (url "data/cave.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Building Passage position) = background (url "data/passage.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Building LivingRoom position) = background (url "data/living_room.svg") >> positionCss position >> commonBuildingCss
-buildingCss (Building Field position) = background (url "data/field.svg") >> positionCss position >> commonBuildingCss
+buildingTypeCss :: BuildingType -> Css
+buildingTypeCss Grass = background (url "data/grass.svg")
+buildingTypeCss Forest = background (url "data/forest.svg")
+buildingTypeCss Rock = background (url "data/rock.svg")
+buildingTypeCss InitialRoom = background (url "data/init_room.svg")
+buildingTypeCss Cave = background (url "data/cave.svg")
+buildingTypeCss Passage = background (url "data/passage.svg")
+buildingTypeCss LivingRoom = background (url "data/living_room.svg")
+buildingTypeCss Field = background (url "data/field.svg")
 
-buildingCss2 :: BuildingType -> Rules.Position -> Css
-buildingCss2 Grass position = background (url "data/grass.svg") >> positionCss position >> commonBuildingCss
-buildingCss2 Forest position = background (url "data/forest.svg") >> positionCss position >> commonBuildingCss
-buildingCss2 Rock position = background (url "data/rock.svg") >> positionCss position >> commonBuildingCss
-buildingCss2 InitialRoom position = background (url "data/init_room.svg") >> positionCss position >> commonBuildingCss
-buildingCss2 Cave position = background (url "data/cave.svg") >> positionCss position >> commonBuildingCss
-buildingCss2 Passage position = background (url "data/passage.svg") >> positionCss position >> commonBuildingCss
-buildingCss2 LivingRoom position = background (url "data/living_room.svg") >> positionCss position >> commonBuildingCss
-buildingCss2 Field position = background (url "data/field.svg") >> positionCss position >> commonBuildingCss
+buildingCss :: BuildingType -> Rules.Position -> Css
+buildingCss buildingType position = buildingTypeCss buildingType >> positionCss position >> commonBuildingCss
 
 commonBuildingCss :: Css
 commonBuildingCss = width (pct oneSixth) >> height (pct oneQuarter) >> position absolute >> backgroundSize cover
+
+buildingSelectionCss :: BuildingType -> Css
+buildingSelectionCss buildingType = do
+  buildingTypeCss buildingType
+  width (em 4)
+  height (em 4)
+  backgroundSize cover
+  display inlineBlock
+  verticalAlign middle
+  lineHeight (em 4)
 
 positionCss :: (Int, Int) -> Css
 positionCss (x, y) = left (pct $ (fromIntegral x)*oneSixth + 5) >> top (pct $ (fromIntegral y)*oneQuarter+5)

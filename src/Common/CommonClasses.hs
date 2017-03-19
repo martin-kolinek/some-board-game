@@ -17,5 +17,9 @@ faPlayClass :: CssClass
 faPlayClass = CssClass "fa-play"
 faTimesClass :: CssClass
 faTimesClass = CssClass "fa-times"
+faCaretLeftClass :: CssClass
+faCaretLeftClass = CssClass "fa-caret-left"
+faCaretRightClass :: CssClass
+faCaretRightClass = CssClass "fa-caret-right"
 hideClass :: CssClass
 hideClass = CssClass "display-none"
