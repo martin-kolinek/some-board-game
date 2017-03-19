@@ -28,6 +28,11 @@ cancelButtonClass = cancelButtonClassInternal <> faClass <> faTimesClass
 cancelButtonWrapperClass :: CssClass
 cancelButtonWrapperClass = CssClass "cancel-button-wrapper"
 
+switchBuildingLeftClass :: CssClass
+switchBuildingLeftClass = CssClass "switch-left"
+switchBuildingRightClass :: CssClass
+switchBuildingRightClass = CssClass "switch-right"
+
 occupantErrorClass :: CssClass
 occupantErrorClass = CssClass "occupant-error"
 occupantErrorIconClass :: CssClass

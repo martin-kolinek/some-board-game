@@ -96,7 +96,7 @@ drawBuildingSpaceNew = divAttributeLike buildingSpaceClass $ do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   directionDyn <- drawRotationButton
-  let buildingDyn = fmap (fromMaybe []) $ fmap listToMaybe $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId
+  buildingDyn <- drawBuildingSelection
   rec
     let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> directionDyn <*> buildingDyn
     result <- listWithKey tiles (drawTileInfo selectedOccupant)
@@ -125,6 +125,28 @@ drawRotationButton = do
   (rotateElement, _) <- divAttributeLike' rotateButtonWrapperClass $ divAttributeLike' rotateButtonClass $ return ()
   let rotateClicks = domEvent Click rotateElement
   foldDyn (const nextDirection) DirectionDown rotateClicks
+
+drawBuildingSelection :: PlayerWidget t m => m (Dynamic t [BuildingType])
+drawBuildingSelection = do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
+  let currentBuildingDyn = (uniqDyn $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
+  behaviorChanges <- dyn $ drawSelectionForPossibilities <$> currentBuildingDyn
+  nestedBehavior <- holdDyn (pure []) behaviorChanges
+  return $ join nestedBehavior
+
+drawSelectionForPossibilities :: MonadWidget t m => [[BuildingType]] -> m (Dynamic t [BuildingType])
+drawSelectionForPossibilities [] = return $ pure []
+drawSelectionForPossibilities possibilities = do
+  let possibilitiesCount = length possibilities
+  rec
+    (leftEl, _) <- divAttributeLike' switchBuildingLeftClass $ text "Left"
+    dynText (T.pack <$> show <$> currentBuilding)
+    (rightEl, _) <- divAttributeLike' switchBuildingRightClass $ text "Right"
+    let switchEvent = leftmost [const (-1 :: Int) <$> domEvent Click leftEl, const (1 :: Int) <$> domEvent Click rightEl]
+    currentIndex <- foldDyn (\x y -> mod (x + y) possibilitiesCount) (0 :: Int) switchEvent
+    let currentBuilding = (possibilities !!) <$> currentIndex
+  return $ currentBuilding
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
 findOccupantChanges selectedOccupant clickedPosition =
