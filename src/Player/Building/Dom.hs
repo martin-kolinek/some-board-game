@@ -23,7 +23,7 @@ import Prelude hiding (error)
 import Data.Foldable (fold)
 import qualified Data.Text as T
 
-data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding deriving Show
+data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding deriving (Eq, Show)
 
 data TileInfo = TileInfo
   {
@@ -71,20 +71,24 @@ instance Reflex t => Monoid (TileResults t) where
 
 drawTileInfo :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Position -> Dynamic t TileInfo -> m (TileResults t)
 drawTileInfo selectedOccupantDyn position tileInfoDyn = do
-  let getBuildingToDraw tileInfo = case tilePotentialBuildings tileInfo of
-        NoBuilding -> tileBuilding tileInfo
+  let tilePotentialBuildingsDyn = uniqDyn $ tilePotentialBuildings <$> tileInfoDyn
+      tileOccupantErrorsDyn = uniqDyn $ tileOccupantErrors <$> tileInfoDyn
+      tileOccupantsDyn = uniqDyn $ tileOccupants <$> tileInfoDyn
+      tileBuildingDyn = uniqDyn $ tileBuilding <$> tileInfoDyn
+      getBuildingToDraw tilePotBuild tileBuild = case tilePotBuild of
+        NoBuilding -> tileBuild
         ValidBuilding b -> b
         InvalidBuilding b -> b
-      getOverlayCss tileInfo = case tilePotentialBuildings tileInfo of
+      getOverlayCss tilePotBuild = case tilePotBuild of
         NoBuilding -> hiddenPlaceholderTileCss
         ValidBuilding _ -> highlightedValidPlaceholderTileCss
         InvalidBuilding _ -> highlightedPlaceholderTileCss
-  (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss position <$> getBuildingToDraw <$> tileInfoDyn) $ do
-    divAttributeLikeDyn (getOverlayCss <$> tileInfoDyn) $ do
-      drawOccupantErrors $ tileOccupantErrors <$> tileInfoDyn
+  (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss position <$> (getBuildingToDraw <$> tilePotentialBuildingsDyn <*> tileBuildingDyn)) $ do
+    divAttributeLikeDyn (getOverlayCss <$> tilePotentialBuildingsDyn) $ do
+      drawOccupantErrors $ tileOccupantErrorsDyn
       divAttributeLike occupantContainerClass $ do
         let combineOccupantClicks workers = M.elems <$> mergeMap workers
-        occupantClicks <- animatedList (fromRational 1) (tileOccupants <$> tileInfoDyn) (drawWorkplaceOccupant selectedOccupantDyn)
+        occupantClicks <- animatedList (fromRational 1) (tileOccupantsDyn) (drawWorkplaceOccupant selectedOccupantDyn)
         let combinedClicks = combineOccupantClicks <$> occupantClicks
         return $ switch (current combinedClicks)
   hoveredPos <- holdDyn [] (leftmost [const [] <$> domEvent Mouseleave divEl, const [position] <$> domEvent Mouseenter divEl])
