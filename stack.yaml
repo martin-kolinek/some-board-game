@@ -10,21 +10,17 @@ packages:
   extra-dep: true
 - location:
     git: https://github.com/reflex-frp/reflex
-    commit: 02cf9dbc89ba20b6e93622e0910a76d5e9d06669
+    commit: a63aba90bdea5ae5b3e1506d468613bdfedcdfa3
   extra-dep: true
 - location:
     git: https://github.com/reflex-frp/reflex-dom
-    commit: 59100d61282fe02aa39be602f0a73daf31e28f63
+    commit: 2b52a41341489d967b71fe82292a61ad77bfe226
   extra-dep: true
 
 extra-deps:
-- clay-0.11
-- ghcjs-dom-0.2.4.0
+- clay-0.12.1
 - prim-uniq-0.1.0.1
 - ref-tf-0.4.0.1
 - zenc-0.1.1
-- webkitgtk3-javascriptcore-0.13.2.0
-- MemoTrie-0.6.7
-- newtype-generics-0.5
 
-resolver: lts-7.19
+resolver: lts-6.30

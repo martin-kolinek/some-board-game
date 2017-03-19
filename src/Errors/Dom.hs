@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RecursiveDo, FlexibleContexts, OverloadedStrings #-}
 
 module Errors.Dom where

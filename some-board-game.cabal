@@ -43,7 +43,7 @@ executable some-board-game
                        data-default,
                        vector-space
   if impl(ghcjs)
-    ghc-options:    -dedupe -Wall -Werror
+    ghc-options:    -Wall -Werror
     cpp-options:    -DGHCJS_BROWSER
   else
     ghc-options:    -Wall -Werror

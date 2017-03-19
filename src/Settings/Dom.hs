@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RecursiveDo, TupleSections, OverloadedStrings #-}
 
 module Settings.Dom where
