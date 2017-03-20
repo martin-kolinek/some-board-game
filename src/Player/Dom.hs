@@ -98,8 +98,17 @@ drawPlayerResources = do
       divAttributeLike' () $ do
         let resourceText = (((resourceLabel <> ": ") <>) . T.pack . show . resourceFunc) <$> resources
         dynText resourceText
-    collectResourcesEvent <- button "Collect resources"
-    return $ const collectResources <$> collectResourcesEvent
+    collectResourcesEvent <- drawActionButton canCollectResources "Collect resources"
+    finishActionEvent <- drawActionButton canFinishAction "Finish action"
+    return $ leftmost [const collectResources <$> collectResourcesEvent, const finishAction <$> finishActionEvent]
+
+drawActionButton :: PlayerWidget t m => (Universe -> PlayerId -> Bool) -> T.Text -> m (Event t ())
+drawActionButton condition label = do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
+  let condDyn = uniqDyn $ condition <$> universeDyn <*> pure playerId
+      draw cond = if cond then button label else return never
+  switchPromptly never =<< (dyn $ draw <$> condDyn)
 
 askResources :: PlayerWidget t m => m (Dynamic t Resources)
 askResources = do
