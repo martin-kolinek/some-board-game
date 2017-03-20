@@ -34,13 +34,13 @@ drawPlayers universeDyn settingsDyn = do
 
 drawPlayer :: PlayerWidget t m => m (Event t PlayerAction)
 drawPlayer = do
-  drawPlayerResources
+  resourceCollectEvents <- drawPlayerResources
   workplaceClicks <- drawWorkplaces
   PlayerExports selectedWorker action <- drawBuildingSpaceNew
   let startWorkerAction (Just worker) workplace = Just $ \player -> startWorking player worker workplace
       startWorkerAction _ _ = Nothing
       startWorkerActionEvent = attachWithMaybe startWorkerAction (current selectedWorker) workplaceClicks
-  return $ leftmost [startWorkerActionEvent, action]
+  return $ leftmost [startWorkerActionEvent, action, resourceCollectEvents]
 
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
 
@@ -90,15 +90,16 @@ drawPlayerInSelection universeDyn settingsDyn selectedPlayerId playerId  = do
   let event = domEvent Click elem
   return $ const playerId <$> event
 
-drawPlayerResources :: PlayerWidget t m => m ()
+drawPlayerResources :: PlayerWidget t m => m (Event t PlayerAction)
 drawPlayerResources = do
-  _ <- divAttributeLike' resourcesClass $ do
+  divAttributeLike resourcesClass $ do
     resources <- askResources
     forM_ resourceTypes $ \(resourceFunc, resourceLabel) -> do
       divAttributeLike' () $ do
         let resourceText = (((resourceLabel <> ": ") <>) . T.pack . show . resourceFunc) <$> resources
         dynText resourceText
-  return ()
+    collectResourcesEvent <- button "Collect resources"
+    return $ const collectResources <$> collectResourcesEvent
 
 askResources :: PlayerWidget t m => m (Dynamic t Resources)
 askResources = do

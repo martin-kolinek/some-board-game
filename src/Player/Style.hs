@@ -75,6 +75,8 @@ playerStyle = do
     padding (em 2) (em 2) (em 2) (em 2)
     margin (em 2) (em 2) (em 2) (em 2)
     fontWeight bold
+  star # classSelector resourcesClass Clay.** button ? do
+    marginTop (em 1)
   star # classSelector currentPlayerIconClassInternal ?
     float floatRight
   star # classSelector selectionClass ? do
