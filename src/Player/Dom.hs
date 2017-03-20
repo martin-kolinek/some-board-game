@@ -25,8 +25,7 @@ drawPlayers universeDyn settingsDyn = do
   let playersDyn = getPlayers <$> universeDyn
   selectedPlayerDyn <- uniqDyn <$> drawPlayerSelection settingsDyn universeDyn
   mapEvent <- listViewWithKey (fromList . (fmap (, Nothing)) <$> playersDyn) $ \playerId _ -> do
-    let singlePlayerSettingsDyn = (flip singlePlayerSettings playerId) <$> settingsDyn
-    playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId singlePlayerSettingsDyn) $ do
+    playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId settingsDyn) $ do
       let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
           clsDyn = cls <$> selectedPlayerDyn
       divAttributeLikeDyn clsDyn drawPlayer

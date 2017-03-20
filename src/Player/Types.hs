@@ -19,7 +19,7 @@ data PlayerExports t = PlayerExports {
 data PlayerWidgetData t = PlayerWidgetData {
     playerWidgetUniverse :: Dynamic t Universe,
     playerWidgetPlayerId :: PlayerId,
-    playerWidgetSettings :: Dynamic t SinglePlayerSettings
+    playerWidgetSettings :: Dynamic t PlayerSettings
   }
 
 type PlayerWidget t m = (MonadWidget t m, MonadReader (PlayerWidgetData t) m)
@@ -30,7 +30,7 @@ askUniverseDyn = asks playerWidgetUniverse
 askPlayerId :: PlayerWidget t m => m PlayerId
 askPlayerId = asks playerWidgetPlayerId
 
-askPlayerSettings :: PlayerWidget t m => m (Dynamic t SinglePlayerSettings)
+askPlayerSettings :: PlayerWidget t m => m (Dynamic t PlayerSettings)
 askPlayerSettings = asks playerWidgetSettings
 
 type PlayerAction = PlayerId -> Universe -> Either String Universe
