@@ -6,7 +6,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/martin-kolinek/some-board-game-rules.git
-    commit: cd4a42a5562b08e420c9e6cee7091db0218bb3f7
+    commit: e47ea7c04da361673e2038f6b80b66506689a3ca
   extra-dep: true
 - location:
     git: https://github.com/reflex-frp/reflex
@@ -18,7 +18,7 @@ packages:
   extra-dep: true
 
 extra-deps:
-- clay-0.11
+- clay-0.12.1
 - ghcjs-dom-0.2.4.0
 - prim-uniq-0.1.0.1
 - ref-tf-0.4.0.1
