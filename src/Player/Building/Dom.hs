@@ -94,29 +94,72 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
   hoveredPos <- holdDyn [] (leftmost [const [] <$> domEvent Mouseleave divEl, const [position] <$> domEvent Mouseenter divEl])
   return $ TileResults (const [position] <$> domEvent Click divEl) inner hoveredPos
 
-drawBuildingSpaceNew :: PlayerWidget t m => m (PlayerExports t)
-drawBuildingSpaceNew = divAttributeLike buildingSpaceClass $ do
+drawBuildings :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Dynamic t BuildingStatus -> m (Event t Position, Event t BuildingOccupant)
+drawBuildings selectedOccupantDyn buildingStatusDyn = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  (directionDyn, buildingDyn) <- divAttributeLike buildingOptionsClass $ do
-    dirDyn <- drawRotationButton
-    buildDyn <- drawBuildingSelection
-    return (dirDyn, buildDyn)
+  let getDirection (IsBuilding _ dir) = dir
+      getDirection _ = DirectionDown
+      getBuildings (IsBuilding b _) = b
+      getBuildings _ = []
+      directionDyn = uniqDyn $ getDirection <$> buildingStatusDyn
+      selectedBuildingDyn = uniqDyn $ getBuildings <$> buildingStatusDyn
   rec
-    let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> directionDyn <*> buildingDyn
-    result <- listWithKey tiles (drawTileInfo selectedOccupant)
+    let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> directionDyn <*> selectedBuildingDyn
+    result <- listWithKey tiles (drawTileInfo selectedOccupantDyn)
     (TileResults clickedPos clickedOcc hoveredPositionDyn) <- extractTileResultsFromDynamic $ fold <$> result
-    selectedOccupant <- deselectInvalidOccupants (fmapMaybe listToMaybe clickedOcc)
-    let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
-        clickedPosition = fmapMaybe listToMaybe clickedPos
-        occupantChanges = findOccupantChanges selectedOccupant clickedPosition
-        wholeOccupantChanges = attachWith (&) (current (getBuildingOccupants <$> universeDyn <*> pure playerId)) occupantChanges
-        occupantChangeActions = flip alterOccupants <$> wholeOccupantChanges
-        createBuildAction :: [BuildingType] -> Direction -> Position -> PlayerAction
-        createBuildAction buildingType direction position plId = buildBuildings plId position direction buildingType
-        buildBuildingActions = attachWith ($) (createBuildAction <$> (current buildingDyn) <*> (current directionDyn)) clickedPosition
-        validBuildBuildingActions = gate (not . null <$> current buildingDyn) buildBuildingActions
-  return $ PlayerExports selectedWorker (leftmost [validBuildBuildingActions, occupantChangeActions])
+  return (fmapMaybe listToMaybe clickedPos, fmapMaybe listToMaybe clickedOcc)
+
+data PlantingStatus = IsPlanting | IsNotPlanting deriving Eq
+data BuildingStatus = IsBuilding [BuildingType] Direction | IsNotBuilding
+
+drawBuildingSelection :: PlayerWidget t m => Dynamic t PlantingStatus -> m (Dynamic t BuildingStatus)
+drawBuildingSelection plantingStatusDyn = do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
+  let drawSelection :: PlayerWidget t2 m2 => Bool -> m2 (Dynamic t2 BuildingStatus)
+      drawSelection True = do
+        universeDyn2 <- askUniverseDyn
+        playerId2 <- askPlayerId
+        let currentBuildingDyn = (uniqDyn $ currentlyBuiltBuildings <$> universeDyn2 <*> pure playerId2)
+        directionDyn <- drawRotationButton
+        behaviorChanges <- dyn $ drawSelectionForPossibilities <$> currentBuildingDyn
+        nestedBehavior <- holdDyn (pure []) behaviorChanges
+        return $ IsBuilding <$> join nestedBehavior <*> directionDyn
+      drawSelection False = do
+        return $ constDyn IsNotBuilding
+      canCurrentlyBuildDyn = not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
+      isNotPlantingDyn = (== IsNotPlanting) <$> plantingStatusDyn
+      canBuildDyn = (&&) <$> canCurrentlyBuildDyn <*> isNotPlantingDyn
+      drawBuildButton :: PlayerWidget t2 m2 => Bool -> m2 (Dynamic t2 Bool)
+      drawBuildButton False = return $ constDyn False
+      drawBuildButton True = do
+        let txt True = "Cancel"
+            txt False = "Build"
+        rec
+          (divEl, _) <- divAttributeLike' buildButtonClass $ dynText (txt <$> isBuilding)
+          isBuilding <- toggle False (domEvent Click divEl)
+        return isBuilding
+  divAttributeLike buildingOptionsClass $ do
+    isBuildingDyn <- join <$> (holdDyn (constDyn False) =<< (dyn $ drawBuildButton <$> canBuildDyn))
+    join <$> (holdDyn (constDyn IsNotBuilding) =<< (dyn $ drawSelection <$> isBuildingDyn))
+
+createBuildActions :: Reflex t => Dynamic t BuildingStatus -> Event t Position -> Event t PlayerAction
+createBuildActions buildingStatusDyn positionEvent =
+  let createBuildAction (IsBuilding buildings direction) position = Just $ \plId -> buildBuildings plId position direction buildings
+      createBuildAction _ _ = Nothing
+  in attachWithMaybe createBuildAction (current buildingStatusDyn) positionEvent
+
+drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
+drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
+  rec
+    (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn
+    selectedOccupantDyn <- createSelectedOccupant clickedOccupant
+    buildingStatusDyn <- drawBuildingSelection plantingStatusDyn
+    let plantingStatusDyn = constDyn IsNotPlanting
+        buildingActions = createBuildActions buildingStatusDyn clickedPosition
+        selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
+  return $ PlayerExports selectedWorkerDyn buildingActions
 
 drawOccupantErrors :: (MonadWidget t m) => Dynamic t [String] -> m ()
 drawOccupantErrors errors =
@@ -136,15 +179,6 @@ drawRotationButton = do
   let rotateClicks = domEvent Click rotateElement
   foldDyn (const nextDirection) DirectionDown rotateClicks
 
-drawBuildingSelection :: PlayerWidget t m => m (Dynamic t [BuildingType])
-drawBuildingSelection = do
-  universeDyn <- askUniverseDyn
-  playerId <- askPlayerId
-  let currentBuildingDyn = (uniqDyn $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
-  behaviorChanges <- dyn $ drawSelectionForPossibilities <$> currentBuildingDyn
-  nestedBehavior <- holdDyn (pure []) behaviorChanges
-  return $ join nestedBehavior
-
 drawSelectionForPossibilities :: MonadWidget t m => [[BuildingType]] -> m (Dynamic t [BuildingType])
 drawSelectionForPossibilities [] = return $ pure []
 drawSelectionForPossibilities possibilities = do
@@ -158,16 +192,8 @@ drawSelectionForPossibilities possibilities = do
     let currentBuilding = (possibilities !!) <$> currentIndex
   return $ currentBuilding
 
-findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
-findOccupantChanges selectedOccupant clickedPosition =
-  let removeOccupant occupant = M.map (Prelude.filter (/= occupant))
-      addOccupant occupant = M.alter (pure . (occupant:) . fromMaybe [])
-      modifyMap (Just occ) pos = addOccupant occ pos . removeOccupant occ
-      modifyMap _ _ = id
-  in attachWith modifyMap (current selectedOccupant) clickedPosition
-
-deselectInvalidOccupants :: PlayerWidget t m => Event t BuildingOccupant -> m (Dynamic t (Maybe BuildingOccupant))
-deselectInvalidOccupants occupants = do
+createSelectedOccupant :: PlayerWidget t m => Event t BuildingOccupant -> m (Dynamic t (Maybe BuildingOccupant))
+createSelectedOccupant occupants = do
   let removeInvalidOccupants maybeOccupant universe = do
           occupant <- maybeOccupant
           guard $ isOccupantValid occupant universe

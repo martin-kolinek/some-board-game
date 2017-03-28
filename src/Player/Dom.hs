@@ -36,7 +36,7 @@ drawPlayer :: PlayerWidget t m => m (Event t PlayerAction)
 drawPlayer = do
   resourceCollectEvents <- drawPlayerResources
   workplaceClicks <- drawWorkplaces
-  PlayerExports selectedWorker action <- drawBuildingSpaceNew
+  PlayerExports selectedWorker action <- drawBuildingSpace
   let startWorkerAction (Just worker) workplace = Just $ \player -> startWorking player worker workplace
       startWorkerAction _ _ = Nothing
       startWorkerActionEvent = attachWithMaybe startWorkerAction (current selectedWorker) workplaceClicks

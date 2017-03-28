@@ -39,6 +39,8 @@ switchBuildingRightClassInternal = CssClass "switch-right"
 switchBuildingRightClass :: CssClass
 switchBuildingRightClass = switchBuildingRightClassInternal <> faClass <> faCaretRightClass
 
+buildButtonClass :: CssClass
+buildButtonClass = CssClass "build-button"
 
 occupantErrorClass :: CssClass
 occupantErrorClass = CssClass "occupant-error"
@@ -139,6 +141,12 @@ buildingStyle = do
     display inline
   star # classSelector occupantErrorClass # hover |> Clay.div # classSelector faExclamationClass ?
     display none
+  star # classSelector buildButtonClass ? do
+    display inlineBlock
+    borderWidth (px 1)
+    borderStyle solid
+    borderColor black
+    cursor pointer
 
 oneSixth :: Double
 oneSixth = 15
