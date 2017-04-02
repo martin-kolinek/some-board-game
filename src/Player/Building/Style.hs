@@ -17,8 +17,8 @@ rotateButtonClassInternal :: CssClass
 rotateButtonClassInternal = CssClass "rotate-button"
 rotateButtonClass :: CssClass
 rotateButtonClass = rotateButtonClassInternal <> faClass <> faRotateRightClass
-hiddenRotateButtonClass :: CssClass
-hiddenRotateButtonClass = CssClass "hidden-rotate-button"
+hiddenButtonClass :: CssClass
+hiddenButtonClass = CssClass "hidden-button"
 buildingOptionsClass :: CssClass
 buildingOptionsClass = CssClass "building-options"
 cancelButtonClassInternal :: CssClass
@@ -55,6 +55,11 @@ occupantContainerClass = CssClass "occupant-container"
 placeholderTileClass :: CssClass
 placeholderTileClass = CssClass "placeholder-tile"
 
+cropTypeClass :: CssClass
+cropTypeClass = CssClass "crop-type"
+plantCropsButtonClass :: CssClass
+plantCropsButtonClass = CssClass "plant-crops-button"
+
 buildingStyle :: Css
 buildingStyle = do
   star # classSelector buildingSpaceClass ? do
@@ -68,9 +73,8 @@ buildingStyle = do
     paddingBottom (pct 75)
     display block
     content $ stringContent ""
-  star # classSelector hiddenRotateButtonClass ? do
-    visibility hidden
-    height (em 4)
+  star # classSelector hiddenButtonClass ? do
+    display none
   star # classSelector rotateButtonClassInternal ? do
     cursor pointer
     display inlineBlock

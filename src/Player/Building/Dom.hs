@@ -110,8 +110,8 @@ drawBuildings selectedOccupantDyn buildingStatusDyn = do
     (TileResults clickedPos clickedOcc hoveredPositionDyn) <- extractTileResultsFromDynamic $ fold <$> result
   return (fmapMaybe listToMaybe clickedPos, fmapMaybe listToMaybe clickedOcc)
 
-data PlantingStatus = IsPlanting | IsNotPlanting deriving Eq
-data BuildingStatus = IsBuilding [BuildingType] Direction | IsNotBuilding
+data PlantingStatus = IsPlanting [CropToPlant] (Maybe CropType) | IsNotPlanting deriving Eq
+data BuildingStatus = IsBuilding [BuildingType] Direction | IsNotBuilding deriving Eq
 
 drawBuildingSelection :: PlayerWidget t m => Dynamic t PlantingStatus -> m (Dynamic t BuildingStatus)
 drawBuildingSelection plantingStatusDyn = do
@@ -131,17 +131,18 @@ drawBuildingSelection plantingStatusDyn = do
       canCurrentlyBuildDyn = not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       isNotPlantingDyn = (== IsNotPlanting) <$> plantingStatusDyn
       canBuildDyn = (&&) <$> canCurrentlyBuildDyn <*> isNotPlantingDyn
-      drawBuildButton :: PlayerWidget t2 m2 => Bool -> m2 (Dynamic t2 Bool)
-      drawBuildButton False = return $ constDyn False
-      drawBuildButton True = do
+      drawBuildButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> m2 (Dynamic t2 Bool)
+      drawBuildButton visible = do
         let txt True = "Cancel"
             txt False = "Build"
+            cls True = buildButtonClass
+            cls False = hiddenButtonClass
         rec
-          (divEl, _) <- divAttributeLike' buildButtonClass $ dynText (txt <$> isBuilding)
+          (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText (txt <$> isBuilding)
           isBuilding <- toggle False (domEvent Click divEl)
         return isBuilding
   divAttributeLike buildingOptionsClass $ do
-    isBuildingDyn <- join <$> (holdDyn (constDyn False) =<< (dyn $ drawBuildButton <$> canBuildDyn))
+    isBuildingDyn <- drawBuildButton canBuildDyn
     join <$> (holdDyn (constDyn IsNotBuilding) =<< (dyn $ drawSelection <$> isBuildingDyn))
 
 createBuildActions :: Reflex t => Dynamic t BuildingStatus -> Event t Position -> Event t PlayerAction
@@ -150,14 +151,61 @@ createBuildActions buildingStatusDyn positionEvent =
       createBuildAction _ _ = Nothing
   in attachWithMaybe createBuildAction (current buildingStatusDyn) positionEvent
 
+drawPlanting :: PlayerWidget t m => Event t Position -> Dynamic t BuildingStatus -> m (Dynamic t PlantingStatus)
+drawPlanting clickedPositionsEvent buildingStatusDyn = do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
+  let drawPlanting' :: PlayerWidget t2 m2 => Event t2 Position -> Bool -> m2 (Dynamic t2 PlantingStatus)
+      drawPlanting' _ False = return $ constDyn IsNotPlanting
+      drawPlanting' clickedPos True = do
+        selectedCrop <- drawCropSelection
+        plantedCropsDyn <- createPlantedCrops selectedCrop clickedPos
+        return $ IsPlanting <$> plantedCropsDyn <*> selectedCrop
+      canPlantDyn = (&&) <$> (isPlantingCrops <$> universeDyn <*> pure playerId) <*> ((== IsNotBuilding) <$> buildingStatusDyn)
+      drawPlantingButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> m2 (Dynamic t2 Bool)
+      drawPlantingButton visible = do
+        let txt True = "Cancel"
+            txt False = "Plant"
+            cls True = plantCropsButtonClass
+            cls False = hiddenButtonClass
+        rec
+          (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText $ txt <$> isPlanting
+          isPlanting <- toggle False (domEvent Click divEl)
+        return isPlanting
+  isPlanting <- drawPlantingButton canPlantDyn
+  fmap join $ holdDyn (constDyn IsNotPlanting) =<< (dyn $ drawPlanting' clickedPositionsEvent <$> isPlanting)
+
+
+drawCropSelection :: PlayerWidget t m => m (Dynamic t (Maybe CropType))
+drawCropSelection = do
+  (potatoElement, _) <- divAttributeLike' cropTypeClass $ text "Potatoes"
+  (wheatElement, _) <- divAttributeLike' cropTypeClass $ text "Wheat"
+  let potatoClicks = const Potatoes <$> domEvent Click potatoElement
+      wheatClicks = const Wheat <$> domEvent Click wheatElement
+  foldDyn (\next curr -> if curr == Just next then Nothing else Just next) Nothing (leftmost [potatoClicks, wheatClicks])
+
+createPlantedCrops :: PlayerWidget t m => Dynamic t (Maybe CropType) -> Event t Position -> m (Dynamic t [CropToPlant])
+createPlantedCrops selectedCrop positionClicks = do
+  let createCropToPlant (Just cropType) pos = Just (cropType, pos)
+      createCropToPlant _ _ = Nothing
+      cropToPlantEvent = attachWithMaybe createCropToPlant (current selectedCrop) positionClicks
+  foldDyn (:) [] cropToPlantEvent
+
+drawPlantingConfirmation :: PlayerWidget t m => Dynamic t PlantingStatus -> m (Event t PlayerAction)
+drawPlantingConfirmation cropsToPlantDyn = do
+  confirmClicks <- button "Confirm"
+  let createAction (IsPlanting crops _) = Just $ \plId -> plantCrops plId crops
+      createAction _ = Nothing
+  return $ fmapMaybe id $ createAction <$> tag (current cropsToPlantDyn) confirmClicks
+
 drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
     (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
     buildingStatusDyn <- drawBuildingSelection plantingStatusDyn
-    let plantingStatusDyn = constDyn IsNotPlanting
-        buildingActions = createBuildActions buildingStatusDyn clickedPosition
+    plantingStatusDyn <- drawPlanting clickedPosition buildingStatusDyn
+    let buildingActions = createBuildActions buildingStatusDyn clickedPosition
         selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
   return $ PlayerExports selectedWorkerDyn buildingActions
 
@@ -173,7 +221,7 @@ drawRotationButton = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   let currentBuildingDyn = (uniqDyn $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
-      getClass [] = hiddenRotateButtonClass
+      getClass [] = hiddenButtonClass
       getClass _ = rotateButtonClass
   (rotateElement, _) <- divAttributeLikeDyn' (getClass <$> currentBuildingDyn) $ return ()
   let rotateClicks = domEvent Click rotateElement
