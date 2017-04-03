@@ -151,6 +151,21 @@ buildingStyle = do
     borderStyle solid
     borderColor black
     cursor pointer
+    marginRight (em 1)
+  star # classSelector plantCropsButtonClass ? do
+    display inlineBlock
+    borderWidth (px 1)
+    borderStyle solid
+    borderColor black
+    cursor pointer
+    marginRight (em 1)
+  star # classSelector cropTypeClass ? do
+    display inlineBlock
+    borderWidth (px 1)
+    borderStyle solid
+    borderColor black
+    cursor pointer
+    marginRight (em 1)
 
 oneSixth :: Double
 oneSixth = 15

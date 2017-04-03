@@ -141,9 +141,8 @@ drawBuildingSelection plantingStatusDyn = do
           (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText (txt <$> isBuilding)
           isBuilding <- toggle False (domEvent Click divEl)
         return isBuilding
-  divAttributeLike buildingOptionsClass $ do
-    isBuildingDyn <- drawBuildButton canBuildDyn
-    join <$> (holdDyn (constDyn IsNotBuilding) =<< (dyn $ drawSelection <$> isBuildingDyn))
+  isBuildingDyn <- drawBuildButton canBuildDyn
+  join <$> (holdDyn (constDyn IsNotBuilding) =<< (dyn $ drawSelection <$> isBuildingDyn))
 
 createBuildActions :: Reflex t => Dynamic t BuildingStatus -> Event t Position -> Event t PlayerAction
 createBuildActions buildingStatusDyn positionEvent =
@@ -203,8 +202,10 @@ drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
     (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
-    buildingStatusDyn <- drawBuildingSelection plantingStatusDyn
-    plantingStatusDyn <- drawPlanting clickedPosition buildingStatusDyn
+    (plantingStatusDyn, buildingStatusDyn) <- divAttributeLike buildingOptionsClass $ do
+      buildingStatusDynInner <- drawBuildingSelection plantingStatusDyn
+      plantingStatusDynInner <- drawPlanting clickedPosition buildingStatusDyn
+      return (plantingStatusDynInner, buildingStatusDynInner)
     let buildingActions = createBuildActions buildingStatusDyn clickedPosition
         selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
   return $ PlayerExports selectedWorkerDyn buildingActions
