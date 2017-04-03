@@ -57,6 +57,8 @@ placeholderTileClass = CssClass "placeholder-tile"
 
 cropTypeClass :: CssClass
 cropTypeClass = CssClass "crop-type"
+highlightedCropTypeClass :: CssClass
+highlightedCropTypeClass = CssClass "highlighted-crop-type"
 plantCropsButtonClass :: CssClass
 plantCropsButtonClass = CssClass "plant-crops-button"
 
@@ -166,6 +168,8 @@ buildingStyle = do
     borderColor black
     cursor pointer
     marginRight (em 1)
+  star # classSelector highlightedCropTypeClass ? do
+    backgroundColor red
 
 oneSixth :: Double
 oneSixth = 15

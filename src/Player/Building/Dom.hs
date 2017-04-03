@@ -177,11 +177,14 @@ drawPlanting clickedPositionsEvent buildingStatusDyn = do
 
 drawCropSelection :: PlayerWidget t m => m (Dynamic t (Maybe CropType))
 drawCropSelection = do
-  (potatoElement, _) <- divAttributeLike' cropTypeClass $ text "Potatoes"
-  (wheatElement, _) <- divAttributeLike' cropTypeClass $ text "Wheat"
-  let potatoClicks = const Potatoes <$> domEvent Click potatoElement
-      wheatClicks = const Wheat <$> domEvent Click wheatElement
-  foldDyn (\next curr -> if curr == Just next then Nothing else Just next) Nothing (leftmost [potatoClicks, wheatClicks])
+  let cls neededCropType actualCropType = cropTypeClass <> if Just neededCropType == actualCropType then highlightedCropTypeClass else mempty
+  rec
+    (potatoElement, _) <- divAttributeLikeDyn' (cls Potatoes <$> selectedCropType) $ text "Potatoes"
+    (wheatElement, _) <- divAttributeLikeDyn' (cls Wheat <$> selectedCropType) $ text "Wheat"
+    let potatoClicks = const Potatoes <$> domEvent Click potatoElement
+        wheatClicks = const Wheat <$> domEvent Click wheatElement
+    selectedCropType <- foldDyn (\next curr -> if curr == Just next then Nothing else Just next) Nothing (leftmost [potatoClicks, wheatClicks])
+  return selectedCropType
 
 createPlantedCrops :: PlayerWidget t m => Dynamic t (Maybe CropType) -> Event t Position -> m (Dynamic t [CropToPlant])
 createPlantedCrops selectedCrop positionClicks = do
