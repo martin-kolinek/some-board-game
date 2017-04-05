@@ -30,11 +30,12 @@ data TileInfo = TileInfo
     tileBuilding :: BuildingType,
     tileOccupants :: [BuildingOccupant],
     tileOccupantErrors :: [String],
-    tilePotentialBuildings :: PotentialBuilding
+    tilePotentialBuildings :: PotentialBuilding,
+    tileCrops :: [CropType]
   } deriving Show
 
-createTiles :: Universe -> PlayerId -> Maybe Position -> Direction -> [BuildingType] -> M.Map Position TileInfo
-createTiles universe playerId hoveredPositionMaybe hoveredDirection currentBuildings =
+createTiles :: Universe -> PlayerId -> Maybe Position -> Direction -> [BuildingType] -> PlantingStatus -> M.Map Position TileInfo
+createTiles universe playerId hoveredPositionMaybe hoveredDirection currentBuildings plantingStatus =
   let buildings = getBuildingSpace universe playerId
       getBuiltBuildingIndex position = if Just position == hoveredPositionMaybe then 0 else if Just (position ^-^ directionAddition hoveredDirection) == hoveredPositionMaybe then 1 else 2
       getPotentialBuildingType position = listToMaybe $ drop (getBuiltBuildingIndex position) currentBuildings
@@ -43,7 +44,10 @@ createTiles universe playerId hoveredPositionMaybe hoveredDirection currentBuild
         _ -> NoBuilding
       getTileOccupants position = findVisibleOccupants universe playerId position
       getTileOccupantErrors position = fst <$> (filter ((== position) . snd) $ getOccupantErrors universe playerId)
-      getBuildingTile (Building buildingType pos) = (pos, TileInfo buildingType (getTileOccupants pos) (getTileOccupantErrors pos) (getPotentialBuilding pos))
+      getCrops position = case plantingStatus of
+        IsNotPlanting -> []
+        IsPlanting crops _ -> [cropType | (cropType, pos) <- crops, pos == position]
+      getBuildingTile (Building buildingType pos) = (pos, TileInfo buildingType (getTileOccupants pos) (getTileOccupantErrors pos) (getPotentialBuilding pos) (getCrops pos))
   in M.fromList $ getBuildingTile <$> buildings
 
 findVisibleOccupants :: Universe -> PlayerId -> Position -> [BuildingOccupant]
@@ -75,6 +79,7 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
       tileOccupantErrorsDyn = uniqDyn $ tileOccupantErrors <$> tileInfoDyn
       tileOccupantsDyn = uniqDyn $ tileOccupants <$> tileInfoDyn
       tileBuildingDyn = uniqDyn $ tileBuilding <$> tileInfoDyn
+      tileCropsDyn = uniqDyn $ tileCrops <$> tileInfoDyn
       getBuildingToDraw tilePotBuild tileBuild = case tilePotBuild of
         NoBuilding -> tileBuild
         ValidBuilding b -> b
@@ -83,19 +88,23 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
         NoBuilding -> hiddenPlaceholderTileCss
         ValidBuilding _ -> highlightedValidPlaceholderTileCss
         InvalidBuilding _ -> highlightedPlaceholderTileCss
+      cropText [] = ""
+      cropText x = T.pack $ show x
   (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss position <$> (getBuildingToDraw <$> tilePotentialBuildingsDyn <*> tileBuildingDyn)) $ do
     divAttributeLikeDyn (getOverlayCss <$> tilePotentialBuildingsDyn) $ do
       drawOccupantErrors $ tileOccupantErrorsDyn
-      divAttributeLike occupantContainerClass $ do
+      result <- divAttributeLike occupantContainerClass $ do
         let combineOccupantClicks workers = M.elems <$> mergeMap workers
         occupantClicks <- animatedList (fromRational 1) (tileOccupantsDyn) (drawWorkplaceOccupant selectedOccupantDyn)
         let combinedClicks = combineOccupantClicks <$> occupantClicks
         return $ switch (current combinedClicks)
+      dynText $ cropText <$> tileCropsDyn
+      return result
   hoveredPos <- holdDyn [] (leftmost [const [] <$> domEvent Mouseleave divEl, const [position] <$> domEvent Mouseenter divEl])
   return $ TileResults (const [position] <$> domEvent Click divEl) inner hoveredPos
 
-drawBuildings :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Dynamic t BuildingStatus -> m (Event t Position, Event t BuildingOccupant)
-drawBuildings selectedOccupantDyn buildingStatusDyn = do
+drawBuildings :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Dynamic t BuildingStatus -> Dynamic t PlantingStatus -> m (Event t Position, Event t BuildingOccupant)
+drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn= do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   let getDirection (IsBuilding _ dir) = dir
@@ -105,7 +114,7 @@ drawBuildings selectedOccupantDyn buildingStatusDyn = do
       directionDyn = uniqDyn $ getDirection <$> buildingStatusDyn
       selectedBuildingDyn = uniqDyn $ getBuildings <$> buildingStatusDyn
   rec
-    let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> directionDyn <*> selectedBuildingDyn
+    let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> directionDyn <*> selectedBuildingDyn <*> plantingStatusDyn
     result <- listWithKey tiles (drawTileInfo selectedOccupantDyn)
     (TileResults clickedPos clickedOcc hoveredPositionDyn) <- extractTileResultsFromDynamic $ fold <$> result
   return (fmapMaybe listToMaybe clickedPos, fmapMaybe listToMaybe clickedOcc)
@@ -203,7 +212,7 @@ drawPlantingConfirmation cropsToPlantDyn = do
 drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
-    (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn
+    (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
     (plantingStatusDyn, buildingStatusDyn) <- divAttributeLike buildingOptionsClass $ do
       buildingStatusDynInner <- drawBuildingSelection plantingStatusDyn
