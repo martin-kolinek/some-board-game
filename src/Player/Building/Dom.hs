@@ -179,7 +179,7 @@ drawPlanting clickedPositionsEvent buildingStatusDyn = do
         rec
           (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText $ txt <$> isPlanting
           isPlanting <- toggle False (domEvent Click divEl)
-        return isPlanting
+        return $ (&&) <$> isPlanting <*> visible
   isPlanting <- drawPlantingButton canPlantDyn
   fmap join $ holdDyn (constDyn IsNotPlanting) =<< (dyn $ drawPlanting' clickedPositionsEvent <$> isPlanting)
 
@@ -204,23 +204,27 @@ createPlantedCrops selectedCrop positionClicks = do
 
 drawPlantingConfirmation :: PlayerWidget t m => Dynamic t PlantingStatus -> m (Event t PlayerAction)
 drawPlantingConfirmation cropsToPlantDyn = do
-  confirmClicks <- button "Confirm"
   let createAction (IsPlanting crops _) = Just $ \plId -> plantCrops plId crops
       createAction _ = Nothing
-  return $ fmapMaybe id $ createAction <$> tag (current cropsToPlantDyn) confirmClicks
+      cls IsNotPlanting = hiddenButtonClass
+      cls _ = plantCropsButtonClass
+  (confirmEl, _) <- divAttributeLikeDyn' (cls <$> cropsToPlantDyn) $ text "Confirm"
+  return $ fmapMaybe id $ createAction <$> tag (current cropsToPlantDyn) (domEvent Click confirmEl)
 
 drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
     (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
-    (plantingStatusDyn, buildingStatusDyn) <- divAttributeLike buildingOptionsClass $ do
+    (plantingStatusDyn, buildingStatusDyn, plantActions) <- divAttributeLike buildingOptionsClass $ do
       buildingStatusDynInner <- drawBuildingSelection plantingStatusDyn
       plantingStatusDynInner <- drawPlanting clickedPosition buildingStatusDyn
-      return (plantingStatusDynInner, buildingStatusDynInner)
+      plantActs <- drawPlantingConfirmation plantingStatusDyn
+      return (plantingStatusDynInner, buildingStatusDynInner, plantActs)
     let buildingActions = createBuildActions buildingStatusDyn clickedPosition
         selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
-  return $ PlayerExports selectedWorkerDyn buildingActions
+        allActions = leftmost [buildingActions, plantActions]
+  return $ PlayerExports selectedWorkerDyn allActions
 
 drawOccupantErrors :: (MonadWidget t m) => Dynamic t [String] -> m ()
 drawOccupantErrors errors =
