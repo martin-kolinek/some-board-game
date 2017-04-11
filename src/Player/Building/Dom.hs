@@ -149,9 +149,11 @@ drawBuildingSelection plantingStatusDyn = do
         rec
           (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText (txt <$> isBuilding)
           isBuilding <- toggle False (domEvent Click divEl)
+        -- return $ (&&) <$> isBuilding <*> visible
         return isBuilding
   isBuildingDyn <- drawBuildButton canBuildDyn
-  join <$> (holdDyn (constDyn IsNotBuilding) =<< (dyn $ drawSelection <$> isBuildingDyn))
+  let isBuildingAndCanBuild = (&&) <$> isBuildingDyn <*> canCurrentlyBuildDyn
+  join <$> (holdDyn (constDyn IsNotBuilding) =<< (dyn $ drawSelection <$> isBuildingAndCanBuild))
 
 createBuildActions :: Reflex t => Dynamic t BuildingStatus -> Event t Position -> Event t PlayerAction
 createBuildActions buildingStatusDyn positionEvent =
@@ -179,9 +181,10 @@ drawPlanting clickedPositionsEvent buildingStatusDyn = do
         rec
           (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText $ txt <$> isPlanting
           isPlanting <- toggle False (domEvent Click divEl)
-        return $ (&&) <$> isPlanting <*> visible
+        return $ isPlanting
   isPlanting <- drawPlantingButton canPlantDyn
-  fmap join $ holdDyn (constDyn IsNotPlanting) =<< (dyn $ drawPlanting' clickedPositionsEvent <$> isPlanting)
+  let isPlantingAndCanPlant = (&&) <$> isPlanting <*> canPlantDyn
+  fmap join $ holdDyn (constDyn IsNotPlanting) =<< (dyn $ drawPlanting' clickedPositionsEvent <$> isPlantingAndCanPlant)
 
 
 drawCropSelection :: PlayerWidget t m => m (Dynamic t (Maybe CropType))
