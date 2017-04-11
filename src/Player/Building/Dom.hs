@@ -22,6 +22,8 @@ import Data.AdditiveGroup
 import Prelude hiding (error)
 import Data.Foldable (fold)
 import qualified Data.Text as T
+import Data.Align
+import Data.These
 
 data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding deriving (Eq, Show)
 
@@ -138,20 +140,20 @@ drawBuildingSelection plantingStatusDyn = do
       drawSelection False = do
         return $ constDyn IsNotBuilding
       canCurrentlyBuildDyn = not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
+      stopBuildingEv = ffilter null $ updated (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       isNotPlantingDyn = (== IsNotPlanting) <$> plantingStatusDyn
       canBuildDyn = (&&) <$> canCurrentlyBuildDyn <*> isNotPlantingDyn
-      drawBuildButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> m2 (Dynamic t2 Bool)
-      drawBuildButton visible = do
+      drawBuildButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
+      drawBuildButton visible stopBuildingEvent = do
         let txt True = "Cancel"
             txt False = "Build"
             cls True = buildButtonClass
             cls False = hiddenButtonClass
         rec
           (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText (txt <$> isBuilding)
-          isBuilding <- toggle False (domEvent Click divEl)
-        -- return $ (&&) <$> isBuilding <*> visible
+          isBuilding <- toggleWithReset False (domEvent Click divEl) stopBuildingEvent
         return isBuilding
-  isBuildingDyn <- drawBuildButton canBuildDyn
+  isBuildingDyn <- drawBuildButton canBuildDyn stopBuildingEv
   let isBuildingAndCanBuild = (&&) <$> isBuildingDyn <*> canCurrentlyBuildDyn
   join <$> (holdDyn (constDyn IsNotBuilding) =<< (dyn $ drawSelection <$> isBuildingAndCanBuild))
 
@@ -172,20 +174,26 @@ drawPlanting clickedPositionsEvent buildingStatusDyn = do
         plantedCropsDyn <- createPlantedCrops selectedCrop clickedPos
         return $ IsPlanting <$> plantedCropsDyn <*> selectedCrop
       canPlantDyn = (&&) <$> (isPlantingCrops <$> universeDyn <*> pure playerId) <*> ((== IsNotBuilding) <$> buildingStatusDyn)
-      drawPlantingButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> m2 (Dynamic t2 Bool)
-      drawPlantingButton visible = do
+      stopPlantingEv = ffilter (==False) $ updated (isPlantingCrops <$> universeDyn <*> pure playerId)
+      drawPlantingButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
+      drawPlantingButton visible stopPlantingEvent = do
         let txt True = "Cancel"
             txt False = "Plant"
             cls True = plantCropsButtonClass
             cls False = hiddenButtonClass
         rec
           (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText $ txt <$> isPlanting
-          isPlanting <- toggle False (domEvent Click divEl)
+          isPlanting <- toggleWithReset False (domEvent Click divEl) stopPlantingEvent
         return $ isPlanting
-  isPlanting <- drawPlantingButton canPlantDyn
+  isPlanting <- drawPlantingButton canPlantDyn stopPlantingEv
   let isPlantingAndCanPlant = (&&) <$> isPlanting <*> canPlantDyn
   fmap join $ holdDyn (constDyn IsNotPlanting) =<< (dyn $ drawPlanting' clickedPositionsEvent <$> isPlantingAndCanPlant)
 
+toggleWithReset :: MonadWidget t m => Bool -> Event t tog -> Event t reset -> m (Dynamic t Bool)
+toggleWithReset initialValue toggleEvent resetEvent = do
+  let combine (This _) cur = not cur
+      combine _ _ = False
+  foldDyn combine initialValue (align toggleEvent resetEvent)
 
 drawCropSelection :: PlayerWidget t m => m (Dynamic t (Maybe CropType))
 drawCropSelection = do
