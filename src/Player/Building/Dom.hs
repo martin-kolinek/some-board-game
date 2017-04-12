@@ -46,9 +46,13 @@ createTiles universe playerId hoveredPositionMaybe hoveredDirection currentBuild
         _ -> NoBuilding
       getTileOccupants position = findVisibleOccupants universe playerId position
       getTileOccupantErrors position = fst <$> (filter ((== position) . snd) $ getOccupantErrors universe playerId)
-      getCrops position = case plantingStatus of
+      getUniverseCrops position = join $ maybeToList $ do
+        (PlantedCrop cropType cnt) <- M.lookup position (getPlantedCrops universe playerId)
+        return $ replicate cnt cropType
+      getCurrentCrops position = case plantingStatus of
         IsNotPlanting -> []
         IsPlanting crops _ -> [cropType | (cropType, pos) <- crops, pos == position]
+      getCrops position = getCurrentCrops position <> getUniverseCrops position
       getBuildingTile (Building buildingType pos) = (pos, TileInfo buildingType (getTileOccupants pos) (getTileOccupantErrors pos) (getPotentialBuilding pos) (getCrops pos))
   in M.fromList $ getBuildingTile <$> buildings
 
