@@ -36,14 +36,18 @@ data TileInfo = TileInfo
     tileCrops :: [CropType]
   } deriving Show
 
-createTiles :: Universe -> PlayerId -> Maybe Position -> Direction -> [BuildingType] -> PlantingStatus -> M.Map Position TileInfo
-createTiles universe playerId hoveredPositionMaybe hoveredDirection currentBuildings plantingStatus =
-  let buildings = getBuildingSpace universe playerId
-      getBuiltBuildingIndex position = if Just position == hoveredPositionMaybe then 0 else if Just (position ^-^ directionAddition hoveredDirection) == hoveredPositionMaybe then 1 else 2
-      getPotentialBuildingType position = listToMaybe $ drop (getBuiltBuildingIndex position) currentBuildings
-      getPotentialBuilding position = case (getPotentialBuildingType position, hoveredPositionMaybe) of
-        (Just bt, Just hoveredPosition) -> if isLeft (buildBuildings playerId hoveredPosition hoveredDirection currentBuildings universe) then InvalidBuilding bt else ValidBuilding bt
+getPotentialBuilding :: BuildingStatus -> Maybe Position -> Position -> PlayerId -> Universe -> PotentialBuilding
+getPotentialBuilding (IsBuilding currentBuildings direction) (Just hoveredPosition) position playerId universe =
+  case potentialBuildingType of
+        Just bt -> if isLeft (buildBuildings playerId hoveredPosition direction currentBuildings universe) then InvalidBuilding bt else ValidBuilding bt
         _ -> NoBuilding
+  where builtBuildingIndex = if position == hoveredPosition then 0 else if position ^-^ directionAddition direction == hoveredPosition then 1 else 2
+        potentialBuildingType = listToMaybe $ drop builtBuildingIndex currentBuildings
+getPotentialBuilding _ _ _ _ _ = NoBuilding
+
+createTiles :: Universe -> PlayerId -> Maybe Position -> BuildingStatus -> PlantingStatus -> M.Map Position TileInfo
+createTiles universe playerId hoveredPositionMaybe buildingStatus plantingStatus =
+  let buildings = getBuildingSpace universe playerId
       getTileOccupants position = findVisibleOccupants universe playerId position
       getTileOccupantErrors position = fst <$> (filter ((== position) . snd) $ getOccupantErrors universe playerId)
       getUniverseCrops position = join $ maybeToList $ do
@@ -53,7 +57,13 @@ createTiles universe playerId hoveredPositionMaybe hoveredDirection currentBuild
         IsNotPlanting -> []
         IsPlanting crops _ -> [cropType | (cropType, pos) <- crops, pos == position]
       getCrops position = getCurrentCrops position <> getUniverseCrops position
-      getBuildingTile (Building buildingType pos) = (pos, TileInfo buildingType (getTileOccupants pos) (getTileOccupantErrors pos) (getPotentialBuilding pos) (getCrops pos))
+      getBuildingTile (Building buildingType pos) =
+        (pos, TileInfo
+          buildingType
+          (getTileOccupants pos)
+          (getTileOccupantErrors pos)
+          (getPotentialBuilding buildingStatus hoveredPositionMaybe pos playerId universe)
+          (getCrops pos))
   in M.fromList $ getBuildingTile <$> buildings
 
 findVisibleOccupants :: Universe -> PlayerId -> Position -> [BuildingOccupant]
@@ -113,14 +123,8 @@ drawBuildings :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Dynam
 drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn= do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  let getDirection (IsBuilding _ dir) = dir
-      getDirection _ = DirectionDown
-      getBuildings (IsBuilding b _) = b
-      getBuildings _ = []
-      directionDyn = uniqDyn $ getDirection <$> buildingStatusDyn
-      selectedBuildingDyn = uniqDyn $ getBuildings <$> buildingStatusDyn
   rec
-    let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> directionDyn <*> selectedBuildingDyn <*> plantingStatusDyn
+    let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> buildingStatusDyn <*> plantingStatusDyn
     result <- listWithKey tiles (drawTileInfo selectedOccupantDyn)
     (TileResults clickedPos clickedOcc hoveredPositionDyn) <- extractTileResultsFromDynamic $ fold <$> result
   return (fmapMaybe listToMaybe clickedPos, fmapMaybe listToMaybe clickedOcc)
