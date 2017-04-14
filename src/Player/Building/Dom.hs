@@ -235,6 +235,7 @@ drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
     (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
+    occupantChangeActions <- createOccupantChangeActions selectedOccupantDyn clickedPosition
     (plantingStatusDyn, buildingStatusDyn, plantActions) <- divAttributeLike buildingOptionsClass $ do
       buildingStatusDynInner <- drawBuildingSelection plantingStatusDyn
       plantingStatusDynInner <- drawPlanting clickedPosition buildingStatusDyn
@@ -242,7 +243,7 @@ drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
       return (plantingStatusDynInner, buildingStatusDynInner, plantActs)
     let buildingActions = createBuildActions buildingStatusDyn clickedPosition
         selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
-        allActions = leftmost [buildingActions, plantActions]
+        allActions = leftmost [buildingActions, plantActions, occupantChangeActions]
   return $ PlayerExports selectedWorkerDyn allActions
 
 drawOccupantErrors :: (MonadWidget t m) => Dynamic t [String] -> m ()
@@ -293,13 +294,29 @@ isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)
 isOccupantValid _ _ = True
 
-drawWorkplaceOccupant :: PlayerWidget t m =>
-  Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
+drawWorkplaceOccupant :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
 drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState = do
   let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
   workerEvent <- drawWorker selectedWorker workerId animationState
   return $ WorkerOccupant <$> workerEvent
 drawWorkplaceOccupant _ _ _ = return never
+
+findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
+findOccupantChanges selectedOccupant clickedPosition =
+  let removeOccupant occupant = M.map (Prelude.filter (/= occupant))
+      addOccupant occupant = M.alter (pure . (occupant:) . fromMaybe [])
+      modifyMap (Just occ) pos = addOccupant occ pos . removeOccupant occ
+      modifyMap _ _ = id
+  in attachWith modifyMap (current selectedOccupant) clickedPosition
+
+createOccupantChangeActions :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> m (Event t PlayerAction)
+createOccupantChangeActions selectedOccupant clickedPositionEvent = do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
+  let occupantChanges = findOccupantChanges selectedOccupant clickedPositionEvent
+      updatedOccupantsEvent = attachWith (&) (current $ getBuildingOccupants <$> universeDyn <*> pure playerId) occupantChanges
+      createAction occ = \plId -> alterOccupants plId occ
+  return $ createAction <$> updatedOccupantsEvent
 
 workerFromOccupant :: BuildingOccupant -> Maybe WorkerId
 workerFromOccupant (WorkerOccupant workerId) = Just workerId
