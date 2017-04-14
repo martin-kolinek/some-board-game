@@ -235,7 +235,7 @@ drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
     (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
-    occupantChangeActions <- createOccupantChangeActions selectedOccupantDyn clickedPosition
+    occupantChangeActions <- createOccupantChangeActions selectedOccupantDyn clickedPosition buildingStatusDyn plantingStatusDyn
     (plantingStatusDyn, buildingStatusDyn, plantActions) <- divAttributeLike buildingOptionsClass $ do
       buildingStatusDynInner <- drawBuildingSelection plantingStatusDyn
       plantingStatusDynInner <- drawPlanting clickedPosition buildingStatusDyn
@@ -309,14 +309,21 @@ findOccupantChanges selectedOccupant clickedPosition =
       modifyMap _ _ = id
   in attachWith modifyMap (current selectedOccupant) clickedPosition
 
-createOccupantChangeActions :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> m (Event t PlayerAction)
-createOccupantChangeActions selectedOccupant clickedPositionEvent = do
+createOccupantChangeActions :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Dynamic t BuildingStatus -> Dynamic t PlantingStatus -> m (Event t PlayerAction)
+createOccupantChangeActions selectedOccupant clickedPositionEvent buildingStatusDyn plantingStatusDyn = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   let occupantChanges = findOccupantChanges selectedOccupant clickedPositionEvent
       updatedOccupantsEvent = attachWith (&) (current $ getBuildingOccupants <$> universeDyn <*> pure playerId) occupantChanges
+      filterBuilding IsNotBuilding ev = Just ev
+      filterBuilding _ _ = Nothing
+      filterPlanting IsNotPlanting ev = Just ev
+      filterPlanting _ _ = Nothing
       createAction occ = \plId -> alterOccupants plId occ
-  return $ createAction <$> updatedOccupantsEvent
+  return $
+    attachWithMaybe filterPlanting (current plantingStatusDyn) $
+    attachWithMaybe filterBuilding (current buildingStatusDyn) $
+    createAction <$> updatedOccupantsEvent
 
 workerFromOccupant :: BuildingOccupant -> Maybe WorkerId
 workerFromOccupant (WorkerOccupant workerId) = Just workerId
