@@ -164,7 +164,7 @@ drawBuildingSelection plantingStatusDyn = do
         return $ IsBuilding <$> join nestedBehavior <*> directionDyn
       drawSelection False = do
         return $ constDyn IsNotBuilding
-      canCurrentlyBuildDyn = not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
+      canCurrentlyBuildDyn = uniqDyn $ not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       stopBuildingEv = ffilter null $ updated (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       isNotPlantingDyn = (== IsNotPlanting) <$> plantingStatusDyn
       canBuildDyn = (&&) <$> canCurrentlyBuildDyn <*> isNotPlantingDyn
@@ -198,7 +198,7 @@ drawPlanting clickedPositionsEvent buildingStatusDyn = do
         selectedCrop <- drawCropSelection
         plantedCropsDyn <- createPlantedCrops selectedCrop clickedPos
         return $ IsPlanting <$> plantedCropsDyn <*> selectedCrop
-      canPlantDyn = (&&) <$> (isPlantingCrops <$> universeDyn <*> pure playerId) <*> ((== IsNotBuilding) <$> buildingStatusDyn)
+      canPlantDyn = uniqDyn $ (&&) <$> (isPlantingCrops <$> universeDyn <*> pure playerId) <*> ((== IsNotBuilding) <$> buildingStatusDyn)
       stopPlantingEv = ffilter (==False) $ updated (isPlantingCrops <$> universeDyn <*> pure playerId)
       drawPlantingButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
       drawPlantingButton visible stopPlantingEvent = do
