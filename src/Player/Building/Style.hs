@@ -62,6 +62,13 @@ highlightedCropTypeClass = CssClass "highlighted-crop-type"
 plantCropsButtonClass :: CssClass
 plantCropsButtonClass = CssClass "plant-crops-button"
 
+hiddenPotentialCropClass :: CssClass
+hiddenPotentialCropClass = CssClass "hidden-potential-crop"
+validPotentialCropClass :: CssClass
+validPotentialCropClass = CssClass "valid-potential-crop"
+invalidPotentialCropClass :: CssClass
+invalidPotentialCropClass = CssClass "invalid-potential-crop"
+
 buildingStyle :: Css
 buildingStyle = do
   star # classSelector buildingSpaceClass ? do
@@ -170,6 +177,13 @@ buildingStyle = do
     marginRight (em 1)
   star # classSelector highlightedCropTypeClass ? do
     backgroundColor red
+  star # classSelector hiddenPotentialCropClass ? display none
+  star # classSelector validPotentialCropClass ? do
+    color green
+    fontWeight bold
+  star # classSelector invalidPotentialCropClass ? do
+    color red
+    fontWeight bold
 
 oneSixth :: Double
 oneSixth = 15

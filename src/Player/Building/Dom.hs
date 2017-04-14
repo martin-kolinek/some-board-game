@@ -26,6 +26,7 @@ import Data.Align
 import Data.These
 
 data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding deriving (Eq, Show)
+data PotentialCrop = ValidCrop CropType | InvalidCrop CropType | NoCrop deriving (Eq, Show)
 
 data TileInfo = TileInfo
   {
@@ -33,7 +34,8 @@ data TileInfo = TileInfo
     tileOccupants :: [BuildingOccupant],
     tileOccupantErrors :: [String],
     tilePotentialBuildings :: PotentialBuilding,
-    tileCrops :: [CropType]
+    tileCrops :: [CropType],
+    tilePotentialCrop :: PotentialCrop
   } deriving Show
 
 getPotentialBuilding :: BuildingStatus -> Maybe Position -> Position -> PlayerId -> Universe -> PotentialBuilding
@@ -57,13 +59,20 @@ createTiles universe playerId hoveredPositionMaybe buildingStatus plantingStatus
         IsNotPlanting -> []
         IsPlanting crops _ -> [cropType | (cropType, pos) <- crops, pos == position]
       getCrops position = getCurrentCrops position <> getUniverseCrops position
+      getPotentialCrop position = case (plantingStatus, hoveredPositionMaybe == Just position) of
+        (IsPlanting crops (Just selectedCrop), True) ->
+          if isLeft $ plantCrops playerId ((selectedCrop, position) : crops) universe
+          then InvalidCrop selectedCrop
+          else ValidCrop selectedCrop
+        _ -> NoCrop
       getBuildingTile (Building buildingType pos) =
         (pos, TileInfo
           buildingType
           (getTileOccupants pos)
           (getTileOccupantErrors pos)
           (getPotentialBuilding buildingStatus hoveredPositionMaybe pos playerId universe)
-          (getCrops pos))
+          (getCrops pos)
+          (getPotentialCrop pos))
   in M.fromList $ getBuildingTile <$> buildings
 
 findVisibleOccupants :: Universe -> PlayerId -> Position -> [BuildingOccupant]
@@ -96,6 +105,7 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
       tileOccupantsDyn = uniqDyn $ tileOccupants <$> tileInfoDyn
       tileBuildingDyn = uniqDyn $ tileBuilding <$> tileInfoDyn
       tileCropsDyn = uniqDyn $ tileCrops <$> tileInfoDyn
+      tilePotentialCropDyn = uniqDyn $ tilePotentialCrop <$> tileInfoDyn
       getBuildingToDraw tilePotBuild tileBuild = case tilePotBuild of
         NoBuilding -> tileBuild
         ValidBuilding b -> b
@@ -104,6 +114,12 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
         NoBuilding -> hiddenPlaceholderTileCss
         ValidBuilding _ -> highlightedValidPlaceholderTileCss
         InvalidBuilding _ -> highlightedPlaceholderTileCss
+      getPotentialCropClass NoCrop = hiddenPotentialCropClass
+      getPotentialCropClass (ValidCrop _) = validPotentialCropClass
+      getPotentialCropClass (InvalidCrop _) = invalidPotentialCropClass
+      getPotentialCropText NoCrop = ""
+      getPotentialCropText (ValidCrop tp) = T.pack $ show tp
+      getPotentialCropText (InvalidCrop tp) = T.pack $ show tp
       cropText [] = ""
       cropText x = T.pack $ show x
   (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss position <$> (getBuildingToDraw <$> tilePotentialBuildingsDyn <*> tileBuildingDyn)) $ do
@@ -115,6 +131,7 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
         let combinedClicks = combineOccupantClicks <$> occupantClicks
         return $ switch (current combinedClicks)
       dynText $ cropText <$> tileCropsDyn
+      divAttributeLikeDyn (getPotentialCropClass <$> tilePotentialCropDyn) $ dynText (getPotentialCropText <$> tilePotentialCropDyn)
       return result
   hoveredPos <- holdDyn [] (leftmost [const [] <$> domEvent Mouseleave divEl, const [position] <$> domEvent Mouseenter divEl])
   return $ TileResults (const [position] <$> domEvent Click divEl) inner hoveredPos
