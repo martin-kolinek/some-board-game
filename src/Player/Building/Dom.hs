@@ -239,10 +239,17 @@ drawCropSelection = do
 
 createPlantedCrops :: PlayerWidget t m => Dynamic t (Maybe CropType) -> Event t Position -> m (Dynamic t [CropToPlant])
 createPlantedCrops selectedCrop positionClicks = do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
   let createCropToPlant (Just cropType) pos = Just (cropType, pos)
       createCropToPlant _ _ = Nothing
       cropToPlantEvent = attachWithMaybe createCropToPlant (current selectedCrop) positionClicks
-  foldDyn (:) [] cropToPlantEvent
+      combine crop existingCrops = do
+        u <- sample (current universeDyn)
+        let combined = crop : existingCrops
+        if isLeft (plantCrops playerId combined u)
+          then return Nothing else return $ Just combined
+  foldDynMaybeM combine [] cropToPlantEvent
 
 drawPlantingConfirmation :: PlayerWidget t m => Dynamic t PlantingStatus -> m (Event t PlayerAction)
 drawPlantingConfirmation cropsToPlantDyn = do
