@@ -222,10 +222,16 @@ toggleWithReset initialValue toggleEvent resetEvent = do
 
 drawCropSelection :: PlayerWidget t m => m (Dynamic t (Maybe CropType))
 drawCropSelection = do
-  let cls neededCropType actualCropType = cropTypeClass <> if Just neededCropType == actualCropType then highlightedCropTypeClass else mempty
+  let cls _ _ False = hiddenButtonClass
+      cls neededCropType actualCropType _ = cropTypeClass <> if Just neededCropType == actualCropType then highlightedCropTypeClass else mempty
+      cropFunc Potatoes = getPotatoAmount
+      cropFunc Wheat = getWheatAmount
+      hasEnoughResources cropType universe playerId = cropFunc cropType (getPlayerResources universe playerId) > 0
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
   rec
-    (potatoElement, _) <- divAttributeLikeDyn' (cls Potatoes <$> selectedCropType) $ text "Potatoes"
-    (wheatElement, _) <- divAttributeLikeDyn' (cls Wheat <$> selectedCropType) $ text "Wheat"
+    (potatoElement, _) <- divAttributeLikeDyn' (cls Potatoes <$> selectedCropType <*> (hasEnoughResources Potatoes <$> universeDyn <*> pure playerId)) $ text "Potatoes"
+    (wheatElement, _) <- divAttributeLikeDyn' (cls Wheat <$> selectedCropType <*> (hasEnoughResources Wheat <$> universeDyn <*> pure playerId)) $ text "Wheat"
     let potatoClicks = const Potatoes <$> domEvent Click potatoElement
         wheatClicks = const Wheat <$> domEvent Click wheatElement
     selectedCropType <- foldDyn (\next curr -> if curr == Just next then Nothing else Just next) Nothing (leftmost [potatoClicks, wheatClicks])
