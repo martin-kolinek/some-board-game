@@ -49,6 +49,7 @@ workerStyle = do
         margin (px 0) (px 0) (px 0) (px 0)
         transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
       workerCommon = do
+        cursor pointer
         opacity 1
         width (em 3.7)
         margin (em 0.2) (em 0.2) (em 0.2) (em 0.2)

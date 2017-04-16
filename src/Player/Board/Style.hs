@@ -29,6 +29,7 @@ boardStyle = do
     display inlineBlock
     position relative
     margin (em 0.5) (em 0.5) (em 0.5) (em 0.5)
+    cursor pointer
   star # classSelector cardWrapperClass # after ? do
     paddingTop $ pct 143.28
     display block
