@@ -69,6 +69,11 @@ validPotentialCropClass = CssClass "valid-potential-crop"
 invalidPotentialCropClass :: CssClass
 invalidPotentialCropClass = CssClass "invalid-potential-crop"
 
+dogClass :: CssClass
+dogClass = CssClass "dog-occupant"
+highlightedDogClass :: CssClass
+highlightedDogClass = CssClass "highlighted-dog-occupant"
+
 buildingStyle :: Css
 buildingStyle = do
   star # classSelector buildingSpaceClass ? do
@@ -184,6 +189,29 @@ buildingStyle = do
   star # classSelector invalidPotentialCropClass ? do
     color red
     fontWeight bold
+  star # classSelector highlightedDogClass ? do
+    fontWeight bold
+  star # classSelector dogClass ? do
+    opacity 1
+    cursor pointer
+    width (em 3.7)
+    margin (em 0.2) (em 0.2) (em 0.2) (em 0.2)
+    transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
+    display inlineBlock
+    height (em 3.7)
+    backgroundSize contain
+    backgroundRepeat noRepeat
+    animationName "dog-kf"
+    animationDuration (sec 1)
+    animationIterationCount (iterationCount 1)
+  star # classSelector dogClass # classSelector fadeClass ? do
+    opacity 0
+    width (px 0)
+    margin (px 0) (px 0) (px 0) (px 0)
+    transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
+  keyframes "dog-kf" [
+      (0, opacity 0),
+      (100, opacity 1)]
 
 oneSixth :: Double
 oneSixth = 15

@@ -24,6 +24,7 @@ import Data.Foldable (fold)
 import qualified Data.Text as T
 import Data.Align
 import Data.These
+import Common.CommonClasses
 
 data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding deriving (Eq, Show)
 data PotentialCrop = ValidCrop CropType | InvalidCrop CropType | NoCrop deriving (Eq, Show)
@@ -329,7 +330,10 @@ drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState 
   let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
   workerEvent <- drawWorker selectedWorker workerId animationState
   return $ WorkerOccupant <$> workerEvent
-drawWorkplaceOccupant _ _ _ = return never
+drawWorkplaceOccupant selectedOccupant occ@(DogOccupant _) animationStateDyn = do
+  let cls selOcc = if selOcc == Just occ then highlightedDogClass <> dogClass else dogClass
+  (divEl, _) <- animateState (cls <$> selectedOccupant) (constDyn fadeClass) animationStateDyn $ text "Dog"
+  return $ const occ <$> domEvent Click divEl
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)
 findOccupantChanges selectedOccupant clickedPosition =
