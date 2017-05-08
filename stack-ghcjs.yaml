@@ -1,7 +1,7 @@
 # For more information, see: http://docs.haskellstack.org/en/stable/yaml_configuration.html
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-7.19
+resolver: lts-8.11
 
 # Local packages, usually specified by relative directory name
 packages:
@@ -12,38 +12,44 @@ packages:
   extra-dep: true
 - location:
     git: https://github.com/reflex-frp/reflex
-    commit: 02cf9dbc89ba20b6e93622e0910a76d5e9d06669
+    commit: 63cb8f83deb68f416ba95afe3d1c5372a40dca43
   extra-dep: true
 - location:
     git: https://github.com/reflex-frp/reflex-dom
-    commit: 59100d61282fe02aa39be602f0a73daf31e28f63
+    commit: e636a3a7a34529116e91c1b1dda567701f1daa18
+  extra-dep: true
+  subdirs:
+  - reflex-dom-core
+  - reflex-dom
+- location:
+    git: https://github.com/afcady/dependent-sum-template
+    commit: 68fc1a90580ea8f20775491cf651eefea422212a
   extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - clay-0.12.1
-- ghcjs-dom-0.2.4.0
+- ghcjs-dom-0.8.0.0
+- jsaddle-0.8.3.2
 - prim-uniq-0.1.0.1
 - ref-tf-0.4.0.1
 - zenc-0.1.1
-- MemoTrie-0.6.7
-- newtype-generics-0.5
+- ghcjs-dom-jsffi-0.8.0.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}
 
 # Extra package databases containing global packages
 extra-package-dbs: []
-compiler: ghcjs-0.2.1.9007019_ghc-8.0.1
+compiler: ghcjs-0.2.1.9008011_ghc-8.0.2
 compiler-check: match-exact
 
 setup-info:
   ghcjs:
     source:
-      ghcjs-0.2.1.9007019_ghc-8.0.1:
-           url: http://ghcjs.tolysz.org/ghc-8.0-2017-02-05-lts-7.19-9007019.tar.gz
-           sha1: d2cfc25f9cda32a25a87d9af68891b2186ee52f9
-
+      ghcjs-0.2.1.9008011_ghc-8.0.2:
+        url: https://github.com/matchwood/ghcjs-stack-dist/raw/master/ghcjs-0.2.1.9008011.tar.gz
+        sha1: a72a5181124baf64bcd0e68a8726e65914473b3b
 # Control whether we use the GHC we find on the path
 # system-ghc: true
 
