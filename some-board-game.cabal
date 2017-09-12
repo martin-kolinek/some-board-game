@@ -41,7 +41,8 @@ executable some-board-game
                        mtl,
                        lens,
                        data-default,
-                       vector-space
+                       vector-space,
+                       jsaddle-warp
   if impl(ghcjs)
     ghc-options:    -dedupe -Wall
     cpp-options:    -DGHCJS_BROWSER

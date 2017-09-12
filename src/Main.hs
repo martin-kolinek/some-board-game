@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, ScopedTypeVariables, FlexibleContexts, TupleSections, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE RecursiveDo, ScopedTypeVariables, FlexibleContexts, TupleSections, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
 
 import Rules
 import Common.DomUtil
@@ -8,11 +8,14 @@ import Errors.Dom
 import Style
 import Settings.Dom
 
+import Reflex.Dom.Main as M
 import Reflex.Dom
 import Control.Monad.Except
+import Language.Javascript.JSaddle.Warp as W
 
 main :: IO ()
-main = mainWidgetWithCss mainStyleByteString $ do
+main = W.run 9000 $ M.mainWidgetWithCss mainStyleByteString $ do
+-- main = mainWidgetWithCss mainStyleByteString $ do
   rec
     let applyActionWithTryFinishTurn :: Universe -> UniverseAction -> Either String Universe
         applyActionWithTryFinishTurn universe action = do

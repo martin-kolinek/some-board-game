@@ -37,5 +37,6 @@ extra-deps:
 - webkit2gtk3-javascriptcore-0.14.2.1
 - jsaddle-dom-0.9.2.0
 - gi-javascriptcore-4.0.12
+- jsaddle-warp-0.9.3.0
 
 resolver: lts-8.11
