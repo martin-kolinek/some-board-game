@@ -11,7 +11,7 @@ import Player.Building.Style
 import Player.Types
 import Player.Worker.Dom
 
-import Reflex.Dom
+import Reflex.Dom hiding (crop)
 import Control.Monad
 import qualified Data.Map as M
 import Data.Maybe
@@ -101,12 +101,12 @@ instance Reflex t => Monoid (TileResults t) where
 
 drawTileInfo :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Position -> Dynamic t TileInfo -> m (TileResults t)
 drawTileInfo selectedOccupantDyn position tileInfoDyn = do
-  let tilePotentialBuildingsDyn = uniqDyn $ tilePotentialBuildings <$> tileInfoDyn
-      tileOccupantErrorsDyn = uniqDyn $ tileOccupantErrors <$> tileInfoDyn
-      tileOccupantsDyn = uniqDyn $ tileOccupants <$> tileInfoDyn
-      tileBuildingDyn = uniqDyn $ tileBuilding <$> tileInfoDyn
-      tileCropsDyn = uniqDyn $ tileCrops <$> tileInfoDyn
-      tilePotentialCropDyn = uniqDyn $ tilePotentialCrop <$> tileInfoDyn
+  let tilePotentialBuildingsDyn = fromUniqDynamic $ uniqDynamic $ tilePotentialBuildings <$> tileInfoDyn
+      tileOccupantErrorsDyn = fromUniqDynamic $ uniqDynamic $ tileOccupantErrors <$> tileInfoDyn
+      tileOccupantsDyn = fromUniqDynamic $ uniqDynamic $ tileOccupants <$> tileInfoDyn
+      tileBuildingDyn = fromUniqDynamic $ uniqDynamic $ tileBuilding <$> tileInfoDyn
+      tileCropsDyn = fromUniqDynamic $ uniqDynamic $ tileCrops <$> tileInfoDyn
+      tilePotentialCropDyn = fromUniqDynamic $ uniqDynamic $ tilePotentialCrop <$> tileInfoDyn
       getBuildingToDraw tilePotBuild tileBuild = case tilePotBuild of
         NoBuilding -> tileBuild
         ValidBuilding b -> b
@@ -158,14 +158,14 @@ drawBuildingSelection plantingStatusDyn = do
       drawSelection True = do
         universeDyn2 <- askUniverseDyn
         playerId2 <- askPlayerId
-        let currentBuildingDyn = (uniqDyn $ currentlyBuiltBuildings <$> universeDyn2 <*> pure playerId2)
+        let currentBuildingDyn = (fromUniqDynamic $ uniqDynamic $ currentlyBuiltBuildings <$> universeDyn2 <*> pure playerId2)
         directionDyn <- drawRotationButton
         behaviorChanges <- dyn $ drawSelectionForPossibilities <$> currentBuildingDyn
         nestedBehavior <- holdDyn (pure []) behaviorChanges
         return $ IsBuilding <$> join nestedBehavior <*> directionDyn
       drawSelection False = do
         return $ constDyn IsNotBuilding
-      canCurrentlyBuildDyn = uniqDyn $ not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
+      canCurrentlyBuildDyn = fromUniqDynamic $ uniqDynamic $ not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       stopBuildingEv = ffilter null $ updated (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       isNotPlantingDyn = (== IsNotPlanting) <$> plantingStatusDyn
       canBuildDyn = (&&) <$> canCurrentlyBuildDyn <*> isNotPlantingDyn
@@ -199,7 +199,7 @@ drawPlanting clickedPositionsEvent buildingStatusDyn = do
         selectedCrop <- drawCropSelection
         plantedCropsDyn <- createPlantedCrops selectedCrop clickedPos
         return $ IsPlanting <$> plantedCropsDyn <*> selectedCrop
-      canPlantDyn = uniqDyn $ (&&) <$> (isPlantingCrops <$> universeDyn <*> pure playerId) <*> ((== IsNotBuilding) <$> buildingStatusDyn)
+      canPlantDyn = fromUniqDynamic $ uniqDynamic $ (&&) <$> (isPlantingCrops <$> universeDyn <*> pure playerId) <*> ((== IsNotBuilding) <$> buildingStatusDyn)
       stopPlantingEv = ffilter (==False) $ updated (isPlantingCrops <$> universeDyn <*> pure playerId)
       drawPlantingButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
       drawPlantingButton visible stopPlantingEvent = do
@@ -288,7 +288,7 @@ drawRotationButton :: PlayerWidget t m => m (Dynamic t Direction)
 drawRotationButton = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  let currentBuildingDyn = (uniqDyn $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
+  let currentBuildingDyn = (fromUniqDynamic $ uniqDynamic $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       getClass [] = hiddenButtonClass
       getClass _ = rotateButtonClass
   (rotateElement, _) <- divAttributeLikeDyn' (getClass <$> currentBuildingDyn) $ return ()
@@ -319,7 +319,7 @@ createSelectedOccupant occupants = do
   universeChangeEvents <- updated <$> askUniverseDyn
   let filteredSelection = attachWith removeInvalidOccupants heldOccupants universeChangeEvents
   selectedOccupants <- holdDyn Nothing $ leftmost [filteredSelection, justOccupants]
-  return (uniqDyn selectedOccupants)
+  return (fromUniqDynamic $ uniqDynamic selectedOccupants)
 
 isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)

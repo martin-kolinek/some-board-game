@@ -23,7 +23,7 @@ import Data.Monoid
 drawPlayers :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
 drawPlayers universeDyn settingsDyn = do
   let playersDyn = getPlayers <$> universeDyn
-  selectedPlayerDyn <- uniqDyn <$> drawPlayerSelection settingsDyn universeDyn
+  selectedPlayerDyn <- fromUniqDynamic . uniqDynamic <$> drawPlayerSelection settingsDyn universeDyn
   mapEvent <- listViewWithKey (fromList . (fmap (, Nothing)) <$> playersDyn) $ \playerId _ -> do
     playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId settingsDyn) $ do
       let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
@@ -72,7 +72,7 @@ findSelectedPlayer universeDyn playerClicks = do
     maybePlayerId <- holdDyn Nothing (Just <$> selections)
     let defaultPlayer = head <$> playersDyn
         result = fromMaybe <$> defaultPlayer <*> maybePlayerId
-  return $ uniqDyn result
+  return $ fromUniqDynamic $ uniqDynamic result
 
 drawPlayerInSelection :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
 drawPlayerInSelection universeDyn settingsDyn selectedPlayerId playerId  = do
@@ -106,7 +106,7 @@ drawActionButton :: PlayerWidget t m => (Universe -> PlayerId -> Bool) -> T.Text
 drawActionButton condition label = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  let condDyn = uniqDyn $ condition <$> universeDyn <*> pure playerId
+  let condDyn = fromUniqDynamic $ uniqDynamic $ condition <$> universeDyn <*> pure playerId
       draw cond = if cond then button label else return never
   switchPromptly never =<< (dyn $ draw <$> condDyn)
 
