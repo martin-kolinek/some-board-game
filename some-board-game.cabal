@@ -42,7 +42,11 @@ executable some-board-game
                        lens,
                        data-default,
                        vector-space,
-                       jsaddle-warp
+                       jsaddle-warp,
+                       wai-middleware-static,
+                       warp,
+                       websockets,
+                       jsaddle
   if impl(ghcjs)
     ghc-options:    -dedupe -Wall
     cpp-options:    -DGHCJS_BROWSER
