@@ -155,18 +155,18 @@ drawBuildingSelection :: PlayerWidget t m => Dynamic t PlantingStatus -> m (Dyna
 drawBuildingSelection plantingStatusDyn = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
+  canCurrentlyBuildDyn <- holdUniqDyn $ not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
   let drawSelection :: PlayerWidget t2 m2 => Bool -> m2 (Dynamic t2 BuildingStatus)
       drawSelection True = do
         universeDyn2 <- askUniverseDyn
         playerId2 <- askPlayerId
-        let currentBuildingDyn = (fromUniqDynamic $ uniqDynamic $ currentlyBuiltBuildings <$> universeDyn2 <*> pure playerId2)
+        currentBuildingDyn <- holdUniqDyn $ currentlyBuiltBuildings <$> universeDyn2 <*> pure playerId2
         directionDyn <- drawRotationButton
         behaviorChanges <- dyn $ drawSelectionForPossibilities <$> currentBuildingDyn
         nestedBehavior <- holdDyn (pure []) behaviorChanges
         return $ IsBuilding <$> join nestedBehavior <*> directionDyn
       drawSelection False = do
         return $ constDyn IsNotBuilding
-      canCurrentlyBuildDyn = fromUniqDynamic $ uniqDynamic $ not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       stopBuildingEv = ffilter null $ updated (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       isNotPlantingDyn = (== IsNotPlanting) <$> plantingStatusDyn
       canBuildDyn = (&&) <$> canCurrentlyBuildDyn <*> isNotPlantingDyn
@@ -200,7 +200,6 @@ drawPlanting clickedPositionsEvent buildingStatusDyn = do
         selectedCrop <- drawCropSelection
         plantedCropsDyn <- createPlantedCrops selectedCrop clickedPos
         return $ IsPlanting <$> plantedCropsDyn <*> selectedCrop
-      canPlantDyn = fromUniqDynamic $ uniqDynamic $ (&&) <$> (isPlantingCrops <$> universeDyn <*> pure playerId) <*> ((== IsNotBuilding) <$> buildingStatusDyn)
       stopPlantingEv = ffilter (==False) $ updated (isPlantingCrops <$> universeDyn <*> pure playerId)
       drawPlantingButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
       drawPlantingButton visible stopPlantingEvent = do
@@ -212,6 +211,7 @@ drawPlanting clickedPositionsEvent buildingStatusDyn = do
           (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText $ txt <$> isPlanting
           isPlanting <- toggleWithReset False (domEvent Click divEl) stopPlantingEvent
         return $ isPlanting
+  canPlantDyn <- holdUniqDyn $ (&&) <$> (isPlantingCrops <$> universeDyn <*> pure playerId) <*> ((== IsNotBuilding) <$> buildingStatusDyn)
   isPlanting <- drawPlantingButton canPlantDyn stopPlantingEv
   let isPlantingAndCanPlant = (&&) <$> isPlanting <*> canPlantDyn
   fmap join $ holdDyn (constDyn IsNotPlanting) =<< (dyn $ drawPlanting' clickedPositionsEvent <$> isPlantingAndCanPlant)
@@ -289,8 +289,8 @@ drawRotationButton :: PlayerWidget t m => m (Dynamic t Direction)
 drawRotationButton = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  let currentBuildingDyn = (fromUniqDynamic $ uniqDynamic $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
-      getClass [] = hiddenButtonClass
+  currentBuildingDyn <- holdUniqDyn $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId
+  let getClass [] = hiddenButtonClass
       getClass _ = rotateButtonClass
   (rotateElement, _) <- divAttributeLikeDyn' (getClass <$> currentBuildingDyn) $ return ()
   let rotateClicks = domEvent Click rotateElement
@@ -320,7 +320,7 @@ createSelectedOccupant occupants = do
   universeChangeEvents <- updated <$> askUniverseDyn
   let filteredSelection = attachWith removeInvalidOccupants heldOccupants universeChangeEvents
   selectedOccupants <- holdDyn Nothing $ leftmost [filteredSelection, justOccupants]
-  return (fromUniqDynamic $ uniqDynamic selectedOccupants)
+  holdUniqDyn selectedOccupants
 
 isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)

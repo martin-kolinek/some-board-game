@@ -23,7 +23,7 @@ import Data.Monoid
 drawPlayers :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
 drawPlayers universeDyn settingsDyn = do
   let playersDyn = getPlayers <$> universeDyn
-  selectedPlayerDyn <- fromUniqDynamic . uniqDynamic <$> drawPlayerSelection settingsDyn universeDyn
+  selectedPlayerDyn <- drawPlayerSelection settingsDyn universeDyn
   mapEvent <- listViewWithKey (fromList . (fmap (, Nothing)) <$> playersDyn) $ \playerId _ -> do
     playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId settingsDyn) $ do
       let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
@@ -52,7 +52,7 @@ drawPlayerSelection settingsDyn universeDyn =
       listOfEvents <- simpleListOrd players $ (drawPlayerInSelection universeDyn settingsDyn selectedPlayer)
       let playerClicks = leftmost <$> listOfEvents
       selectedPlayer <- findSelectedPlayer universeDyn playerClicks
-    return selectedPlayer
+    holdUniqDyn selectedPlayer
 
 findSelectedPlayer :: MonadWidget t m => Dynamic t Universe -> Dynamic t (Event t PlayerId) -> m (Dynamic t PlayerId)
 findSelectedPlayer universeDyn playerClicks = do
@@ -72,7 +72,7 @@ findSelectedPlayer universeDyn playerClicks = do
     maybePlayerId <- holdDyn Nothing (Just <$> selections)
     let defaultPlayer = head <$> playersDyn
         result = fromMaybe <$> defaultPlayer <*> maybePlayerId
-  return $ fromUniqDynamic $ uniqDynamic result
+  holdUniqDyn result
 
 drawPlayerInSelection :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
 drawPlayerInSelection universeDyn settingsDyn selectedPlayerId playerId  = do
@@ -106,8 +106,8 @@ drawActionButton :: PlayerWidget t m => (Universe -> PlayerId -> Bool) -> T.Text
 drawActionButton condition label = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  let condDyn = fromUniqDynamic $ uniqDynamic $ condition <$> universeDyn <*> pure playerId
-      draw cond = if cond then button label else return never
+  condDyn <- holdUniqDyn $ condition <$> universeDyn <*> pure playerId
+  let draw cond = if cond then button label else return never
   switchPromptly never =<< (dyn $ draw <$> condDyn)
 
 askResources :: PlayerWidget t m => m (Dynamic t Resources)
