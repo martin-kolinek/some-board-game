@@ -101,10 +101,11 @@ instance Reflex t => Monoid (TileResults t) where
 
 drawTileInfo :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Position -> Dynamic t TileInfo -> m (TileResults t)
 drawTileInfo selectedOccupantDyn position tileInfoDyn = do
-  let tilePotentialBuildingsDyn = fromUniqDynamic $ uniqDynamic $ tilePotentialBuildings <$> tileInfoDyn
-      tileOccupantErrorsDyn = fromUniqDynamic $ uniqDynamic $ tileOccupantErrors <$> tileInfoDyn
-      tileOccupantsDyn = fromUniqDynamic $ uniqDynamic $ tileOccupants <$> tileInfoDyn
-      tileBuildingDyn = fromUniqDynamic $ uniqDynamic $ tileBuilding <$> tileInfoDyn
+  let tileInfoDynUniq = uniqDynamic tileInfoDyn
+      tilePotentialBuildingsDyn = fromUniqDynamic $ tilePotentialBuildings <$> tileInfoDynUniq
+      tileOccupantErrorsDyn = fromUniqDynamic $ tileOccupantErrors <$> tileInfoDynUniq
+      tileOccupantsDyn = fromUniqDynamic $ tileOccupants <$> tileInfoDynUniq
+      tileBuildingDyn = fromUniqDynamic $ tileBuilding <$> tileInfoDynUniq
       tileCropsDyn = fromUniqDynamic $ uniqDynamic $ tileCrops <$> tileInfoDyn
       tilePotentialCropDyn = fromUniqDynamic $ uniqDynamic $ tilePotentialCrop <$> tileInfoDyn
       getBuildingToDraw tilePotBuild tileBuild = case tilePotBuild of
