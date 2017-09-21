@@ -20,7 +20,7 @@ executable some-board-game
   other-modules:       Style, Types,
                        Common.CssClass, Common.DomUtil, Common.CommonClasses
                        Errors.Style, Errors.Dom,
-                       Player.Building.Dom, Player.Building.Style,
+                       Player.Building.Dom, Player.Building.Style, Player.Building.Types,
                        Player.Dom, Player.Style, Player.Types,
                        Settings.Dom, Settings.Style, Settings.Types,
                        Player.Worker.Dom, Player.Worker.Style,

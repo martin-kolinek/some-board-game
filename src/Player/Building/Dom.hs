@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -10,6 +11,8 @@ import Common.DomUtil
 import Player.Building.Style
 import Player.Types
 import Player.Worker.Dom
+import Common.CommonClasses
+import Player.Building.Types
 
 import Reflex.Dom hiding (crop)
 import Control.Monad
@@ -24,14 +27,13 @@ import Data.Foldable (fold)
 import qualified Data.Text as T
 import Data.Align
 import Data.These
-import Common.CommonClasses
 
-data PotentialBuilding = ValidBuilding BuildingType | InvalidBuilding BuildingType | NoBuilding deriving (Eq, Show)
+data PotentialBuilding = ValidBuilding TileBuildingType | InvalidBuilding TileBuildingType | NoBuilding deriving (Eq, Show)
 data PotentialCrop = ValidCrop CropType | InvalidCrop CropType | NoCrop deriving (Eq, Show)
 
 data TileInfo = TileInfo
   {
-    tileBuilding :: BuildingType,
+    tileBuilding :: TileBuildingType,
     tileOccupants :: [BuildingOccupant],
     tileOccupantErrors :: [String],
     tilePotentialBuildings :: PotentialBuilding,
@@ -40,12 +42,12 @@ data TileInfo = TileInfo
   } deriving Show
 
 getPotentialBuilding :: BuildingStatus -> Maybe Position -> Position -> PlayerId -> Universe -> PotentialBuilding
-getPotentialBuilding (IsBuilding currentBuildings direction) (Just hoveredPosition) position playerId universe =
+getPotentialBuilding (IsBuilding buildingDescription direction) (Just hoveredPosition) position playerId universe =
   case potentialBuildingType of
-        Just bt -> if isLeft (buildBuildings playerId hoveredPosition direction currentBuildings universe) then InvalidBuilding bt else ValidBuilding bt
+        Just bt -> if isLeft (buildBuildings playerId hoveredPosition direction buildingDescription universe) then InvalidBuilding bt else ValidBuilding bt
         _ -> NoBuilding
-  where builtBuildingIndex = if position == hoveredPosition then 0 else if position ^-^ directionAddition direction == hoveredPosition then 1 else 2
-        potentialBuildingType = listToMaybe $ drop builtBuildingIndex currentBuildings
+  where tileOffset = if position == hoveredPosition then ExactPosition else if position ^-^ directionAddition direction == hoveredPosition then NextPosition else OtherPosition
+        potentialBuildingType = getTileBuildingType direction tileOffset buildingDescription
 getPotentialBuilding _ _ _ _ _ = NoBuilding
 
 createTiles :: Universe -> PlayerId -> Maybe Position -> BuildingStatus -> PlantingStatus -> M.Map Position TileInfo
@@ -66,15 +68,17 @@ createTiles universe playerId hoveredPositionMaybe buildingStatus plantingStatus
           then InvalidCrop selectedCrop
           else ValidCrop selectedCrop
         _ -> NoCrop
-      getBuildingTile (Building buildingType pos) =
-        (pos, TileInfo
-          buildingType
+      makeTile tileBuildingType pos = (pos, TileInfo
+          (tileBuildingType)
           (getTileOccupants pos)
           (getTileOccupantErrors pos)
           (getPotentialBuilding buildingStatus hoveredPositionMaybe pos playerId universe)
           (getCrops pos)
           (getPotentialCrop pos))
-  in M.fromList $ getBuildingTile <$> buildings
+      getBuildingTiles (SmallBuilding buildingType pos) = [makeTile (SingleTileBuilding buildingType) pos]
+      getBuildingTiles (LargeBuilding buildingType pos dir) =
+        [makeTile (BuildingPart buildingType dir) pos, makeTile (BuildingPart buildingType (oppositeDirection dir)) pos]
+    in M.fromList $ getBuildingTiles =<< buildings
 
 findVisibleOccupants :: Universe -> PlayerId -> Position -> [BuildingOccupant]
 findVisibleOccupants universe playerId position = filter isOccupantVisible $ M.findWithDefault [] position $ getBuildingOccupants universe playerId
@@ -124,7 +128,7 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
       getPotentialCropText (InvalidCrop tp) = T.pack $ show tp
       cropText [] = ""
       cropText x = T.pack $ show x
-  (divEl, inner) <- divAttributeLikeDyn' (flip buildingCss position <$> (getBuildingToDraw <$> tilePotentialBuildingsDyn <*> tileBuildingDyn)) $ do
+  (divEl, inner) <- divAttributeLikeDyn' (buildingCss position <$> (getBuildingToDraw <$> tilePotentialBuildingsDyn <*> tileBuildingDyn)) $ do
     divAttributeLikeDyn (getOverlayCss <$> tilePotentialBuildingsDyn) $ do
       drawOccupantErrors $ tileOccupantErrorsDyn
       result <- divAttributeLike occupantContainerClass $ do
@@ -149,22 +153,24 @@ drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn= do
   return (fmapMaybe listToMaybe clickedPos, fmapMaybe listToMaybe clickedOcc)
 
 data PlantingStatus = IsPlanting [CropToPlant] (Maybe CropType) | IsNotPlanting deriving Eq
-data BuildingStatus = IsBuilding [BuildingType] Direction | IsNotBuilding deriving Eq
+data BuildingStatus = IsBuilding BuildingDescription Direction | IsNotBuilding deriving Eq
 
 drawBuildingSelection :: PlayerWidget t m => Dynamic t PlantingStatus -> m (Dynamic t BuildingStatus)
 drawBuildingSelection plantingStatusDyn = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   canCurrentlyBuildDyn <- holdUniqDyn $ not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
-  let drawSelection :: PlayerWidget t2 m2 => Bool -> m2 (Dynamic t2 BuildingStatus)
+  let makeBuildingStatus (Just buildingDescription) dir = IsBuilding buildingDescription dir
+      makeBuildingStatus Nothing _ = IsNotBuilding
+      drawSelection :: PlayerWidget t2 m2 => Bool -> m2 (Dynamic t2 BuildingStatus)
       drawSelection True = do
         universeDyn2 <- askUniverseDyn
         playerId2 <- askPlayerId
         currentBuildingDyn <- holdUniqDyn $ currentlyBuiltBuildings <$> universeDyn2 <*> pure playerId2
         directionDyn <- drawRotationButton
         behaviorChanges <- dyn $ drawSelectionForPossibilities <$> currentBuildingDyn
-        nestedBehavior <- holdDyn (pure []) behaviorChanges
-        return $ IsBuilding <$> join nestedBehavior <*> directionDyn
+        nestedBehavior <- holdDyn (pure Nothing) behaviorChanges
+        return $ makeBuildingStatus <$> join nestedBehavior <*> directionDyn
       drawSelection False = do
         return $ constDyn IsNotBuilding
       stopBuildingEv = ffilter null $ updated (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
@@ -296,18 +302,21 @@ drawRotationButton = do
   let rotateClicks = domEvent Click rotateElement
   foldDyn (const nextDirection) DirectionDown rotateClicks
 
-drawSelectionForPossibilities :: MonadWidget t m => [[BuildingType]] -> m (Dynamic t [BuildingType])
-drawSelectionForPossibilities [] = return $ pure []
+drawSelectionForPossibilities :: MonadWidget t m => [BuildingDescription] -> m (Dynamic t (Maybe BuildingDescription))
+drawSelectionForPossibilities [] = return $ pure Nothing
 drawSelectionForPossibilities possibilities = do
   let possibilitiesCount = length possibilities
+      drawTile buildingDescription = do
+        divAttributeLikeDyn (buildingSelectionCss . getTileBuildingType DirectionRight ExactPosition <$> buildingDescription) $ return ()
+        divAttributeLikeDyn (buildingSelectionCss . getTileBuildingType DirectionRight NextPosition <$> buildingDescription) $ return ()
   rec
     (leftEl, _) <- divAttributeLike' switchBuildingLeftClass $ return ()
-    void $ simpleList currentBuilding $ \buildingTypeDyn -> divAttributeLikeDyn (buildingSelectionCss <$> buildingTypeDyn) $ return ()
+    drawTile currentBuilding
     (rightEl, _) <- divAttributeLike' switchBuildingRightClass $ return ()
     let switchEvent = leftmost [const (-1 :: Int) <$> domEvent Click leftEl, const (1 :: Int) <$> domEvent Click rightEl]
     currentIndex <- foldDyn (\x y -> mod (x + y) possibilitiesCount) (0 :: Int) switchEvent
     let currentBuilding = (possibilities !!) <$> currentIndex
-  return $ currentBuilding
+  return $ Just <$> currentBuilding
 
 createSelectedOccupant :: PlayerWidget t m => Event t BuildingOccupant -> m (Dynamic t (Maybe BuildingOccupant))
 createSelectedOccupant occupants = do
@@ -331,9 +340,9 @@ drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState 
   let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
   workerEvent <- drawWorker selectedWorker workerId animationState
   return $ WorkerOccupant <$> workerEvent
-drawWorkplaceOccupant selectedOccupant occ@(DogOccupant _) animationStateDyn = do
-  let cls selOcc = if selOcc == Just occ then highlightedDogClass <> dogClass else dogClass
-  (divEl, _) <- animateState (cls <$> selectedOccupant) (constDyn fadeClass) animationStateDyn $ text "Dog"
+drawWorkplaceOccupant selectedOccupant occ@(AnimalOccupant (Animal animalType _)) animationStateDyn = do
+  let cls selOcc = if selOcc == Just occ then highlightedAnimalClass <> animalClass else animalClass
+  (divEl, _) <- animateState (cls <$> selectedOccupant) (constDyn fadeClass) animationStateDyn $ text (T.pack $ show animalType)
   return $ const occ <$> domEvent Click divEl
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)

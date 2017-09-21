@@ -8,7 +8,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/martin-kolinek/some-board-game-rules.git
-    commit: 2a2bbb8f23f05ba9eeec819f73a3a8b3733662bc
+    commit: 43e31aaa160f952cb99beb9d5074b6678f8b7d8c
   extra-dep: true
 - location:
     git: https://github.com/reflex-frp/reflex

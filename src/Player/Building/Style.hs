@@ -5,6 +5,7 @@ module Player.Building.Style where
 
 import Common.CssClass
 import Common.CommonClasses
+import Player.Building.Types
 
 import Clay
 import qualified Clay.Flexbox as F
@@ -69,10 +70,10 @@ validPotentialCropClass = CssClass "valid-potential-crop"
 invalidPotentialCropClass :: CssClass
 invalidPotentialCropClass = CssClass "invalid-potential-crop"
 
-dogClass :: CssClass
-dogClass = CssClass "dog-occupant"
-highlightedDogClass :: CssClass
-highlightedDogClass = CssClass "highlighted-dog-occupant"
+animalClass :: CssClass
+animalClass = CssClass "animal-occupant"
+highlightedAnimalClass :: CssClass
+highlightedAnimalClass = CssClass "highlighted-animal-occupant"
 
 buildingStyle :: Css
 buildingStyle = do
@@ -189,9 +190,9 @@ buildingStyle = do
   star # classSelector invalidPotentialCropClass ? do
     color red
     fontWeight bold
-  star # classSelector highlightedDogClass ? do
+  star # classSelector highlightedAnimalClass ? do
     fontWeight bold
-  star # classSelector dogClass ? do
+  star # classSelector animalClass ? do
     opacity 1
     cursor pointer
     width (em 3.7)
@@ -201,15 +202,15 @@ buildingStyle = do
     height (em 3.7)
     backgroundSize contain
     backgroundRepeat noRepeat
-    animationName "dog-kf"
+    animationName "animal-kf"
     animationDuration (sec 1)
     animationIterationCount (iterationCount 1)
-  star # classSelector dogClass # classSelector fadeClass ? do
+  star # classSelector animalClass # classSelector fadeClass ? do
     opacity 0
     width (px 0)
     margin (px 0) (px 0) (px 0) (px 0)
     transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
-  keyframes "dog-kf" [
+  keyframes "animal-kf" [
       (0, opacity 0),
       (100, opacity 1)]
 
@@ -218,25 +219,34 @@ oneSixth = 15
 oneQuarter :: Double
 oneQuarter = 20
 
-buildingTypeCss :: BuildingType -> Css
-buildingTypeCss Grass = background (url "data/grass.svg")
-buildingTypeCss Forest = background (url "data/forest.svg")
-buildingTypeCss Rock = background (url "data/rock.svg")
-buildingTypeCss InitialRoom = background (url "data/init_room.svg")
-buildingTypeCss Cave = background (url "data/cave.svg")
-buildingTypeCss Passage = background (url "data/passage.svg")
-buildingTypeCss LivingRoom = background (url "data/living_room.svg")
-buildingTypeCss Field = background (url "data/field.svg")
+smallBuildingTypeCss :: SmallBuildingType -> Css
+smallBuildingTypeCss Grass = background (url "data/grass.svg")
+smallBuildingTypeCss Forest = background (url "data/forest.svg")
+smallBuildingTypeCss Rock = background (url "data/rock.svg")
+smallBuildingTypeCss InitialRoom = background (url "data/init_room.svg")
+smallBuildingTypeCss Cave = background (url "data/cave.svg")
+smallBuildingTypeCss Passage = background (url "data/passage.svg")
+smallBuildingTypeCss LivingRoom = background (url "data/living_room.svg")
+smallBuildingTypeCss Field = background (url "data/field.svg")
+smallBuildingTypeCss SmallPasture = background (url "data/small_pasture.svg")
 
-buildingCss :: BuildingType -> Rules.Position -> Css
-buildingCss buildingType position = buildingTypeCss buildingType >> positionCss position >> commonBuildingCss
+largeBuildingTypeCss :: LargeBuildingType -> Css
+largeBuildingTypeCss LargePasture = background (url "data/large_pasture.svg")
+
+buildingTileCss :: TileBuildingType -> Css
+buildingTileCss (SingleTileBuilding buildingType) = smallBuildingTypeCss buildingType
+buildingTileCss (BuildingPart buildingType direction) = largeBuildingTypeCss buildingType >> rotateCss direction
+
+buildingCss :: Rules.Position -> TileBuildingType -> Css
+buildingCss position tileBuildingType = buildingTileCss tileBuildingType >> positionCss position >> commonBuildingCss
 
 commonBuildingCss :: Css
 commonBuildingCss = width (pct oneSixth) >> height (pct oneQuarter) >> position absolute >> backgroundSize cover
 
-buildingSelectionCss :: BuildingType -> Css
-buildingSelectionCss buildingType = do
-  buildingTypeCss buildingType
+buildingSelectionCss :: Maybe TileBuildingType -> Css
+buildingSelectionCss Nothing = display none
+buildingSelectionCss (Just tileBuildingType) = do
+  buildingTileCss tileBuildingType
   width (em 4)
   height (em 4)
   backgroundSize cover
@@ -246,6 +256,15 @@ buildingSelectionCss buildingType = do
 
 positionCss :: (Int, Int) -> Css
 positionCss (x, y) = left (pct $ (fromIntegral x)*oneSixth + 5) >> top (pct $ (fromIntegral y)*oneQuarter+5)
+
+rotateCss :: Rules.Direction -> Css
+rotateCss dir =
+  let degs = case dir of
+        DirectionUp -> 0
+        DirectionLeft -> 90
+        DirectionDown -> 180
+        DirectionRight -> 270
+  in transform $ rotate $ deg degs
 
 placeholderTileCss :: (Int, Int) -> Css
 placeholderTileCss position = positionCss position >> commonBuildingCss
