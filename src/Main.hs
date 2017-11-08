@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, ScopedTypeVariables, FlexibleContexts, TupleSections, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
+{-# LANGUAGE RecursiveDo, ScopedTypeVariables, FlexibleContexts, TupleSections, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings, CPP #-}
 
 import Rules
 import Common.DomUtil
@@ -11,12 +11,14 @@ import Settings.Dom
 import Reflex.Dom.Main as M
 import Reflex.Dom
 import Control.Monad.Except
-import Language.Javascript.JSaddle.WebSockets as W
+import Language.Javascript.JSaddle.Types (JSM)
+#ifndef ghcjs_HOST_OS
 import Network.Wai.Handler.Warp as Net (run)
 import Network.WebSockets (defaultConnectionOptions)
 import Language.Javascript.JSaddle.Run (syncPoint)
 import Network.Wai.Middleware.Static (static)
-import Language.Javascript.JSaddle.Types (JSM)
+import Language.Javascript.JSaddle.Warp as W
+#endif
 
 mainJsm :: JSM ()
 mainJsm = M.mainWidgetWithCss mainStyleByteString $ do
@@ -33,7 +35,13 @@ mainJsm = M.mainWidgetWithCss mainStyleByteString $ do
       universeDyn <- holdDyn initialUniverse correctMoves
     return ()
 
+#ifdef ghcjs_HOST_OS
+main :: IO ()
+main = mainJsm
+#else
 main :: IO ()
 main = do
   app <- W.jsaddleOr defaultConnectionOptions (mainJsm >> syncPoint) W.jsaddleApp
   Net.run 9000 $ static app
+#endif
+
