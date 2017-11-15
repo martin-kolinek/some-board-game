@@ -16,7 +16,7 @@ import qualified Data.Text as T
 
 drawErrors :: MonadWidget t m => Dynamic t Universe -> Event t UniverseAction -> m ()
 drawErrors universeDyn actions = divAttributeLike errorContainerClass $ do
-  let extractError (un, act) = fromLeft $ act un
+  let extractError (un, act) = fromLeft $ applyAction act un
       attached = attach (current universeDyn) actions
       errorEvents = fmapMaybe extractError attached
       addToMap :: String -> Map Int String -> Map Int String

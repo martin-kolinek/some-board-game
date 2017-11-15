@@ -13,12 +13,12 @@ import Player.Building.Dom
 
 import Reflex.Dom
 import Data.Maybe
-import Data.Map (fromList, foldl')
+import Data.Map (fromList, elems)
 import Control.Monad
 import Control.Monad.Reader
 import Prelude hiding (elem)
 import qualified Data.Text as T
-import Data.Monoid
+import Data.Semigroup ((<>))
 
 drawPlayers :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
 drawPlayers universeDyn settingsDyn = do
@@ -29,8 +29,8 @@ drawPlayers universeDyn settingsDyn = do
       let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
           clsDyn = cls <$> selectedPlayerDyn
       divAttributeLikeDyn clsDyn drawPlayer
-    return $ ($ playerId) <$> playerActionEvent
-  return $ foldl' (>=>) return <$> mapEvent
+    return $ makeUniverseAction playerId <$> playerActionEvent
+  return $ mconcat <$> elems <$> mapEvent
 
 drawPlayer :: PlayerWidget t m => m (Event t PlayerAction)
 drawPlayer = do

@@ -25,7 +25,7 @@ mainJsm = M.mainWidgetWithCss mainStyleByteString $ do
     rec
       let applyActionWithTryFinishTurn :: Universe -> UniverseAction -> Either String Universe
           applyActionWithTryFinishTurn universe action = do
-            withActionApplied <- action universe
+            withActionApplied <- applyAction action universe
             catchError (finishTurn withActionApplied) (const $ return withActionApplied)
       settingsDyn <- drawSettingsIcon universeDyn
       actions <- drawPlayers universeDyn settingsDyn

@@ -7,9 +7,11 @@ module Player.Types where
 
 import Rules
 import Settings.Types
+import Types
 
 import Reflex.Dom
 import Control.Monad.Reader
+import Control.Arrow (Kleisli(..))
 
 data PlayerExports t = PlayerExports {
   extractSelectedWorker :: Dynamic t (Maybe WorkerId),
@@ -34,3 +36,6 @@ askPlayerSettings :: PlayerWidget t m => m (Dynamic t PlayerSettings)
 askPlayerSettings = asks playerWidgetSettings
 
 type PlayerAction = PlayerId -> Universe -> Either String Universe
+
+makeUniverseAction :: PlayerId -> PlayerAction -> UniverseAction
+makeUniverseAction plId act = UniverseAction $ Kleisli $ act plId
