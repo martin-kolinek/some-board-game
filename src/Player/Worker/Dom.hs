@@ -7,12 +7,13 @@ import Common.CommonClasses
 import Player.Worker.Style
 import Settings.Types
 import Player.Types
+import Types
 import Data.Maybe
 
 import Reflex.Dom
 import Data.Monoid
 
-drawWorker :: PlayerWidget t m => Dynamic t (Maybe WorkerId) -> WorkerId -> Dynamic t AnimationState -> m (Event t WorkerId)
+drawWorker :: PlayerWidget t m x => Dynamic t (Maybe WorkerId) -> WorkerId -> Dynamic t AnimationState -> m (Event t WorkerId)
 drawWorker selectedWorkerDyn workerId animationStates = do
   colorDyn <- getWorkerColor workerId
   let addHighlight color selectedWorker = if selectedWorker == Just workerId then colorClass color <> activeWorkerClass <> workerAnimationClass else colorClass color <> workerAnimationClass
@@ -22,12 +23,12 @@ drawWorker selectedWorkerDyn workerId animationStates = do
       filteredClicks = filterByBehavior (/=Fading) (current animationStates) clicks
   return $ const workerId <$> filteredClicks
 
-getWorkerColor :: PlayerWidget t m => WorkerId -> m (Dynamic t PlayerColor)
+getWorkerColor :: PlayerWidget t m x => WorkerId -> m (Dynamic t PlayerColor)
 getWorkerColor workerId= do
   settingsDyn <- askPlayerSettings
   universeDyn <- askUniverseDyn
-  let getPlayerId universe = listToMaybe $ [plId | plId <- getPlayers universe, wId <- getWorkers universe plId, wId == workerId]
-      playerIdDyn = getPlayerId <$> universeDyn
+  let getWorkerPlayerId universe = listToMaybe $ [plId | plId <- getPlayers universe, wId <- getWorkers universe plId, wId == workerId]
+      playerIdDyn = getWorkerPlayerId <$> universeDyn
       getPlayerColor (Just playerId) settings = playerColor $ singlePlayerSettings settings playerId
       getPlayerColor _ _ = PlayerGreen
   return $ getPlayerColor <$> playerIdDyn <*> settingsDyn

@@ -4,6 +4,8 @@
 
 module Types where
 
+import Settings.Types
+
 import Rules
 import Reflex
 import Control.Monad.Reader
@@ -26,8 +28,17 @@ instance Monoid UniverseAction where
   mempty = UniverseAction $ returnA
   mappend = (<>)
 
-class HasUniverseDyn t x where
-  getUniverseDyn :: x -> Dynamic t Universe
+class HasUniverseContext t x where
+  getUniverseContext :: x -> UniverseContext t
 
-type UniverseWidget t m x = (MonadWidget t m, MonadReader x m, HasUniverseDyn t x)
+type UniverseWidget t m x = (MonadWidget t m, MonadReader x m, HasUniverseContext t x, EventWriter t UniverseAction m)
 
+data UniverseContext t = UniverseContext { getContextSettings :: Dynamic t PlayerSettings, getContextUniverse :: Dynamic t Universe }
+
+instance HasUniverseContext t (UniverseContext t) where getUniverseContext = id
+
+askUniverseDyn :: UniverseWidget t m x => m (Dynamic t Universe)
+askUniverseDyn = asks (getContextUniverse . getUniverseContext)
+
+askPlayerSettings :: UniverseWidget t m x => m (Dynamic t PlayerSettings)
+askPlayerSettings = asks (getContextSettings . getUniverseContext)

@@ -13,12 +13,13 @@ import Data.Map.Strict as M hiding (map)
 import Control.Monad
 import Prelude hiding (map)
 import qualified Data.Text as T
+import Types
 
-drawWorkplaces :: PlayerWidget t m => m (Event t WorkplaceId)
+drawWorkplaces :: PlayerWidget t m x => m (Event t WorkplaceId)
 drawWorkplaces =
   divAttributeLike workplacesClass $ do
     workplaces <- askWorkplaces
-    let drawWorkplace :: PlayerWidget t m => WorkplaceId -> Dynamic t WorkplaceData -> m (Event t WorkplaceId)
+    let drawWorkplace :: PlayerWidget t m x => WorkplaceId -> Dynamic t WorkplaceData -> m (Event t WorkplaceId)
         drawWorkplace workplaceId dataDyn = do
           workersInWorkplace <- askWorkplaceOccupants workplaceId
           (wrapperElem, _) <- divAttributeLike' cardWrapperClass $
@@ -31,10 +32,10 @@ drawWorkplaces =
         event = combineEvents <$> events
     return $ switch (current event)
 
-askWorkplaces :: PlayerWidget t m => m (Dynamic t (Map WorkplaceId WorkplaceData))
+askWorkplaces :: PlayerWidget t m x => m (Dynamic t (Map WorkplaceId WorkplaceData))
 askWorkplaces = fmap getWorkplaces <$> askUniverseDyn
 
-askWorkplaceOccupants :: PlayerWidget t m => WorkplaceId -> m (Dynamic t [WorkerId])
+askWorkplaceOccupants :: PlayerWidget t m x => WorkplaceId -> m (Dynamic t [WorkerId])
 askWorkplaceOccupants workplaceId = fmap (flip getWorkplaceOccupants workplaceId) <$> askUniverseDyn
 
 cardContents :: MonadWidget t m => Dynamic t WorkplaceData -> m ()

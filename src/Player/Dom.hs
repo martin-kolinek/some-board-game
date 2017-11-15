@@ -1,4 +1,4 @@
-{-# LANGUAGE RecursiveDo, FlexibleContexts, AllowAmbiguousTypes, FlexibleInstances, MultiParamTypeClasses, TupleSections, TypeFamilies, OverloadedStrings #-}
+{-# LANGUAGE RecursiveDo, FlexibleContexts, AllowAmbiguousTypes, FlexibleInstances, MultiParamTypeClasses, TupleSections, TypeFamilies, OverloadedStrings, ScopedTypeVariables #-}
 
 module Player.Dom where
 
@@ -13,43 +13,47 @@ import Player.Building.Dom
 
 import Reflex.Dom
 import Data.Maybe
-import Data.Map (fromList, elems)
+import Data.Map (fromList)
 import Control.Monad
 import Control.Monad.Reader
 import Prelude hiding (elem)
 import qualified Data.Text as T
 import Data.Semigroup ((<>))
 
-drawPlayers :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> m (Event t UniverseAction)
-drawPlayers universeDyn settingsDyn = do
+drawPlayers :: forall t m x. UniverseWidget t m x => m ()
+drawPlayers = do
+  universeDyn <- askUniverseDyn
   let playersDyn = getPlayers <$> universeDyn
-  selectedPlayerDyn <- drawPlayerSelection settingsDyn universeDyn
-  mapEvent <- listViewWithKey (fromList . (fmap (, Nothing)) <$> playersDyn) $ \playerId _ -> do
-    playerActionEvent <- flip runReaderT (PlayerWidgetData universeDyn playerId settingsDyn) $ do
+  selectedPlayerDyn <- drawPlayerSelection
+  _ <- listWithKey (fromList . (fmap (, ())) <$> playersDyn) $ \playerId _ -> do
+    universeContext <- (asks getUniverseContext :: m (UniverseContext t))
+    flip runReaderT (PlayerContext universeContext playerId) $ do
       let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
           clsDyn = cls <$> selectedPlayerDyn
       divAttributeLikeDyn clsDyn drawPlayer
-    return $ makeUniverseAction playerId <$> playerActionEvent
-  return $ mconcat <$> elems <$> mapEvent
+    return ()
+  return ()
 
-drawPlayer :: PlayerWidget t m => m (Event t PlayerAction)
+drawPlayer :: PlayerWidget t m x => m ()
 drawPlayer = do
   resourceCollectEvents <- drawPlayerResources
   workplaceClicks <- drawWorkplaces
-  PlayerExports selectedWorker action <- drawBuildingSpace
+  selectedWorker <- drawBuildingSpace
   let startWorkerAction (Just worker) workplace = Just $ \player -> startWorking player worker workplace
       startWorkerAction _ _ = Nothing
       startWorkerActionEvent = attachWithMaybe startWorkerAction (current selectedWorker) workplaceClicks
-  return $ leftmost [startWorkerActionEvent, action, resourceCollectEvents]
+  tellPlayerAction startWorkerActionEvent
+  tellPlayerAction resourceCollectEvents
 
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
 
-drawPlayerSelection :: MonadWidget t m => Dynamic t PlayerSettings -> Dynamic t Universe -> m (Dynamic t PlayerId)
-drawPlayerSelection settingsDyn universeDyn =
+drawPlayerSelection :: UniverseWidget t m x => m (Dynamic t PlayerId)
+drawPlayerSelection =
   divAttributeLike playerContainerClass $ do
+    universeDyn <- askUniverseDyn
     rec
       let players = getPlayers <$> universeDyn
-      listOfEvents <- simpleListOrd players $ (drawPlayerInSelection universeDyn settingsDyn selectedPlayer)
+      listOfEvents <- simpleListOrd players $ (drawPlayerInSelection selectedPlayer)
       let playerClicks = leftmost <$> listOfEvents
       selectedPlayer <- findSelectedPlayer universeDyn playerClicks
     holdUniqDyn selectedPlayer
@@ -74,8 +78,10 @@ findSelectedPlayer universeDyn playerClicks = do
         result = fromMaybe <$> defaultPlayer <*> maybePlayerId
   holdUniqDyn result
 
-drawPlayerInSelection :: MonadWidget t m => Dynamic t Universe -> Dynamic t PlayerSettings -> Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
-drawPlayerInSelection universeDyn settingsDyn selectedPlayerId playerId  = do
+drawPlayerInSelection :: UniverseWidget t m x => Dynamic t PlayerId -> PlayerId -> m (Event t PlayerId)
+drawPlayerInSelection selectedPlayerId playerId  = do
+  universeDyn <- askUniverseDyn
+  settingsDyn <- askPlayerSettings
   let currentPlayerDyn = getCurrentPlayer <$> universeDyn
       selectedClass isSel = if isSel then selectedPlayerClass else mempty
       drawCurrentPlayerIcon isCur = when isCur $ divAttributeLike currentPlayerIconClass (return ())
@@ -90,7 +96,7 @@ drawPlayerInSelection universeDyn settingsDyn selectedPlayerId playerId  = do
   let event = domEvent Click elem
   return $ const playerId <$> event
 
-drawPlayerResources :: PlayerWidget t m => m (Event t PlayerAction)
+drawPlayerResources :: PlayerWidget t m x => m (Event t PlayerAction)
 drawPlayerResources = do
   divAttributeLike resourcesClass $ do
     resources <- askResources
@@ -102,7 +108,7 @@ drawPlayerResources = do
     finishActionEvent <- drawActionButton canFinishAction "Finish action"
     return $ leftmost [const collectResources <$> collectResourcesEvent, const finishAction <$> finishActionEvent]
 
-drawActionButton :: PlayerWidget t m => (Universe -> PlayerId -> Bool) -> T.Text -> m (Event t ())
+drawActionButton :: PlayerWidget t m x => (Universe -> PlayerId -> Bool) -> T.Text -> m (Event t ())
 drawActionButton condition label = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
@@ -110,7 +116,7 @@ drawActionButton condition label = do
   let draw cond = if cond then button label else return never
   switchPromptly never =<< (dyn $ draw <$> condDyn)
 
-askResources :: PlayerWidget t m => m (Dynamic t Resources)
+askResources :: PlayerWidget t m x => m (Dynamic t Resources)
 askResources = do
   u <- askUniverseDyn
   player <- askPlayerId

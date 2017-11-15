@@ -13,6 +13,7 @@ import Player.Types
 import Player.Worker.Dom
 import Common.CommonClasses
 import Player.Building.Types
+import Types
 
 import Reflex.Dom hiding (crop)
 import Control.Monad
@@ -103,7 +104,7 @@ instance Reflex t => Monoid (TileResults t) where
   mempty = TileResults mempty mempty mempty
   mappend (TileResults a1 b1 c1) (TileResults a2 b2 c2) = TileResults (a1 <> a2) (b1 <> b2) (c1 <> c2)
 
-drawTileInfo :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Position -> Dynamic t TileInfo -> m (TileResults t)
+drawTileInfo :: PlayerWidget t m x => Dynamic t (Maybe BuildingOccupant) -> Position -> Dynamic t TileInfo -> m (TileResults t)
 drawTileInfo selectedOccupantDyn position tileInfoDyn = do
   let tileInfoDynUniq = uniqDynamic tileInfoDyn
       tilePotentialBuildingsDyn = fromUniqDynamic $ tilePotentialBuildings <$> tileInfoDynUniq
@@ -142,7 +143,7 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
   hoveredPos <- holdDyn [] (leftmost [const [] <$> domEvent Mouseleave divEl, const [position] <$> domEvent Mouseenter divEl])
   return $ TileResults (const [position] <$> domEvent Click divEl) inner hoveredPos
 
-drawBuildings :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Dynamic t BuildingStatus -> Dynamic t PlantingStatus -> m (Event t Position, Event t BuildingOccupant)
+drawBuildings :: PlayerWidget t m x => Dynamic t (Maybe BuildingOccupant) -> Dynamic t BuildingStatus -> Dynamic t PlantingStatus -> m (Event t Position, Event t BuildingOccupant)
 drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn= do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
@@ -155,14 +156,14 @@ drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn= do
 data PlantingStatus = IsPlanting [CropToPlant] (Maybe CropType) | IsNotPlanting deriving Eq
 data BuildingStatus = IsBuilding BuildingDescription Direction | IsNotBuilding deriving Eq
 
-drawBuildingSelection :: PlayerWidget t m => Dynamic t PlantingStatus -> m (Dynamic t BuildingStatus)
+drawBuildingSelection :: PlayerWidget t m x => Dynamic t PlantingStatus -> m (Dynamic t BuildingStatus)
 drawBuildingSelection plantingStatusDyn = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   canCurrentlyBuildDyn <- holdUniqDyn $ not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
   let makeBuildingStatus (Just buildingDescription) dir = IsBuilding buildingDescription dir
       makeBuildingStatus Nothing _ = IsNotBuilding
-      drawSelection :: PlayerWidget t2 m2 => Bool -> m2 (Dynamic t2 BuildingStatus)
+      drawSelection :: PlayerWidget t2 m2 x2 => Bool -> m2 (Dynamic t2 BuildingStatus)
       drawSelection True = do
         universeDyn2 <- askUniverseDyn
         playerId2 <- askPlayerId
@@ -176,7 +177,7 @@ drawBuildingSelection plantingStatusDyn = do
       stopBuildingEv = ffilter null $ updated (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
       isNotPlantingDyn = (== IsNotPlanting) <$> plantingStatusDyn
       canBuildDyn = (&&) <$> canCurrentlyBuildDyn <*> isNotPlantingDyn
-      drawBuildButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
+      drawBuildButton :: PlayerWidget t2 m2 x2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
       drawBuildButton visible stopBuildingEvent = do
         let txt True = "Cancel"
             txt False = "Build"
@@ -196,18 +197,18 @@ createBuildActions buildingStatusDyn positionEvent =
       createBuildAction _ _ = Nothing
   in attachWithMaybe createBuildAction (current buildingStatusDyn) positionEvent
 
-drawPlanting :: PlayerWidget t m => Event t Position -> Dynamic t BuildingStatus -> m (Dynamic t PlantingStatus)
+drawPlanting :: PlayerWidget t m x => Event t Position -> Dynamic t BuildingStatus -> m (Dynamic t PlantingStatus)
 drawPlanting clickedPositionsEvent buildingStatusDyn = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  let drawPlanting' :: PlayerWidget t2 m2 => Event t2 Position -> Bool -> m2 (Dynamic t2 PlantingStatus)
+  let drawPlanting' :: PlayerWidget t2 m2 x2 => Event t2 Position -> Bool -> m2 (Dynamic t2 PlantingStatus)
       drawPlanting' _ False = return $ constDyn IsNotPlanting
       drawPlanting' clickedPos True = do
         selectedCrop <- drawCropSelection
         plantedCropsDyn <- createPlantedCrops selectedCrop clickedPos
         return $ IsPlanting <$> plantedCropsDyn <*> selectedCrop
       stopPlantingEv = ffilter (==False) $ updated (isPlantingCrops <$> universeDyn <*> pure playerId)
-      drawPlantingButton :: PlayerWidget t2 m2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
+      drawPlantingButton :: PlayerWidget t2 m2 x2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
       drawPlantingButton visible stopPlantingEvent = do
         let txt True = "Cancel"
             txt False = "Plant"
@@ -228,7 +229,7 @@ toggleWithReset initialValue toggleEvent resetEvent = do
       combine _ _ = False
   foldDyn combine initialValue (align toggleEvent resetEvent)
 
-drawCropSelection :: PlayerWidget t m => m (Dynamic t (Maybe CropType))
+drawCropSelection :: PlayerWidget t m x => m (Dynamic t (Maybe CropType))
 drawCropSelection = do
   let cls _ _ False = hiddenButtonClass
       cls neededCropType actualCropType _ = cropTypeClass <> if Just neededCropType == actualCropType then highlightedCropTypeClass else mempty
@@ -245,7 +246,7 @@ drawCropSelection = do
     selectedCropType <- foldDyn (\next curr -> if curr == Just next then Nothing else Just next) Nothing (leftmost [potatoClicks, wheatClicks])
   return selectedCropType
 
-createPlantedCrops :: PlayerWidget t m => Dynamic t (Maybe CropType) -> Event t Position -> m (Dynamic t [CropToPlant])
+createPlantedCrops :: PlayerWidget t m x => Dynamic t (Maybe CropType) -> Event t Position -> m (Dynamic t [CropToPlant])
 createPlantedCrops selectedCrop positionClicks = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
@@ -259,7 +260,7 @@ createPlantedCrops selectedCrop positionClicks = do
           then return Nothing else return $ Just combined
   foldDynMaybeM combine [] cropToPlantEvent
 
-drawPlantingConfirmation :: PlayerWidget t m => Dynamic t PlantingStatus -> m (Event t PlayerAction)
+drawPlantingConfirmation :: PlayerWidget t m x => Dynamic t PlantingStatus -> m (Event t PlayerAction)
 drawPlantingConfirmation cropsToPlantDyn = do
   let createAction (IsPlanting crops _) = Just $ \plId -> plantCrops plId crops
       createAction _ = Nothing
@@ -268,7 +269,7 @@ drawPlantingConfirmation cropsToPlantDyn = do
   (confirmEl, _) <- divAttributeLikeDyn' (cls <$> cropsToPlantDyn) $ text "Confirm"
   return $ fmapMaybe id $ createAction <$> tag (current cropsToPlantDyn) (domEvent Click confirmEl)
 
-drawBuildingSpace :: PlayerWidget t m => m (PlayerExports t)
+drawBuildingSpace :: PlayerWidget t m x => m (Dynamic t (Maybe WorkerId))
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
     (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn
@@ -281,8 +282,10 @@ drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
       return (plantingStatusDynInner, buildingStatusDynInner, plantActs)
     let buildingActions = createBuildActions buildingStatusDyn clickedPosition
         selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
-        allActions = leftmost [buildingActions, plantActions, occupantChangeActions]
-  return $ PlayerExports selectedWorkerDyn allActions
+    tellPlayerAction buildingActions
+    tellPlayerAction plantActions
+    tellPlayerAction occupantChangeActions
+  return selectedWorkerDyn
 
 drawOccupantErrors :: (MonadWidget t m) => Dynamic t [String] -> m ()
 drawOccupantErrors errors =
@@ -291,7 +294,7 @@ drawOccupantErrors errors =
       divAttributeLike occupantErrorIconClass (return ())
       divAttributeLike occupantErrorTextClass (dynText $ T.pack <$> errorDyn)
 
-drawRotationButton :: PlayerWidget t m => m (Dynamic t Direction)
+drawRotationButton :: PlayerWidget t m x => m (Dynamic t Direction)
 drawRotationButton = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
@@ -318,7 +321,7 @@ drawSelectionForPossibilities possibilities = do
     let currentBuilding = (possibilities !!) <$> currentIndex
   return $ Just <$> currentBuilding
 
-createSelectedOccupant :: PlayerWidget t m => Event t BuildingOccupant -> m (Dynamic t (Maybe BuildingOccupant))
+createSelectedOccupant :: PlayerWidget t m x => Event t BuildingOccupant -> m (Dynamic t (Maybe BuildingOccupant))
 createSelectedOccupant occupants = do
   let removeInvalidOccupants maybeOccupant universe = do
           occupant <- maybeOccupant
@@ -335,7 +338,7 @@ isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)
 isOccupantValid _ _ = True
 
-drawWorkplaceOccupant :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
+drawWorkplaceOccupant :: PlayerWidget t m x => Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
 drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState = do
   let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
   workerEvent <- drawWorker selectedWorker workerId animationState
@@ -353,7 +356,7 @@ findOccupantChanges selectedOccupant clickedPosition =
       modifyMap _ _ = id
   in attachWith modifyMap (current selectedOccupant) clickedPosition
 
-createOccupantChangeActions :: PlayerWidget t m => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Dynamic t BuildingStatus -> Dynamic t PlantingStatus -> m (Event t PlayerAction)
+createOccupantChangeActions :: PlayerWidget t m x => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Dynamic t BuildingStatus -> Dynamic t PlantingStatus -> m (Event t PlayerAction)
 createOccupantChangeActions selectedOccupant clickedPositionEvent buildingStatusDyn plantingStatusDyn = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId

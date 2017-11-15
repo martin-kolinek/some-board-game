@@ -6,36 +6,31 @@
 module Player.Types where
 
 import Rules
-import Settings.Types
 import Types
 
 import Reflex.Dom
 import Control.Monad.Reader
 import Control.Arrow (Kleisli(..))
 
-data PlayerExports t = PlayerExports {
-  extractSelectedWorker :: Dynamic t (Maybe WorkerId),
-  extractActions :: Event t PlayerAction
-}
+class HasPlayerId x where
+  getPlayerId :: x -> PlayerId
 
-data PlayerWidgetData t = PlayerWidgetData {
-    playerWidgetUniverse :: Dynamic t Universe,
-    playerWidgetPlayerId :: PlayerId,
-    playerWidgetSettings :: Dynamic t PlayerSettings
-  }
+data PlayerContext t = PlayerContext { getInnerUniverseContext :: UniverseContext t, getContextPlayerId :: PlayerId }
 
-type PlayerWidget t m = (MonadWidget t m, MonadReader (PlayerWidgetData t) m)
+instance HasPlayerId (PlayerContext t) where getPlayerId = getContextPlayerId
+instance HasUniverseContext t (PlayerContext t) where getUniverseContext = getInnerUniverseContext
 
-askUniverseDyn :: PlayerWidget t m => m (Dynamic t Universe)
-askUniverseDyn = asks playerWidgetUniverse
+type PlayerWidget t m x = (UniverseWidget t m x, HasPlayerId x)
 
-askPlayerId :: PlayerWidget t m => m PlayerId
-askPlayerId = asks playerWidgetPlayerId
-
-askPlayerSettings :: PlayerWidget t m => m (Dynamic t PlayerSettings)
-askPlayerSettings = asks playerWidgetSettings
+askPlayerId :: PlayerWidget t m x => m PlayerId
+askPlayerId = asks getPlayerId
 
 type PlayerAction = PlayerId -> Universe -> Either String Universe
 
 makeUniverseAction :: PlayerId -> PlayerAction -> UniverseAction
 makeUniverseAction plId act = UniverseAction $ Kleisli $ act plId
+
+tellPlayerAction :: (PlayerWidget t m x) => Event t PlayerAction -> m ()
+tellPlayerAction act = do
+  plId <- askPlayerId
+  tellEvent $ makeUniverseAction plId <$> act

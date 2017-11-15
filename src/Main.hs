@@ -12,6 +12,7 @@ import Reflex.Dom.Main as M
 import Reflex.Dom
 import Control.Monad.Except
 import Language.Javascript.JSaddle.Types (JSM)
+import Control.Monad.Reader
 #ifndef ghcjs_HOST_OS
 import Network.Wai.Handler.Warp as Net (run)
 import Network.WebSockets (defaultConnectionOptions)
@@ -28,7 +29,7 @@ mainJsm = M.mainWidgetWithCss mainStyleByteString $ do
             withActionApplied <- applyAction action universe
             catchError (finishTurn withActionApplied) (const $ return withActionApplied)
       settingsDyn <- drawSettingsIcon universeDyn
-      actions <- drawPlayers universeDyn settingsDyn
+      (_, actions) <- runEventWriterT $ flip runReaderT (UniverseContext settingsDyn universeDyn) $ drawPlayers
       drawErrors universeDyn actions
       let actionsApplied = attachWith applyActionWithTryFinishTurn (current universeDyn) actions
           correctMoves = fmapMaybe fromRight actionsApplied
