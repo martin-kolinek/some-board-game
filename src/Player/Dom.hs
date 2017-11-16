@@ -36,14 +36,12 @@ drawPlayers = do
 
 drawPlayer :: PlayerWidget t m x => m ()
 drawPlayer = do
-  resourceCollectEvents <- drawPlayerResources
+  drawPlayerResources
   workplaceClicks <- drawWorkplaces
   selectedWorker <- drawBuildingSpace
   let startWorkerAction (Just worker) workplace = Just $ \player -> startWorking player worker workplace
       startWorkerAction _ _ = Nothing
-      startWorkerActionEvent = attachWithMaybe startWorkerAction (current selectedWorker) workplaceClicks
-  tellPlayerAction startWorkerActionEvent
-  tellPlayerAction resourceCollectEvents
+  tellPlayerAction $ attachWithMaybe startWorkerAction (current selectedWorker) workplaceClicks
 
 type SelectedPlayerWithSettingsChanges t = (Dynamic t PlayerId, Event t SinglePlayerSettings)
 
@@ -96,7 +94,7 @@ drawPlayerInSelection selectedPlayerId playerId  = do
   let event = domEvent Click elem
   return $ const playerId <$> event
 
-drawPlayerResources :: PlayerWidget t m x => m (Event t PlayerAction)
+drawPlayerResources :: PlayerWidget t m x => m ()
 drawPlayerResources = do
   divAttributeLike resourcesClass $ do
     resources <- askResources
@@ -106,7 +104,8 @@ drawPlayerResources = do
         dynText resourceText
     collectResourcesEvent <- drawActionButton canCollectResources "Collect resources"
     finishActionEvent <- drawActionButton canFinishAction "Finish action"
-    return $ leftmost [const collectResources <$> collectResourcesEvent, const finishAction <$> finishActionEvent]
+    tellPlayerAction $ const collectResources <$> collectResourcesEvent
+    tellPlayerAction $ const finishAction <$> finishActionEvent
 
 drawActionButton :: PlayerWidget t m x => (Universe -> PlayerId -> Bool) -> T.Text -> m (Event t ())
 drawActionButton condition label = do

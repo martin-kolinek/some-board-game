@@ -275,16 +275,15 @@ drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
     (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
     occupantChangeActions <- createOccupantChangeActions selectedOccupantDyn clickedPosition buildingStatusDyn plantingStatusDyn
-    (plantingStatusDyn, buildingStatusDyn, plantActions) <- divAttributeLike buildingOptionsClass $ do
+    tellPlayerAction occupantChangeActions
+    (plantingStatusDyn, buildingStatusDyn) <- divAttributeLike buildingOptionsClass $ do
       buildingStatusDynInner <- drawBuildingSelection plantingStatusDyn
       plantingStatusDynInner <- drawPlanting clickedPosition buildingStatusDyn
-      plantActs <- drawPlantingConfirmation plantingStatusDyn
-      return (plantingStatusDynInner, buildingStatusDynInner, plantActs)
-    let buildingActions = createBuildActions buildingStatusDyn clickedPosition
-        selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
-    tellPlayerAction buildingActions
-    tellPlayerAction plantActions
-    tellPlayerAction occupantChangeActions
+      plantActions <- drawPlantingConfirmation plantingStatusDyn
+      tellPlayerAction plantActions
+      return (plantingStatusDynInner, buildingStatusDynInner)
+    tellPlayerAction $ createBuildActions buildingStatusDyn clickedPosition
+    let selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
   return selectedWorkerDyn
 
 drawOccupantErrors :: (MonadWidget t m) => Dynamic t [String] -> m ()
