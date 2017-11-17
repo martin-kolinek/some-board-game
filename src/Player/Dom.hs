@@ -36,7 +36,7 @@ drawPlayers = do
 
 drawPlayer :: PlayerWidget t m x => m ()
 drawPlayer = do
-  drawPlayerResources
+  drawPlayerData
   workplaceClicks <- drawWorkplaces
   selectedWorker <- drawBuildingSpace
   let startWorkerAction (Just worker) workplace = Just $ \player -> startWorking player worker workplace
@@ -94,26 +94,48 @@ drawPlayerInSelection selectedPlayerId playerId  = do
   let event = domEvent Click elem
   return $ const playerId <$> event
 
+drawPlayerData :: PlayerWidget t m x => m ()
+drawPlayerData = do
+  divAttributeLike playerDataClass $ do
+    drawPlayerResources
+    drawFinishButton
+    drawCollectButton
+    drawHireButton
+    drawArming
+    drawAdventures
+
 drawPlayerResources :: PlayerWidget t m x => m ()
 drawPlayerResources = do
-  divAttributeLike resourcesClass $ do
-    resources <- askResources
-    forM_ resourceTypes $ \(resourceFunc, resourceLabel) -> do
-      divAttributeLike' () $ do
-        let resourceText = (((resourceLabel <> ": ") <>) . T.pack . show . resourceFunc) <$> resources
-        dynText resourceText
-    collectResourcesEvent <- drawActionButton canCollectResources "Collect resources"
-    finishActionEvent <- drawActionButton canFinishAction "Finish action"
-    tellPlayerAction $ const collectResources <$> collectResourcesEvent
-    tellPlayerAction $ const finishAction <$> finishActionEvent
+  resources <- askResources
+  forM_ resourceTypes $ \(resourceFunc, resourceLabel) -> do
+    divAttributeLike' () $ do
+      let resourceText = (((resourceLabel <> ": ") <>) . T.pack . show . resourceFunc) <$> resources
+      dynText resourceText
 
-drawActionButton :: PlayerWidget t m x => (Universe -> PlayerId -> Bool) -> T.Text -> m (Event t ())
-drawActionButton condition label = do
+drawFinishButton :: PlayerWidget t m x => m ()
+drawFinishButton = drawActionButton canFinishAction finishAction "Finish action"
+
+drawCollectButton :: PlayerWidget t m x => m ()
+drawCollectButton = drawActionButton canCollectResources collectResources "Collect resources"
+
+drawHireButton :: PlayerWidget t m x => m ()
+drawHireButton = drawActionButton canHireWorker hireWorker "Hire worker"
+
+drawArming :: PlayerWidget t m x => m ()
+drawArming = do
+  return ()
+
+drawAdventures :: PlayerWidget t m x => m()
+drawAdventures = return ()
+
+drawActionButton :: PlayerWidget t m x => (Universe -> PlayerId -> Bool) -> (PlayerId -> Universe -> Either String Universe) -> T.Text -> m ()
+drawActionButton condition action label = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   condDyn <- holdUniqDyn $ condition <$> universeDyn <*> pure playerId
   let draw cond = if cond then button label else return never
-  switchPromptly never =<< (dyn $ draw <$> condDyn)
+  event <- switchPromptly never =<< (dyn $ draw <$> condDyn)
+  tellPlayerAction $ const action <$> event
 
 askResources :: PlayerWidget t m x => m (Dynamic t Resources)
 askResources = do

@@ -25,8 +25,8 @@ hiddenPlayerData = CssClass "hidden-player-data"
 
 freeWorkersClass :: CssClass
 freeWorkersClass = CssClass "free-workers"
-resourcesClass :: CssClass
-resourcesClass = CssClass "resources"
+playerDataClass :: CssClass
+playerDataClass = CssClass "player-data"
 currentPlayerIconClassInternal :: CssClass
 currentPlayerIconClassInternal = CssClass "current-player-icon"
 currentPlayerIconClass :: CssClass
@@ -68,14 +68,14 @@ playerStyle = do
     order 1
     F.flex 1 1 (pct 85)
     minWidth (em 35)
-  star # classSelector resourcesClass ? do
+  star # classSelector playerDataClass ? do
     order 3
     F.flex 1 1 (pct 10)
     minWidth (em 10)
     padding (em 2) (em 2) (em 2) (em 2)
     margin (em 2) (em 2) (em 2) (em 2)
     fontWeight bold
-  star # classSelector resourcesClass Clay.** button ? do
+  star # classSelector playerDataClass Clay.** button ? do
     marginTop (em 1)
   star # classSelector currentPlayerIconClassInternal ?
     float floatRight
