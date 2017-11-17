@@ -10,6 +10,7 @@ import Player.Types
 import Settings.Types
 import Player.Board.Dom
 import Player.Building.Dom
+import Player.Cheats
 
 import Reflex.Dom
 import Data.Maybe
@@ -31,6 +32,7 @@ drawPlayers = do
       let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
           clsDyn = cls <$> selectedPlayerDyn
       divAttributeLikeDyn clsDyn drawPlayer
+      cheatsHandler
     return ()
   return ()
 
