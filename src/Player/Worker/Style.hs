@@ -13,6 +13,8 @@ activeWorkerClass :: CssClass
 activeWorkerClass = CssClass "active-worker"
 workerAnimationClass :: CssClass
 workerAnimationClass = CssClass "worker-animation"
+strengthClass :: CssClass
+strengthClass = CssClass "strength"
 
 colorClass :: PlayerColor -> CssClass
 colorClass PlayerRed = CssClass "worker-red"
@@ -56,8 +58,22 @@ workerStyle = do
         transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
         display inlineBlock
         height (em 3.7)
+        textAlign end
         backgroundSize contain
         backgroundRepeat noRepeat
+  star # classSelector strengthClass ? do
+    backgroundColor "#848484"
+    borderColor black
+    fontWeight bold
+    borderWidth (px 1)
+    borderStyle solid
+    width (em 1.4)
+    height (em 1.3)
+    display inlineBlock
+    textAlign center
+    paddingTop (em 0.1)
+    margin (px 4) (px 4) (px 4) (px 4)
+    borderRadius (em 0.7) (em 0.7) (em 0.7) (em 0.7)
   keyframes "worker-kf" [
       (0, opacity 0),
       (100, opacity 1)]
