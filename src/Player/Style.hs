@@ -29,6 +29,8 @@ playerInfoClass :: CssClass
 playerInfoClass = CssClass "player-info"
 currentPlayerIconClassInternal :: CssClass
 currentPlayerIconClassInternal = CssClass "current-player-icon"
+armingClass :: CssClass
+armingClass = CssClass "arming"
 currentPlayerIconClass :: CssClass
 currentPlayerIconClass = currentPlayerIconClassInternal <> faClass <> faPlayClass
 
@@ -75,8 +77,13 @@ playerStyle = do
     padding (em 2) (em 2) (em 2) (em 2)
     margin (em 2) (em 2) (em 2) (em 2)
     fontWeight bold
-  star # classSelector playerInfoClass Clay.** button ? do
+  star # classSelector playerInfoClass |> button ? do
     marginTop (em 1)
+  star # classSelector armingClass ? do
+    marginTop (em 1)
+  star # classSelector armingClass Clay.** input ? do
+    marginRight (em 0.5)
+    width (em 4)
   star # classSelector currentPlayerIconClassInternal ?
     float floatRight
   star # classSelector selectionClass ? do

@@ -20,6 +20,7 @@ import Control.Monad.Reader
 import Prelude hiding (elem)
 import qualified Data.Text as T
 import Data.Semigroup ((<>))
+import Text.Read
 
 drawPlayers :: forall t m x. UniverseWidget t m x => m ()
 drawPlayers = do
@@ -125,7 +126,16 @@ drawHireButton = drawActionButton canHireWorker hireWorker "Hire worker"
 
 drawArming :: PlayerWidget t m x => m ()
 drawArming = do
-  return ()
+  universeDyn <- askUniverseDyn
+  plId <- askPlayerId
+  let inside = divAttributeLike armingClass $ do
+        strengthText <- textInput (def & textInputConfig_inputType .~ "number" & textInputConfig_initialValue .~ "1")
+        clicks <- button "Arm"
+        let strength = readMaybe <$> T.unpack <$> current (value strengthText)
+            event = fmapMaybe id $ fmap (flip armWorker) <$> tag strength clicks
+        tellPlayerAction event
+      draw cond = if cond then inside else return ()
+  void $ dyn $ draw <$> (isArmingWorker <$> universeDyn <*> pure plId)
 
 drawAdventures :: PlayerWidget t m x => m()
 drawAdventures = return ()
