@@ -38,7 +38,7 @@ drawPlayers = do
 
 drawPlayer :: PlayerWidget t m x => m ()
 drawPlayer = do
-  drawPlayerData
+  drawPlayerInfo
   workplaceClicks <- drawWorkplaces
   selectedWorker <- drawBuildingSpace
   let startWorkerAction (Just worker) workplace = Just $ \player -> startWorking player worker workplace
@@ -96,9 +96,9 @@ drawPlayerInSelection selectedPlayerId playerId  = do
   let event = domEvent Click elem
   return $ const playerId <$> event
 
-drawPlayerData :: PlayerWidget t m x => m ()
-drawPlayerData = do
-  divAttributeLike playerDataClass $ do
+drawPlayerInfo :: PlayerWidget t m x => m ()
+drawPlayerInfo = do
+  divAttributeLike playerInfoClass $ do
     drawPlayerResources
     drawFinishButton
     drawCollectButton
