@@ -33,7 +33,7 @@ drawPlayers = do
       let cls selPlId = if selPlId == playerId then playerDataContainerClass else hiddenPlayerData
           clsDyn = cls <$> selectedPlayerDyn
       divAttributeLikeDyn clsDyn drawPlayer
-      cheatsHandler
+      whenWidget ((== playerId) <$> selectedPlayerDyn) cheatsHandler
     return ()
   return ()
 
@@ -128,14 +128,12 @@ drawArming :: PlayerWidget t m x => m ()
 drawArming = do
   universeDyn <- askUniverseDyn
   plId <- askPlayerId
-  let inside = divAttributeLike armingClass $ do
-        strengthText <- textInput (def & textInputConfig_inputType .~ "number" & textInputConfig_initialValue .~ "1")
-        clicks <- button "Arm"
-        let strength = readMaybe <$> T.unpack <$> current (value strengthText)
-            event = fmapMaybe id $ fmap (flip armWorker) <$> tag strength clicks
-        tellPlayerAction event
-      draw cond = if cond then inside else return ()
-  void $ dyn $ draw <$> (isArmingWorker <$> universeDyn <*> pure plId)
+  whenWidget (isArmingWorker <$> universeDyn <*> pure plId) $ divAttributeLike armingClass $ do
+    strengthText <- textInput (def & textInputConfig_inputType .~ "number" & textInputConfig_initialValue .~ "1")
+    clicks <- button "Arm"
+    let strength = readMaybe <$> T.unpack <$> current (value strengthText)
+        event = fmapMaybe id $ fmap (flip armWorker) <$> tag strength clicks
+    tellPlayerAction event
 
 drawAdventures :: PlayerWidget t m x => m()
 drawAdventures = return ()
@@ -144,10 +142,9 @@ drawActionButton :: PlayerWidget t m x => (Universe -> PlayerId -> Bool) -> (Pla
 drawActionButton condition action label = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  condDyn <- holdUniqDyn $ condition <$> universeDyn <*> pure playerId
-  let draw cond = if cond then button label else return never
-  event <- switchPromptly never =<< (dyn $ draw <$> condDyn)
-  tellPlayerAction $ const action <$> event
+  whenWidget (condition <$> universeDyn <*> pure playerId) $ do
+    event <- button label
+    tellPlayerAction $ const action <$> event
 
 askResources :: PlayerWidget t m x => m (Dynamic t Resources)
 askResources = do

@@ -118,3 +118,10 @@ simpleListOrd listDyn itemFunc =
   let toMap = M.fromList . fmap (, 1 :: Int)
       applyFunc k _ = itemFunc k
   in fmap M.elems <$> listWithKey (toMap <$> listDyn) applyFunc
+
+whenWidget :: MonadWidget t m => Dynamic t Bool -> m () -> m ()
+whenWidget cond inner = do
+  let draw b = if b then inner else return ()
+  heldCond <- holdUniqDyn cond
+  _ <- dyn $ draw <$> heldCond
+  return ()
