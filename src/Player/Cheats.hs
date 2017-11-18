@@ -22,4 +22,4 @@ addResources :: PlayerId -> Universe -> Either String Universe
 addResources plId u = Right $ u { _players = updatedPlayers }
   where updatedPlayers = adjust updatePlayerData plId $ _players u
         updatePlayerData plData = plData { _playerResources = updatedResources }
-          where updatedResources = _playerResources plData ^+^ Resources 10 10 10 10 10 10 10 10
+          where updatedResources = _playerResources plData ^+^ Resources 3 3 3 3 3 3 3 3
