@@ -136,7 +136,20 @@ drawArming = do
     tellPlayerAction event
 
 drawAdventures :: PlayerWidget t m x => m()
-drawAdventures = return ()
+drawAdventures = do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
+  whenWidget (canGoOnAdventure <$> universeDyn <*> pure playerId) $ do
+    forM_ [WoodReward, GrassReward, SmallPastureReward, SheepReward, LargePastureReward, BarnReward] $ \reward -> do
+      let label = case reward of
+            WoodReward -> "Collect wood"
+            GrassReward -> "Clear forest tile"
+            SmallPastureReward -> "Build a small pasture"
+            SheepReward -> "Get sheep"
+            LargePastureReward -> "Build a large pasture"
+            BarnReward -> "Build a barn"
+      event <- button label
+      tellPlayerAction $ (const (flip adventure reward)) <$> event
 
 drawActionButton :: PlayerWidget t m x => (Universe -> PlayerId -> Bool) -> (PlayerId -> Universe -> Either String Universe) -> T.Text -> m ()
 drawActionButton condition action label = do

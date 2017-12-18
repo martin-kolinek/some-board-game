@@ -79,6 +79,7 @@ playerStyle = do
     fontWeight bold
   star # classSelector playerInfoClass |> button ? do
     marginTop (em 1)
+    display block
   star # classSelector armingClass ? do
     marginTop (em 1)
   star # classSelector armingClass Clay.** input ? do
