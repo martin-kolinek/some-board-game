@@ -28,9 +28,11 @@ import Data.Foldable (fold)
 import qualified Data.Text as T
 import Data.Align
 import Data.These
+import Data.Default
 
 data PotentialBuilding = ValidBuilding TileBuildingType | InvalidBuilding TileBuildingType | NoBuilding deriving (Eq, Show)
 data PotentialCrop = ValidCrop CropType | InvalidCrop CropType | NoCrop deriving (Eq, Show)
+data PotentialBarn = ValidBarn | InvalidBarn | NoBarn deriving (Eq, Show)
 
 data TileInfo = TileInfo
   {
@@ -39,7 +41,9 @@ data TileInfo = TileInfo
     tileOccupantErrors :: [String],
     tilePotentialBuildings :: PotentialBuilding,
     tileCrops :: [CropType],
-    tilePotentialCrop :: PotentialCrop
+    tilePotentialCrop :: PotentialCrop,
+    tileHasBarn :: Bool,
+    tilePotentialBarn :: PotentialBarn
   } deriving Show
 
 getPotentialBuilding :: BuildingStatus -> Maybe Position -> Position -> PlayerId -> Universe -> PotentialBuilding
@@ -69,13 +73,16 @@ createTiles universe playerId hoveredPositionMaybe buildingStatus plantingStatus
           then InvalidCrop selectedCrop
           else ValidCrop selectedCrop
         _ -> NoCrop
+      getHasBarn = (`elem` getBarns universe playerId)
       makeTile tileBuildingType pos = (pos, TileInfo
           (tileBuildingType)
           (getTileOccupants pos)
           (getTileOccupantErrors pos)
           (getPotentialBuilding buildingStatus hoveredPositionMaybe pos playerId universe)
           (getCrops pos)
-          (getPotentialCrop pos))
+          (getPotentialCrop pos)
+          (getHasBarn pos)
+          NoBarn)
       getBuildingTiles (SmallBuilding buildingType pos) = [makeTile (SingleTileBuilding buildingType) pos]
       getBuildingTiles (LargeBuilding buildingType pos dir) =
         [makeTile (BuildingPart buildingType dir) pos, makeTile (BuildingPart buildingType (oppositeDirection dir)) pos]
@@ -154,42 +161,47 @@ drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn= do
   return (fmapMaybe listToMaybe clickedPos, fmapMaybe listToMaybe clickedOcc)
 
 data PlantingStatus = IsPlanting [CropToPlant] (Maybe CropType) | IsNotPlanting deriving Eq
+instance Default PlantingStatus where
+  def = IsNotPlanting
 data BuildingStatus = IsBuilding BuildingDescription Direction | IsNotBuilding deriving Eq
+instance Default BuildingStatus where
+  def = IsNotBuilding
+data BarnBuildingStatus = IsBuildingBarn | IsNotBuildingBarn deriving Eq
 
-drawBuildingSelection :: PlayerWidget t m x => Dynamic t PlantingStatus -> m (Dynamic t BuildingStatus)
-drawBuildingSelection plantingStatusDyn = do
+toggleButton :: (PlayerWidget t m x, Default a) => T.Text -> Dynamic t Bool -> (Universe -> PlayerId -> Bool) -> m (Dynamic t a) -> m (Dynamic t a)
+toggleButton name otherActivityDyn canDoActivityFunc inner = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  canCurrentlyBuildDyn <- holdUniqDyn $ not . null <$> (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
-  let makeBuildingStatus (Just buildingDescription) dir = IsBuilding buildingDescription dir
-      makeBuildingStatus Nothing _ = IsNotBuilding
-      drawSelection :: PlayerWidget t2 m2 x2 => Bool -> m2 (Dynamic t2 BuildingStatus)
-      drawSelection True = do
-        universeDyn2 <- askUniverseDyn
-        playerId2 <- askPlayerId
-        currentBuildingDyn <- holdUniqDyn $ currentlyBuiltBuildings <$> universeDyn2 <*> pure playerId2
-        directionDyn <- drawRotationButton
-        behaviorChanges <- dyn $ drawSelectionForPossibilities <$> currentBuildingDyn
-        nestedBehavior <- holdDyn (pure Nothing) behaviorChanges
-        return $ makeBuildingStatus <$> join nestedBehavior <*> directionDyn
-      drawSelection False = do
-        return $ constDyn IsNotBuilding
-      stopBuildingEv = ffilter null $ updated (currentlyBuiltBuildings <$> universeDyn <*> pure playerId)
-      isNotPlantingDyn = (== IsNotPlanting) <$> plantingStatusDyn
-      canBuildDyn = (&&) <$> canCurrentlyBuildDyn <*> isNotPlantingDyn
-      drawBuildButton :: PlayerWidget t2 m2 x2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
-      drawBuildButton visible stopBuildingEvent = do
+  canDoActivityDyn <- holdUniqDyn $ canDoActivityFunc <$> universeDyn <*> pure playerId
+  isActivityPossible <- holdUniqDyn $ (&&) <$> canDoActivityDyn <*> (not <$> otherActivityDyn)
+  let stopActivity = ffilter (== False) $ updated canDoActivityDyn
+      drawButton :: PlayerWidget t2 m2 x2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
+      drawButton visible stopEvent = do
         let txt True = "Cancel"
-            txt False = "Build"
+            txt False = name
             cls True = buildButtonClass
             cls False = hiddenButtonClass
         rec
           (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText (txt <$> isBuilding)
-          isBuilding <- toggleWithReset False (domEvent Click divEl) stopBuildingEvent
+          isBuilding <- toggleWithReset False (domEvent Click divEl) stopEvent
         return isBuilding
-  isBuildingDyn <- drawBuildButton canBuildDyn stopBuildingEv
-  let isBuildingAndCanBuild = (&&) <$> isBuildingDyn <*> canCurrentlyBuildDyn
-  join <$> (holdDyn (constDyn IsNotBuilding) =<< (dyn $ drawSelection <$> isBuildingAndCanBuild))
+      drawInner True = inner
+      drawInner False = return $ constDyn def
+  isDoingActivity <- drawButton isActivityPossible stopActivity
+  let isDoingActivityAndCan= (&&) <$> isDoingActivity <*> isActivityPossible
+  join <$> (holdDyn (constDyn def) =<< (dyn $ drawInner <$> isDoingActivityAndCan))
+
+drawBuildingSelection :: PlayerWidget t m x => Dynamic t PlantingStatus -> m (Dynamic t BuildingStatus)
+drawBuildingSelection plantingStatusDyn = toggleButton "Build" ((/= IsNotPlanting) <$> plantingStatusDyn) (\u p -> not $ null $ currentlyBuiltBuildings u p) $ do
+  universeDyn <- askUniverseDyn
+  playerId <- askPlayerId
+  currentBuildingDyn <- holdUniqDyn $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId
+  directionDyn <- drawRotationButton
+  behaviorChanges <- dyn $ drawSelectionForPossibilities <$> currentBuildingDyn
+  nestedBehavior <- holdDyn (pure Nothing) behaviorChanges
+  let makeBuildingStatus (Just buildingDescription) dir = IsBuilding buildingDescription dir
+      makeBuildingStatus Nothing _ = IsNotBuilding
+  return $ makeBuildingStatus <$> join nestedBehavior <*> directionDyn
 
 createBuildActions :: Reflex t => Dynamic t BuildingStatus -> Event t Position -> Event t PlayerAction
 createBuildActions buildingStatusDyn positionEvent =
@@ -198,30 +210,14 @@ createBuildActions buildingStatusDyn positionEvent =
   in attachWithMaybe createBuildAction (current buildingStatusDyn) positionEvent
 
 drawPlanting :: PlayerWidget t m x => Event t Position -> Dynamic t BuildingStatus -> m (Dynamic t PlantingStatus)
-drawPlanting clickedPositionsEvent buildingStatusDyn = do
-  universeDyn <- askUniverseDyn
-  playerId <- askPlayerId
-  let drawPlanting' :: PlayerWidget t2 m2 x2 => Event t2 Position -> Bool -> m2 (Dynamic t2 PlantingStatus)
-      drawPlanting' _ False = return $ constDyn IsNotPlanting
-      drawPlanting' clickedPos True = do
-        selectedCrop <- drawCropSelection
-        plantedCropsDyn <- createPlantedCrops selectedCrop clickedPos
-        return $ IsPlanting <$> plantedCropsDyn <*> selectedCrop
-      stopPlantingEv = ffilter (==False) $ updated (isPlantingCrops <$> universeDyn <*> pure playerId)
-      drawPlantingButton :: PlayerWidget t2 m2 x2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
-      drawPlantingButton visible stopPlantingEvent = do
-        let txt True = "Cancel"
-            txt False = "Plant"
-            cls True = plantCropsButtonClass
-            cls False = hiddenButtonClass
-        rec
-          (divEl, _) <- divAttributeLikeDyn' (cls <$> visible) $ dynText $ txt <$> isPlanting
-          isPlanting <- toggleWithReset False (domEvent Click divEl) stopPlantingEvent
-        return $ isPlanting
-  canPlantDyn <- holdUniqDyn $ (&&) <$> (isPlantingCrops <$> universeDyn <*> pure playerId) <*> ((== IsNotBuilding) <$> buildingStatusDyn)
-  isPlanting <- drawPlantingButton canPlantDyn stopPlantingEv
-  let isPlantingAndCanPlant = (&&) <$> isPlanting <*> canPlantDyn
-  fmap join $ holdDyn (constDyn IsNotPlanting) =<< (dyn $ drawPlanting' clickedPositionsEvent <$> isPlantingAndCanPlant)
+drawPlanting clickedPositionsEvent buildingStatusDyn = toggleButton "Plant" ((/= IsNotBuilding) <$> buildingStatusDyn) isPlantingCrops $ do
+  selectedCrop <- drawCropSelection
+  plantedCropsDyn <- createPlantedCrops selectedCrop clickedPositionsEvent
+  return $ IsPlanting <$> plantedCropsDyn <*> selectedCrop
+
+drawBarnBuilding :: PlayerWidget t m x => Event t Position -> Dynamic t Bool -> m (Dynamic t BarnBuildingStatus)
+drawBarnBuilding _ _ = do
+  return (constDyn IsNotBuildingBarn)
 
 toggleWithReset :: MonadWidget t m => Bool -> Event t tog -> Event t reset -> m (Dynamic t Bool)
 toggleWithReset initialValue toggleEvent resetEvent = do
