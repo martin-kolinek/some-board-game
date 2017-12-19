@@ -55,8 +55,8 @@ getPotentialBuilding (IsBuilding buildingDescription direction) (Just hoveredPos
         potentialBuildingType = getTileBuildingType direction tileOffset buildingDescription
 getPotentialBuilding _ _ _ _ _ = NoBuilding
 
-createTiles :: Universe -> PlayerId -> Maybe Position -> BuildingStatus -> PlantingStatus -> M.Map Position TileInfo
-createTiles universe playerId hoveredPositionMaybe buildingStatus plantingStatus =
+createTiles :: Universe -> PlayerId -> Maybe Position -> BuildingStatus -> PlantingStatus -> BarnBuildingStatus -> M.Map Position TileInfo
+createTiles universe playerId hoveredPositionMaybe buildingStatus plantingStatus barnBuildingStatus =
   let buildings = getBuildingSpace universe playerId
       getTileOccupants position = findVisibleOccupants universe playerId position
       getTileOccupantErrors position = fst <$> (filter ((== position) . snd) $ getOccupantErrors universe playerId)
@@ -74,6 +74,11 @@ createTiles universe playerId hoveredPositionMaybe buildingStatus plantingStatus
           else ValidCrop selectedCrop
         _ -> NoCrop
       getHasBarn = (`elem` getBarns universe playerId)
+      getPotentialBarn position = case (barnBuildingStatus, hoveredPositionMaybe == Just position) of
+        (IsBuildingBarn, True) -> if isLeft $ buildBarn playerId position universe
+                                  then InvalidBarn
+                                  else ValidBarn
+        _ -> NoBarn
       makeTile tileBuildingType pos = (pos, TileInfo
           (tileBuildingType)
           (getTileOccupants pos)
@@ -82,7 +87,7 @@ createTiles universe playerId hoveredPositionMaybe buildingStatus plantingStatus
           (getCrops pos)
           (getPotentialCrop pos)
           (getHasBarn pos)
-          NoBarn)
+          (getPotentialBarn pos))
       getBuildingTiles (SmallBuilding buildingType pos) = [makeTile (SingleTileBuilding buildingType) pos]
       getBuildingTiles (LargeBuilding buildingType pos dir) =
         [makeTile (BuildingPart buildingType dir) pos, makeTile (BuildingPart buildingType (oppositeDirection dir)) pos]
@@ -118,8 +123,10 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
       tileOccupantErrorsDyn = fromUniqDynamic $ tileOccupantErrors <$> tileInfoDynUniq
       tileOccupantsDyn = fromUniqDynamic $ tileOccupants <$> tileInfoDynUniq
       tileBuildingDyn = fromUniqDynamic $ tileBuilding <$> tileInfoDynUniq
-      tileCropsDyn = fromUniqDynamic $ uniqDynamic $ tileCrops <$> tileInfoDyn
-      tilePotentialCropDyn = fromUniqDynamic $ uniqDynamic $ tilePotentialCrop <$> tileInfoDyn
+      tileCropsDyn = fromUniqDynamic $ tileCrops <$> tileInfoDynUniq
+      tilePotentialCropDyn = fromUniqDynamic $ tilePotentialCrop <$> tileInfoDynUniq
+      tileBarnDyn = fromUniqDynamic $ tileHasBarn <$> tileInfoDynUniq
+      tilePotentialBarnDyn = fromUniqDynamic $ tilePotentialBarn <$> tileInfoDynUniq
       getBuildingToDraw tilePotBuild tileBuild = case tilePotBuild of
         NoBuilding -> tileBuild
         ValidBuilding b -> b
@@ -134,8 +141,13 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
       getPotentialCropText NoCrop = ""
       getPotentialCropText (ValidCrop tp) = T.pack $ show tp
       getPotentialCropText (InvalidCrop tp) = T.pack $ show tp
+      getPotentialBarnClass NoBarn = hiddenPotentialBarnClass
+      getPotentialBarnClass ValidBarn = validPotentialBarnClass
+      getPotentialBarnClass InvalidBarn = invalidPotentialBarnClass
       cropText [] = ""
       cropText x = T.pack $ show x
+      drawBarn True = text "Barn"
+      drawBarn False = return ()
   (divEl, inner) <- divAttributeLikeDyn' (buildingCss position <$> (getBuildingToDraw <$> tilePotentialBuildingsDyn <*> tileBuildingDyn)) $ do
     divAttributeLikeDyn (getOverlayCss <$> tilePotentialBuildingsDyn) $ do
       drawOccupantErrors $ tileOccupantErrorsDyn
@@ -145,17 +157,19 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
         let combinedClicks = combineOccupantClicks <$> occupantClicks
         return $ switch (current combinedClicks)
       dynText $ cropText <$> tileCropsDyn
+      void $ dyn $ drawBarn <$> tileBarnDyn
       divAttributeLikeDyn (getPotentialCropClass <$> tilePotentialCropDyn) $ dynText (getPotentialCropText <$> tilePotentialCropDyn)
+      divAttributeLikeDyn (getPotentialBarnClass <$> tilePotentialBarnDyn) $ drawBarn True
       return result
   hoveredPos <- holdDyn [] (leftmost [const [] <$> domEvent Mouseleave divEl, const [position] <$> domEvent Mouseenter divEl])
   return $ TileResults (const [position] <$> domEvent Click divEl) inner hoveredPos
 
-drawBuildings :: PlayerWidget t m x => Dynamic t (Maybe BuildingOccupant) -> Dynamic t BuildingStatus -> Dynamic t PlantingStatus -> m (Event t Position, Event t BuildingOccupant)
-drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn= do
+drawBuildings :: PlayerWidget t m x => Dynamic t (Maybe BuildingOccupant) -> Dynamic t BuildingStatus -> Dynamic t PlantingStatus -> Dynamic t BarnBuildingStatus -> m (Event t Position, Event t BuildingOccupant)
+drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn barnBuildingStatusDyn = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   rec
-    let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> buildingStatusDyn <*> plantingStatusDyn
+    let tiles = createTiles <$> universeDyn <*> pure playerId <*> (listToMaybe <$> hoveredPositionDyn) <*> buildingStatusDyn <*> plantingStatusDyn <*> barnBuildingStatusDyn
     result <- listWithKey tiles (drawTileInfo selectedOccupantDyn)
     (TileResults clickedPos clickedOcc hoveredPositionDyn) <- extractTileResultsFromDynamic $ fold <$> result
   return (fmapMaybe listToMaybe clickedPos, fmapMaybe listToMaybe clickedOcc)
@@ -167,13 +181,15 @@ data BuildingStatus = IsBuilding BuildingDescription Direction | IsNotBuilding d
 instance Default BuildingStatus where
   def = IsNotBuilding
 data BarnBuildingStatus = IsBuildingBarn | IsNotBuildingBarn deriving Eq
+instance Default BarnBuildingStatus where
+  def = IsNotBuildingBarn
 
 toggleButton :: (PlayerWidget t m x, Default a) => T.Text -> Dynamic t Bool -> (Universe -> PlayerId -> Bool) -> m (Dynamic t a) -> m (Dynamic t a)
-toggleButton name otherActivityDyn canDoActivityFunc inner = do
+toggleButton name noOtherActivityDyn canDoActivityFunc inner = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   canDoActivityDyn <- holdUniqDyn $ canDoActivityFunc <$> universeDyn <*> pure playerId
-  isActivityPossible <- holdUniqDyn $ (&&) <$> canDoActivityDyn <*> (not <$> otherActivityDyn)
+  isActivityPossible <- holdUniqDyn $ (&&) <$> canDoActivityDyn <*> noOtherActivityDyn
   let stopActivity = ffilter (== False) $ updated canDoActivityDyn
       drawButton :: PlayerWidget t2 m2 x2 => Dynamic t2 Bool -> Event t2 a -> m2 (Dynamic t2 Bool)
       drawButton visible stopEvent = do
@@ -191,8 +207,8 @@ toggleButton name otherActivityDyn canDoActivityFunc inner = do
   let isDoingActivityAndCan= (&&) <$> isDoingActivity <*> isActivityPossible
   join <$> (holdDyn (constDyn def) =<< (dyn $ drawInner <$> isDoingActivityAndCan))
 
-drawBuildingSelection :: PlayerWidget t m x => Dynamic t PlantingStatus -> m (Dynamic t BuildingStatus)
-drawBuildingSelection plantingStatusDyn = toggleButton "Build" ((/= IsNotPlanting) <$> plantingStatusDyn) (\u p -> not $ null $ currentlyBuiltBuildings u p) $ do
+drawBuildingSelection :: PlayerWidget t m x => Dynamic t Bool -> m (Dynamic t BuildingStatus)
+drawBuildingSelection canBuildDyn = toggleButton "Build" canBuildDyn (\u p -> not $ null $ currentlyBuiltBuildings u p) $ do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
   currentBuildingDyn <- holdUniqDyn $ currentlyBuiltBuildings <$> universeDyn <*> pure playerId
@@ -209,15 +225,15 @@ createBuildActions buildingStatusDyn positionEvent =
       createBuildAction _ _ = Nothing
   in attachWithMaybe createBuildAction (current buildingStatusDyn) positionEvent
 
-drawPlanting :: PlayerWidget t m x => Event t Position -> Dynamic t BuildingStatus -> m (Dynamic t PlantingStatus)
-drawPlanting clickedPositionsEvent buildingStatusDyn = toggleButton "Plant" ((/= IsNotBuilding) <$> buildingStatusDyn) isPlantingCrops $ do
+drawPlanting :: PlayerWidget t m x => Event t Position -> Dynamic t Bool -> m (Dynamic t PlantingStatus)
+drawPlanting clickedPositionsEvent canPlantDyn = toggleButton "Plant" canPlantDyn isPlantingCrops $ do
   selectedCrop <- drawCropSelection
   plantedCropsDyn <- createPlantedCrops selectedCrop clickedPositionsEvent
   return $ IsPlanting <$> plantedCropsDyn <*> selectedCrop
 
-drawBarnBuilding :: PlayerWidget t m x => Event t Position -> Dynamic t Bool -> m (Dynamic t BarnBuildingStatus)
-drawBarnBuilding _ _ = do
-  return (constDyn IsNotBuildingBarn)
+drawBarnBuilding :: PlayerWidget t m x => Dynamic t Bool -> m (Dynamic t BarnBuildingStatus)
+drawBarnBuilding canBuildBarnDyn = toggleButton "Build Barn" canBuildBarnDyn canBuildBarn $ do
+  return (constDyn IsBuildingBarn)
 
 toggleWithReset :: MonadWidget t m => Bool -> Event t tog -> Event t reset -> m (Dynamic t Bool)
 toggleWithReset initialValue toggleEvent resetEvent = do
@@ -265,22 +281,41 @@ drawPlantingConfirmation cropsToPlantDyn = do
   (confirmEl, _) <- divAttributeLikeDyn' (cls <$> cropsToPlantDyn) $ text "Confirm"
   return $ fmapMaybe id $ createAction <$> tag (current cropsToPlantDyn) (domEvent Click confirmEl)
 
+isBuildingPossible :: Applicative f => f PlantingStatus -> f BarnBuildingStatus -> f Bool
+isBuildingPossible planting barnBuilding = (&&) <$> ((== IsNotPlanting) <$> planting) <*> ((== IsNotBuildingBarn) <$> barnBuilding)
+isPlantingPossible :: Applicative f => f BuildingStatus -> f BarnBuildingStatus -> f Bool
+isPlantingPossible building barnBuilding = (&&) <$> ((== IsNotBuilding) <$> building) <*> ((== IsNotBuildingBarn) <$> barnBuilding)
+isBarnBuildingPossible :: Applicative f => f BuildingStatus -> f PlantingStatus -> f Bool
+isBarnBuildingPossible building planting = (&&) <$> ((== IsNotBuilding) <$> building) <*> ((== IsNotPlanting) <$> planting)
+
 drawBuildingSpace :: PlayerWidget t m x => m (Dynamic t (Maybe WorkerId))
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
-    (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn
+    (clickedPosition, clickedOccupant) <- drawBuildings selectedOccupantDyn buildingStatusDyn plantingStatusDyn barnBuildingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
     occupantChangeActions <- createOccupantChangeActions selectedOccupantDyn clickedPosition buildingStatusDyn plantingStatusDyn
     tellPlayerAction occupantChangeActions
-    (plantingStatusDyn, buildingStatusDyn) <- divAttributeLike buildingOptionsClass $ do
-      buildingStatusDynInner <- drawBuildingSelection plantingStatusDyn
-      plantingStatusDynInner <- drawPlanting clickedPosition buildingStatusDyn
-      plantActions <- drawPlantingConfirmation plantingStatusDyn
-      tellPlayerAction plantActions
-      return (plantingStatusDynInner, buildingStatusDynInner)
+    (plantingStatusDyn, buildingStatusDyn, barnBuildingStatusDyn) <- divAttributeLike buildingOptionsClass $ do
+      rec
+        let canBuildDyn = traceDyn "build" $ isBuildingPossible plantingStatusDynInner barnBuildingStatusDynInner
+            canPlantDyn = traceDyn "plant" $ isPlantingPossible buildingStatusDynInner barnBuildingStatusDynInner
+            canBuildBarnDyn = traceDyn "barn" $ isBarnBuildingPossible buildingStatusDynInner plantingStatusDynInner
+        buildingStatusDynInner <- drawBuildingSelection canBuildDyn
+        plantingStatusDynInner <- drawPlanting clickedPosition canPlantDyn
+        barnBuildingStatusDynInner <- drawBarnBuilding canBuildBarnDyn
+        plantActions <- drawPlantingConfirmation plantingStatusDyn
+        tellPlayerAction plantActions
+      return (plantingStatusDynInner, buildingStatusDynInner, barnBuildingStatusDynInner)
     tellPlayerAction $ createBuildActions buildingStatusDyn clickedPosition
+    tellPlayerAction $ createBuildBarnAction barnBuildingStatusDyn clickedPosition
     let selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
   return selectedWorkerDyn
+
+createBuildBarnAction :: Reflex t => Dynamic t BarnBuildingStatus -> Event t Position -> Event t PlayerAction
+createBuildBarnAction statusDyn posEvent =
+  let act IsBuildingBarn pos = Just $ \playerId universe -> buildBarn playerId pos universe
+      act _ _ = Nothing
+  in attachWithMaybe act (current statusDyn) posEvent
 
 drawOccupantErrors :: (MonadWidget t m) => Dynamic t [String] -> m ()
 drawOccupantErrors errors =

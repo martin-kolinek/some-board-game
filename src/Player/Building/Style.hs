@@ -70,6 +70,13 @@ validPotentialCropClass = CssClass "valid-potential-crop"
 invalidPotentialCropClass :: CssClass
 invalidPotentialCropClass = CssClass "invalid-potential-crop"
 
+hiddenPotentialBarnClass :: CssClass
+hiddenPotentialBarnClass = CssClass "hidden-potential-barn"
+validPotentialBarnClass :: CssClass
+validPotentialBarnClass = CssClass "valid-potential-barn"
+invalidPotentialBarnClass :: CssClass
+invalidPotentialBarnClass = CssClass "invalid-potential-barn"
+
 animalClass :: CssClass
 animalClass = CssClass "animal-occupant"
 highlightedAnimalClass :: CssClass
@@ -188,6 +195,13 @@ buildingStyle = do
     color green
     fontWeight bold
   star # classSelector invalidPotentialCropClass ? do
+    color red
+    fontWeight bold
+  star # classSelector hiddenPotentialBarnClass ? display none
+  star # classSelector validPotentialBarnClass ? do
+    color blue
+    fontWeight bold
+  star # classSelector invalidPotentialBarnClass ? do
     color red
     fontWeight bold
   star # classSelector highlightedAnimalClass ? do
