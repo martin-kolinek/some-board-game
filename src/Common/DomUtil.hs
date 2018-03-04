@@ -121,7 +121,10 @@ simpleListOrd listDyn itemFunc =
 
 whenWidget :: MonadWidget t m => Dynamic t Bool -> m () -> m ()
 whenWidget cond inner = do
-  let draw b = if b then inner else return ()
   heldCond <- holdUniqDyn cond
-  _ <- dyn $ draw <$> heldCond
+  postBuild <- getPostBuild
+  let draw b = if b then inner else return ()
+      updates = draw <$> updated heldCond
+      initial = draw <$> tag (current heldCond) postBuild
+  _ <- widgetHold (return ()) $ leftmost [initial, updates]
   return ()
