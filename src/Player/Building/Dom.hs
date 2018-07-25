@@ -11,7 +11,6 @@ import Common.DomUtil
 import Player.Building.Style
 import Player.Types
 import Player.Worker.Dom
-import Common.CommonClasses
 import Player.Building.Types
 import Types
 
@@ -153,7 +152,7 @@ drawTileInfo selectedOccupantDyn position tileInfoDyn = do
       drawOccupantErrors $ tileOccupantErrorsDyn
       result <- divAttributeLike occupantContainerClass $ do
         let combineOccupantClicks workers = M.elems <$> mergeMap workers
-        occupantClicks <- animatedList (fromRational 1) (tileOccupantsDyn) (drawWorkplaceOccupant selectedOccupantDyn)
+        occupantClicks <- simplerList tileOccupantsDyn (drawWorkplaceOccupant selectedOccupantDyn)
         let combinedClicks = combineOccupantClicks <$> occupantClicks
         return $ switch (current combinedClicks)
       dynText $ cropText <$> tileCropsDyn
@@ -368,14 +367,14 @@ isOccupantValid :: BuildingOccupant -> Universe -> Bool
 isOccupantValid (WorkerOccupant workerId) universe = isNothing (getWorkerWorkplace universe workerId)
 isOccupantValid _ _ = True
 
-drawWorkplaceOccupant :: PlayerWidget t m x => Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> Dynamic t AnimationState -> m (Event t BuildingOccupant)
-drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) animationState = do
+drawWorkplaceOccupant :: PlayerWidget t m x => Dynamic t (Maybe BuildingOccupant) -> BuildingOccupant -> m (Event t BuildingOccupant)
+drawWorkplaceOccupant selectedOccupant (WorkerOccupant workerId) = do
   let selectedWorker = (workerFromOccupant =<<) <$> selectedOccupant
-  workerEvent <- drawWorker selectedWorker workerId animationState
+  workerEvent <- drawWorker selectedWorker workerId
   return $ WorkerOccupant <$> workerEvent
-drawWorkplaceOccupant selectedOccupant occ@(AnimalOccupant (Animal animalType _)) animationStateDyn = do
+drawWorkplaceOccupant selectedOccupant occ@(AnimalOccupant (Animal animalType _)) = do
   let cls selOcc = if selOcc == Just occ then highlightedAnimalClass <> animalClass else animalClass
-  (divEl, _) <- animateState (cls <$> selectedOccupant) (constDyn fadeClass) animationStateDyn $ text (T.pack $ show animalType)
+  (divEl, _) <- divAttributeLikeDyn' (cls <$> selectedOccupant) $ text (T.pack $ show animalType)
   return $ const occ <$> domEvent Click divEl
 
 findOccupantChanges :: Reflex t => Dynamic t (Maybe BuildingOccupant) -> Event t Position -> Event t (BuildingOccupants -> BuildingOccupants)

@@ -3,7 +3,6 @@ module Player.Worker.Dom where
 
 import Rules
 import Common.DomUtil
-import Common.CommonClasses
 import Player.Worker.Style
 import Settings.Types
 import Player.Types
@@ -14,15 +13,14 @@ import Reflex.Dom
 import Data.Monoid
 import Data.Text as T
 
-drawWorker :: PlayerWidget t m x => Dynamic t (Maybe WorkerId) -> WorkerId -> Dynamic t AnimationState -> m (Event t WorkerId)
-drawWorker selectedWorkerDyn workerId animationStates = do
+drawWorker :: PlayerWidget t m x => Dynamic t (Maybe WorkerId) -> WorkerId -> m (Event t WorkerId)
+drawWorker selectedWorkerDyn workerId = do
   (colorDyn, strengthDyn) <- getWorkerData workerId
   let addHighlight color selectedWorker = if selectedWorker == Just workerId then colorClass color <> activeWorkerClass <> workerAnimationClass else colorClass color <> workerAnimationClass
       mainClass = addHighlight <$> colorDyn <*> selectedWorkerDyn
-  (divEl, _) <- animateState mainClass (constDyn fadeClass) animationStates $ drawWorkerStrength strengthDyn
+  (divEl, _) <- divAttributeLikeDyn' mainClass $ drawWorkerStrength strengthDyn
   let clicks = domEvent Click divEl
-      filteredClicks = filterByBehavior (/=Fading) (current animationStates) clicks
-  return $ const workerId <$> filteredClicks
+  return $ const workerId <$> clicks
 
 drawWorkerStrength :: MonadWidget t m => Dynamic t WorkerStrength -> m ()
 drawWorkerStrength strengthDyn =

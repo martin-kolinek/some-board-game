@@ -25,7 +25,7 @@ drawWorkplaces =
           (wrapperElem, _) <- divAttributeLike' cardWrapperClass $
             divAttributeLikeDyn' (cardCss <$> dataDyn) $ do
               cardContents dataDyn
-              animatedList (fromRational 1) workersInWorkplace (drawWorker $ constDyn Nothing)
+              simplerList workersInWorkplace (drawWorker $ constDyn Nothing)
           return $ const workplaceId <$> domEvent Click wrapperElem
     events <- listWithKey workplaces drawWorkplace
     let combineEvents map = leftmost (M.elems map)

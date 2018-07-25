@@ -4,7 +4,6 @@ module Player.Worker.Style where
 
 import Settings.Types
 import Common.CssClass
-import Common.CommonClasses
 
 import Clay
 import Control.Monad
@@ -45,12 +44,7 @@ colorGlowingUrl PlayerBlack = url "data/worker_black_glowing.svg"
 
 workerStyle :: Css
 workerStyle = do
-  let workerFade = do
-        opacity 0
-        width (px 0)
-        margin (px 0) (px 0) (px 0) (px 0)
-        transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
-      workerCommon = do
+  let workerCommon = do
         cursor pointer
         opacity 1
         width (em 3.7)
@@ -84,7 +78,6 @@ workerStyle = do
     star # classSelector (colorClass clr) # classSelector activeWorkerClass ? do
       background $ colorGlowingUrl clr
       workerCommon
-    star # classSelector (colorClass clr) # classSelector fadeClass ? workerFade
   star # classSelector workerAnimationClass ? do
     animationName "worker-kf"
     animationDuration (sec 1)

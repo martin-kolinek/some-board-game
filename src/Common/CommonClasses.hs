@@ -3,8 +3,6 @@ module Common.CommonClasses where
 
 import Common.CssClass
 
-fadeClass :: CssClass
-fadeClass = CssClass "fade"
 faClass :: CssClass
 faClass = CssClass "fa"
 faExclamationClass :: CssClass

@@ -4,7 +4,6 @@ module Errors.Dom where
 
 import Types
 import Common.DomUtil
-import Common.CommonClasses
 import Errors.Style
 
 import Reflex.Dom
@@ -25,17 +24,15 @@ drawErrors universeDyn actions = divAttributeLike errorContainerClass $ do
       attachIdToEvent :: Reflex t => (Int, Event t ()) -> Event t Int
       attachIdToEvent (id, event) = const id <$> event
       extractEventsFromMap map = leftmost $ attachIdToEvent <$> assocs map
-      drawError :: Reflex t => MonadWidget t m => Int -> Dynamic t (AnimationState, String) -> m (Event t ())
-      drawError _ tuple = do
-        let err = T.pack <$> snd <$> tuple
-            animState = fst <$> tuple
-        (_, res) <- animateState (constDyn errorItemClass) (constDyn fadeClass) animState $ do
-          el "div" $ dynText err
+      drawError :: Reflex t => MonadWidget t m => Int -> Dynamic t String -> m (Event t ())
+      drawError _ err = do
+        (_, res) <- divAttributeLike' errorItemClass $ do
+          el "div" $ dynText (T.pack <$> err)
           el "div" $ buttonSpanCssClass closeButtonWithIconClass (return ())
         return res
       combineWithLast newValue (oldValue, _) = (newValue, newValue M.\\ oldValue)
   rec
-    closeEvents <- animated (fromRational 1) allErrors drawError
+    closeEvents <- listWithKey allErrors drawError
     allErrors <- foldDyn modifyMap empty addAndRemoveEvents
     additionsDyn <- foldDyn combineWithLast (M.empty, M.empty) (updated allErrors)
     let additions = (M.keys . snd) <$> updated additionsDyn

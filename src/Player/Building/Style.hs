@@ -219,11 +219,6 @@ buildingStyle = do
     animationName "animal-kf"
     animationDuration (sec 1)
     animationIterationCount (iterationCount 1)
-  star # classSelector animalClass # classSelector fadeClass ? do
-    opacity 0
-    width (px 0)
-    margin (px 0) (px 0) (px 0) (px 0)
-    transitions [("opacity", sec 0.5, easeInOut, sec 0), ("width", sec 0.5, easeInOut, sec 0.5), ("margin", sec 0.5, easeInOut, sec 0.5)]
   keyframes "animal-kf" [
       (0, opacity 0),
       (100, opacity 1)]

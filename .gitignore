@@ -1,9 +1,9 @@
 dist/
-.cabal-sandbox
+.cabal-sandbox/
 cabal.sandbox.config
-.stack-work
+.stack-work/
 nohup.out
-dist-newstyle
+dist-newstyle/
 result
-reflex-platform
+reflex-platform/
 TAGS

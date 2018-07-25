@@ -53,6 +53,4 @@ errorStyle = do
   star # classSelector errorItemClass |> div # firstChild ? do
     fontWeight bold
     marginLeft (em 0.3)
-  star # classSelector errorItemClass # classSelector fadeClass ?
-    height (em 0)
   star # classSelector closeButtonClass ? cursor pointer
