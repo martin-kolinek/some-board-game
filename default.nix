@@ -7,6 +7,8 @@
     ghc = ["some-board-game"];
     ghcjs = ["some-board-game"];
   };
+
+  useWarp = true;
   
   overrides = self: super: {
     some-board-game-rules = self.callCabal2nix "some-board-game-rules" (pkgs.fetchFromGitHub {

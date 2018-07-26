@@ -18,6 +18,21 @@ simplerList input draw = do
       mapFromList = (\x -> M.fromList $ (, ()) <$> x) <$> input
   listWithKey mapFromList draw2
 
+data KeyValWrapper k v = KeyValWrapper k v
+instance Eq k => Eq (KeyValWrapper k v)
+  where (KeyValWrapper k _) == (KeyValWrapper k2 _) = k == k2
+instance Ord k => Ord (KeyValWrapper k v)
+  where compare (KeyValWrapper k1 _) (KeyValWrapper k2 _) = compare k1 k2
+
+listWithKeyNonDyn :: (MonadWidget t m, Ord k) => Dynamic t (M.Map k v) -> (k -> v -> m a) -> m (Dynamic t (M.Map k a))
+listWithKeyNonDyn input draw = do
+  let draw2 (KeyValWrapper k v) _ = draw k v
+      newMap m = M.mapKeysMonotonic (\k -> KeyValWrapper k (m M.! k)) m
+      getKeyFromWrapper (KeyValWrapper k _) = k
+      oldMap = M.mapKeysMonotonic getKeyFromWrapper
+  res <- listWithKey (newMap <$> input) draw2
+  return $ oldMap <$> res
+
 updatedWithInitialValue :: MonadWidget t m => Dynamic t a -> m (Event t a)
 updatedWithInitialValue input = do
   postBuild <- getPostBuild
@@ -91,10 +106,7 @@ simpleListOrd listDyn itemFunc =
 
 whenWidget :: MonadWidget t m => Dynamic t Bool -> m () -> m ()
 whenWidget cond inner = do
-  heldCond <- holdUniqDyn cond
-  postBuild <- getPostBuild
-  let draw b = if b then inner else return ()
-      updates = draw <$> updated heldCond
-      initial = draw <$> tag (current heldCond) postBuild
-  _ <- widgetHold (return ()) $ leftmost [initial, updates]
+  let toMap False = M.empty
+      toMap True = M.singleton () ()
+  _ <- listWithKey (toMap <$> cond) $ \_ _ -> inner
   return ()
