@@ -104,33 +104,32 @@ instance Reflex t => Monoid (TileResults t) where
   mempty = TileResults mempty mempty mempty
   mappend (TileResults a1 b1 c1) (TileResults a2 b2 c2) = TileResults (a1 <> a2) (b1 <> b2) (c1 <> c2)
 
-getPotentialCrop :: Universe -> PlayerId -> PlantingStatus -> Position -> Maybe Position -> PotentialCrop
+getPotentialCrop :: Universe -> PlayerId -> PlantingStatus -> Position -> Bool -> PotentialCrop
 getPotentialCrop universe plId (IsPlanting crops selectedCrop) position hovered =
   let existing = do
         (crop, _) <- find ((== position) . snd) crops
         return $ ValidCrop crop
       new = do
         selCrop <- selectedCrop
-        guard $ Just position == hovered
+        guard $ hovered
         return $ if isLeft $ plantCrops plId ((selCrop, position) : crops) universe
           then ValidCrop selCrop
           else InvalidCrop selCrop
   in fromMaybe NoCrop $ listToMaybe $ catMaybes [existing, new]
 getPotentialCrop _ _ _ _ _ = NoCrop
 
-getPotentialBarn :: Position -> BarnBuildingStatus -> Maybe (Int, Int) -> PlayerId -> Universe -> PotentialBarn
-getPotentialBarn position IsBuildingBarn (Just hoveredPosition) playerId universe
-  | hoveredPosition == position = if isLeft $ buildBarn playerId position universe
-                                  then InvalidBarn
-                                  else ValidBarn
-  | otherwise = NoBarn
+getPotentialBarn :: BarnBuildingStatus -> Position -> Bool -> PlayerId -> Universe -> PotentialBarn
+getPotentialBarn IsBuildingBarn position True playerId universe = if isLeft $ buildBarn playerId position universe
+                                                                  then InvalidBarn
+                                                                  else ValidBarn
 getPotentialBarn _ _ _ _ _ = NoBarn
 
 drawTileInfo :: PlayerWidget t m x => DynamicInfo t -> Position -> TileInfo -> m (TileResults t)
 drawTileInfo dynamicInfo position tileInfo = do
   universeDyn <- askUniverseDyn
   playerId <- askPlayerId
-  let potentialBuildingDyn = traceDyn "potential" $ getPotentialBuilding <$> (traceDyn "curBuild" $ currentlyBuilding dynamicInfo) <*> (currentlyHoveredPosition dynamicInfo) <*> pure position <*> pure playerId <*> universeDyn
+  isHovered <- holdUniqDyn (((==) . Just) <$> pure position <*> currentlyHoveredPosition dynamicInfo)
+  let potentialBuildingDyn = getPotentialBuilding <$> (currentlyBuilding dynamicInfo) <*> (currentlyHoveredPosition dynamicInfo) <*> pure position <*> pure playerId <*> universeDyn
       getBuildingToDraw tilePotBuild tileBuild = case tilePotBuild of
         NoBuilding -> tileBuild
         ValidBuilding b -> b
@@ -152,8 +151,8 @@ drawTileInfo dynamicInfo position tileInfo = do
       cropText x = T.pack $ show x
       drawBarn True = text "Barn"
       drawBarn False = return ()
-      tilePotentialCropDyn = getPotentialCrop <$> universeDyn <*> pure playerId <*> currentPlantingStatus dynamicInfo <*> pure position <*> currentlyHoveredPosition dynamicInfo
-      tilePotentialBarnDyn = getPotentialBarn <$> pure position <*> currentlyBuildingBarn dynamicInfo <*> currentlyHoveredPosition dynamicInfo <*> pure playerId <*> universeDyn
+      tilePotentialCropDyn = getPotentialCrop <$> universeDyn <*> pure playerId <*> currentPlantingStatus dynamicInfo <*> pure position <*> isHovered
+      tilePotentialBarnDyn = getPotentialBarn <$> currentlyBuildingBarn dynamicInfo <*> pure position <*> isHovered <*> pure playerId <*> universeDyn
   (divEl, inner) <- divAttributeLikeDyn' (buildingCss position <$> (getBuildingToDraw <$> potentialBuildingDyn <*> pure (tileBuilding tileInfo))) $ do
     divAttributeLikeDyn (getOverlayCss <$> potentialBuildingDyn) $ do
       drawOccupantErrors $ tileOccupantErrors tileInfo
@@ -296,16 +295,16 @@ isBarnBuildingPossible building planting = (&&) <$> ((== IsNotBuilding) <$> buil
 drawBuildingSpace :: PlayerWidget t m x => m (Dynamic t (Maybe WorkerId))
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
-    (clickedPosition, clickedOccupant, hoveredPosition) <- drawBuildings $ DynamicInfo (traceDyn "hovered" hoveredPosition) selectedOccupantDyn (constDyn IsNotPlanting) buildingStatusDyn (constDyn IsNotBuildingBarn)
+    (clickedPosition, clickedOccupant, hoveredPosition) <- drawBuildings $ DynamicInfo hoveredPosition selectedOccupantDyn (constDyn IsNotPlanting) buildingStatusDyn (constDyn IsNotBuildingBarn)
     -- hoveredPosition selectedOccupantDyn plantingStatusDyn buildingStatusDyn barnBuildingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
     occupantChangeActions <- createOccupantChangeActions selectedOccupantDyn clickedPosition buildingStatusDyn plantingStatusDyn
     tellPlayerAction occupantChangeActions
     (plantingStatusDyn, buildingStatusDyn, barnBuildingStatusDyn) <- divAttributeLike buildingOptionsClass $ do
       rec
-        let canBuildDyn = traceDyn "build" $ isBuildingPossible plantingStatusDynInner barnBuildingStatusDynInner
-            canPlantDyn = traceDyn "plant" $ isPlantingPossible buildingStatusDynInner barnBuildingStatusDynInner
-            canBuildBarnDyn = traceDyn "barn" $ isBarnBuildingPossible buildingStatusDynInner plantingStatusDynInner
+        let canBuildDyn = isBuildingPossible plantingStatusDynInner barnBuildingStatusDynInner
+            canPlantDyn = isPlantingPossible buildingStatusDynInner barnBuildingStatusDynInner
+            canBuildBarnDyn = isBarnBuildingPossible buildingStatusDynInner plantingStatusDynInner
         buildingStatusDynInner <- drawBuildingSelection canBuildDyn
         -- plantingStatusDynInner <- drawPlanting clickedPosition canPlantDyn
         -- let buildingStatusDynInner = constDyn IsNotBuilding
