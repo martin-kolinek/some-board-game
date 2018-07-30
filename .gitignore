@@ -5,5 +5,4 @@ cabal.sandbox.config
 nohup.out
 dist-newstyle/
 result
-reflex-platform/
 TAGS
