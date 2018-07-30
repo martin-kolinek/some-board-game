@@ -1,4 +1,5 @@
-(import ./reflex-platform {}).project ({ pkgs, ... }: {
+{pkgs ? import <nixpkgs> {}}:
+let all = (import ./reflex-platform {}).project ({ pkgs, ... }: {
   packages = {
     some-board-game = ./. ;
   };
@@ -18,4 +19,11 @@
       sha256 = "1w6h3hfzcg6kxdxdyfks3id0h8mwi81jshakx0rc4mibp2wpdgnn";
     }) {};
   };
-})
+});
+    dataDir = ./data;
+    withData = pkgs.runCommand "some-board-game-with-data" {passthru = all; preferLocalBuild = true; } ''
+  mkdir $out
+  cp -rv ${dataDir} $out/data
+  cp -rv ${all.ghcjs.some-board-game}/bin/some-board-game.jsexe/. $out
+'';
+in all // withData
