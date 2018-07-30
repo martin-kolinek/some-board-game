@@ -295,8 +295,7 @@ isBarnBuildingPossible building planting = (&&) <$> ((== IsNotBuilding) <$> buil
 drawBuildingSpace :: PlayerWidget t m x => m (Dynamic t (Maybe WorkerId))
 drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
   rec
-    (clickedPosition, clickedOccupant, hoveredPosition) <- drawBuildings $ DynamicInfo hoveredPosition selectedOccupantDyn (constDyn IsNotPlanting) buildingStatusDyn (constDyn IsNotBuildingBarn)
-    -- hoveredPosition selectedOccupantDyn plantingStatusDyn buildingStatusDyn barnBuildingStatusDyn
+    (clickedPosition, clickedOccupant, hoveredPosition) <- drawBuildings $ DynamicInfo hoveredPosition selectedOccupantDyn plantingStatusDyn buildingStatusDyn barnBuildingStatusDyn
     selectedOccupantDyn <- createSelectedOccupant clickedOccupant
     occupantChangeActions <- createOccupantChangeActions selectedOccupantDyn clickedPosition buildingStatusDyn plantingStatusDyn
     tellPlayerAction occupantChangeActions
@@ -306,16 +305,13 @@ drawBuildingSpace = divAttributeLike buildingSpaceClass $ do
             canPlantDyn = isPlantingPossible buildingStatusDynInner barnBuildingStatusDynInner
             canBuildBarnDyn = isBarnBuildingPossible buildingStatusDynInner plantingStatusDynInner
         buildingStatusDynInner <- drawBuildingSelection canBuildDyn
-        -- plantingStatusDynInner <- drawPlanting clickedPosition canPlantDyn
-        -- let buildingStatusDynInner = constDyn IsNotBuilding
-        let plantingStatusDynInner = constDyn IsNotPlanting
+        plantingStatusDynInner <- drawPlanting clickedPosition canPlantDyn
         barnBuildingStatusDynInner <- drawBarnBuilding canBuildBarnDyn
-        -- plantActions <- drawPlantingConfirmation plantingStatusDyn
-        let plantActions = never
+        plantActions <- drawPlantingConfirmation plantingStatusDyn
         tellPlayerAction plantActions
       return (plantingStatusDynInner, buildingStatusDynInner, barnBuildingStatusDynInner)
-    -- tellPlayerAction $ createBuildActions buildingStatusDyn clickedPosition
-    -- tellPlayerAction $ createBuildBarnAction barnBuildingStatusDyn clickedPosition
+    tellPlayerAction $ createBuildActions buildingStatusDyn clickedPosition
+    tellPlayerAction $ createBuildBarnAction barnBuildingStatusDyn clickedPosition
     let selectedWorkerDyn = (workerFromOccupant =<<) <$> selectedOccupantDyn
   return $ selectedWorkerDyn
 
