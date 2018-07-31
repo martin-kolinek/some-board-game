@@ -16,7 +16,7 @@ import Data.Text as T
 drawWorker :: PlayerWidget t m x => Dynamic t (Maybe WorkerId) -> WorkerId -> m (Event t WorkerId)
 drawWorker selectedWorkerDyn workerId = do
   (colorDyn, strengthDyn) <- getWorkerData workerId
-  let addHighlight color selectedWorker = if selectedWorker == Just workerId then colorClass color <> activeWorkerClass <> workerAnimationClass else colorClass color <> workerAnimationClass
+  let addHighlight color selectedWorker = if selectedWorker == Just workerId then colorClass color <> activeWorkerClass else colorClass color
       mainClass = addHighlight <$> colorDyn <*> selectedWorkerDyn
   (divEl, _) <- divAttributeLikeDyn' mainClass $ drawWorkerStrength strengthDyn
   let clicks = domEvent Click divEl

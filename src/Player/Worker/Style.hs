@@ -10,8 +10,6 @@ import Control.Monad
 
 activeWorkerClass :: CssClass
 activeWorkerClass = CssClass "active-worker"
-workerAnimationClass :: CssClass
-workerAnimationClass = CssClass "worker-animation"
 strengthClass :: CssClass
 strengthClass = CssClass "strength"
 
@@ -68,9 +66,6 @@ workerStyle = do
     paddingTop (em 0.1)
     margin (px 4) (px 4) (px 4) (px 4)
     borderRadius (em 0.7) (em 0.7) (em 0.7) (em 0.7)
-  keyframes "worker-kf" [
-      (0, opacity 0),
-      (100, opacity 1)]
   forM_ allPlayerColors $ \clr -> do
     star # classSelector (colorClass clr) ? do
       background $ colorUrl clr
@@ -78,7 +73,3 @@ workerStyle = do
     star # classSelector (colorClass clr) # classSelector activeWorkerClass ? do
       background $ colorGlowingUrl clr
       workerCommon
-  star # classSelector workerAnimationClass ? do
-    animationName "worker-kf"
-    animationDuration (sec 1)
-    animationIterationCount (iterationCount 1)
