@@ -24,15 +24,6 @@ instance Eq k => Eq (KeyValWrapper k v)
 instance Ord k => Ord (KeyValWrapper k v)
   where compare (KeyValWrapper k1 _) (KeyValWrapper k2 _) = compare k1 k2
 
-listWithKeyNonDyn :: (MonadWidget t m, Ord k) => Dynamic t (M.Map k v) -> (k -> v -> m a) -> m (Dynamic t (M.Map k a))
-listWithKeyNonDyn input draw = do
-  let draw2 (KeyValWrapper k v) _ = draw k v
-      newMap m = M.mapKeysMonotonic (\k -> KeyValWrapper k (m M.! k)) m
-      getKeyFromWrapper (KeyValWrapper k _) = k
-      oldMap = M.mapKeysMonotonic getKeyFromWrapper
-  res <- listWithKey (newMap <$> input) draw2
-  return $ oldMap <$> res
-
 updatedWithInitialValue :: MonadWidget t m => Dynamic t a -> m (Event t a)
 updatedWithInitialValue input = do
   postBuild <- getPostBuild

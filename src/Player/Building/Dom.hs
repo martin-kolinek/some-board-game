@@ -28,7 +28,7 @@ import qualified Data.Text as T
 import Data.Align
 import Data.These
 import Data.Default
-import Data.List (find)
+import Data.List (find, sort)
 import qualified Data.List.NonEmpty as NE
 
 data PotentialBuilding = ValidBuilding TileBuildingType | InvalidBuilding TileBuildingType | NoBuilding deriving (Eq, Show)
@@ -42,7 +42,7 @@ data TileInfo = TileInfo
     tileOccupantErrors :: [String],
     tileCrops :: [CropType],
     tileHasBarn :: Bool
-  } deriving Show
+  } deriving (Eq, Show)
 
 data DynamicInfo t = DynamicInfo {
     currentlyHoveredPosition :: Dynamic t (Maybe Position),
@@ -82,7 +82,7 @@ createTiles universe playerId =
     in M.fromList $ getBuildingTiles =<< buildings
 
 findVisibleOccupants :: Universe -> PlayerId -> Position -> [BuildingOccupant]
-findVisibleOccupants universe playerId position = filter isOccupantVisible $ M.findWithDefault [] position $ getBuildingOccupants universe playerId
+findVisibleOccupants universe playerId position = sort $ filter isOccupantVisible $ M.findWithDefault [] position $ getBuildingOccupants universe playerId
   where isOccupantVisible (WorkerOccupant workerId) = isNothing $ getWorkerWorkplace universe workerId
         isOccupantVisible _ = True
 
@@ -113,8 +113,8 @@ getPotentialCrop universe plId (IsPlanting crops selectedCrop) position hovered 
         selCrop <- selectedCrop
         guard $ hovered
         return $ if isLeft $ plantCrops plId ((selCrop, position) : crops) universe
-          then ValidCrop selCrop
-          else InvalidCrop selCrop
+          then InvalidCrop selCrop
+          else ValidCrop selCrop
   in fromMaybe NoCrop $ listToMaybe $ catMaybes [existing, new]
 getPotentialCrop _ _ _ _ _ = NoCrop
 
@@ -123,6 +123,13 @@ getPotentialBarn IsBuildingBarn position True playerId universe = if isLeft $ bu
                                                                   then InvalidBarn
                                                                   else ValidBarn
 getPotentialBarn _ _ _ _ _ = NoBarn
+
+drawDynTileInfo :: PlayerWidget t m x => DynamicInfo t -> Position -> Dynamic t TileInfo -> m (TileResults t)
+drawDynTileInfo dynamicInfo position tileInfoDyn = do
+  uniqTileInfo <- holdUniqDyn tileInfoDyn
+  resultEvent <- dyn $ drawTileInfo dynamicInfo position <$> uniqTileInfo
+  held <- holdDyn (TileResults never never $ constDyn []) resultEvent
+  extractTileResultsFromDynamic held
 
 drawTileInfo :: PlayerWidget t m x => DynamicInfo t -> Position -> TileInfo -> m (TileResults t)
 drawTileInfo dynamicInfo position tileInfo = do
@@ -174,7 +181,7 @@ drawBuildings dynamicInfo = do
   playerId <- askPlayerId
   rec
     let tiles = createTiles <$> universeDyn <*> pure playerId
-    result <- listWithKeyNonDyn tiles (drawTileInfo dynamicInfo)
+    result <- listWithKey tiles (drawDynTileInfo dynamicInfo)
     (TileResults clickedPos clickedOcc hoveredPositionDyn) <- extractTileResultsFromDynamic $ fold <$> result
   return (fmapMaybe listToMaybe clickedPos, fmapMaybe listToMaybe clickedOcc, listToMaybe <$> hoveredPositionDyn)
 
