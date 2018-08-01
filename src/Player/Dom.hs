@@ -11,6 +11,7 @@ import Settings.Types
 import Player.Board.Dom
 import Player.Building.Dom
 import Player.Cheats
+import Player.Resources.Dom
 
 import Reflex.Dom
 import Data.Maybe
@@ -19,7 +20,6 @@ import Control.Monad
 import Control.Monad.Reader
 import Prelude hiding (elem)
 import qualified Data.Text as T
-import Data.Semigroup ((<>))
 import Text.Read
 
 drawPlayers :: forall t m x. UniverseWidget t m x => m ()
@@ -110,10 +110,7 @@ drawPlayerInfo = do
 drawPlayerResources :: PlayerWidget t m x => m ()
 drawPlayerResources = do
   resources <- askResources
-  forM_ resourceTypes $ \(resourceFunc, resourceLabel) -> do
-    divAttributeLike' () $ do
-      let resourceText = (((resourceLabel <> ": ") <>) . T.pack . show . resourceFunc) <$> resources
-      dynText resourceText
+  drawResourcesDyn resources
 
 drawFinishButton :: PlayerWidget t m x => m ()
 drawFinishButton = drawActionButton canFinishAction finishAction "Finish action"
@@ -165,13 +162,4 @@ askResources = do
   player <- askPlayerId
   return $ getPlayerResources <$> u <*> constDyn player
 
-resourceTypes :: [(Resources -> Int, T.Text)]
-resourceTypes = [(getWoodAmount, "Wood"),
-                 (getStoneAmount, "Stone"),
-                 (getGoldAmount, "Gold"),
-                 (getIronAmount, "Iron"),
-                 (getWheatAmount, "Wheat"),
-                 (getPotatoAmount, "Potato"),
-                 (getMoneyAmount, "Money"),
-                 (getFoodAmount, "Food")]
 

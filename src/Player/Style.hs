@@ -3,6 +3,7 @@
 module Player.Style where
 
 import Player.Building.Style
+import Player.Resources.Style
 import Common.CssClass
 import Common.CommonClasses
 
@@ -37,6 +38,7 @@ currentPlayerIconClass = currentPlayerIconClassInternal <> faClass <> faPlayClas
 playerStyle :: Css
 playerStyle = do
   buildingStyle
+  resourcesStyle
   star # classSelector playerDataContainerClass ? do
     display Clay.flex
     flexFlow row F.wrap

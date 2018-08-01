@@ -24,7 +24,8 @@ executable some-board-game
                        Player.Dom, Player.Style, Player.Types,
                        Settings.Dom, Settings.Style, Settings.Types,
                        Player.Worker.Dom, Player.Worker.Style,
-                       Player.Board.Dom, Player.Board.Style, Player.Cheats
+                       Player.Board.Dom, Player.Board.Style, Player.Cheats,
+                       Player.Resources.Dom, Player.Resources.Style
   -- other-extensions:
   build-depends:       base >=4.8 && <5,
                        reflex,
