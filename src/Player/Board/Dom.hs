@@ -7,12 +7,12 @@ import Common.DomUtil
 import Player.Types
 import Player.Worker.Dom
 import Player.Board.Style
+import Player.Resources.Dom
 
 import Reflex.Dom
 import Data.Map.Strict as M hiding (map)
 import Control.Monad
 import Prelude hiding (map)
-import qualified Data.Text as T
 import Types
 
 drawWorkplaces :: PlayerWidget t m x => m (Event t WorkplaceId)
@@ -39,4 +39,4 @@ askWorkplaceOccupants :: PlayerWidget t m x => WorkplaceId -> m (Dynamic t [Work
 askWorkplaceOccupants workplaceId = fmap (flip getWorkplaceOccupants workplaceId) <$> askUniverseDyn
 
 cardContents :: MonadWidget t m => Dynamic t WorkplaceData -> m ()
-cardContents workplaceData = dynText $ T.pack <$> show <$> getWorkplaceResources <$> workplaceData
+cardContents workplaceData = drawResourcesDyn $ getWorkplaceResources <$> workplaceData

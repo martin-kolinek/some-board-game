@@ -11,7 +11,9 @@ import Data.Text as T
 import Control.Monad (replicateM_, forM_)
 
 drawResourcesDyn :: MonadWidget t m => Dynamic t Resources -> m ()
-drawResourcesDyn res = dyn_ $ drawResources <$> res
+drawResourcesDyn res = do
+  uniqRes <- holdUniqDyn res
+  dyn_ $ drawResources <$> uniqRes
 
 drawResources :: MonadWidget t m => Resources -> m ()
 drawResources res = divAttributeLike resourceHolderClass $
