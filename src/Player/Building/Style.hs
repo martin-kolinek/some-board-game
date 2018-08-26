@@ -50,8 +50,8 @@ occupantErrorIconClass = faClass <> faExclamationClass
 occupantErrorTextClass :: CssClass
 occupantErrorTextClass = CssClass "occupant-error-text"
 
-occupantContainerClass :: CssClass
-occupantContainerClass = CssClass "occupant-container"
+buildingContainerClass :: CssClass
+buildingContainerClass = CssClass "building-container"
 
 placeholderTileClass :: CssClass
 placeholderTileClass = CssClass "placeholder-tile"
@@ -70,8 +70,6 @@ validPotentialCropClass = CssClass "valid-potential-crop"
 invalidPotentialCropClass :: CssClass
 invalidPotentialCropClass = CssClass "invalid-potential-crop"
 
-hiddenPotentialBarnClass :: CssClass
-hiddenPotentialBarnClass = CssClass "hidden-potential-barn"
 validPotentialBarnClass :: CssClass
 validPotentialBarnClass = CssClass "valid-potential-barn"
 invalidPotentialBarnClass :: CssClass
@@ -81,6 +79,9 @@ animalClass :: CssClass
 animalClass = CssClass "animal-occupant"
 highlightedAnimalClass :: CssClass
 highlightedAnimalClass = CssClass "highlighted-animal-occupant"
+
+barnClass :: CssClass
+barnClass = CssClass "barn"
 
 buildingStyle :: Css
 buildingStyle = do
@@ -135,13 +136,18 @@ buildingStyle = do
     cursor pointer
   star # classSelector placeholderTileClass ? do
     textAlign (alignSide sideCenter)
-  star # classSelector occupantContainerClass ? do
-    verticalAlign middle
-    display inlineBlock
-    paddingTop (pct 25)
-    paddingLeft (pct 10)
-    height (pct 85)
+  star # classSelector buildingContainerClass ? do
+    display flex
+    position absolute
+    width (pct 80)
+    height (pct 80)
+    left (pct 10)
+    top (pct 10)
+    F.flexWrap F.wrap
+    F.justifyContent center
+    F.alignItems center
     overflow auto
+    zIndex 10
   star # classSelector occupantErrorClass ? do
     position absolute
     backgroundColor red
@@ -197,36 +203,44 @@ buildingStyle = do
   star # classSelector invalidPotentialCropClass ? do
     color red
     fontWeight bold
-  star # classSelector hiddenPotentialBarnClass ? display none
-  star # classSelector validPotentialBarnClass ? do
-    color blue
-    fontWeight bold
-  star # classSelector invalidPotentialBarnClass ? do
-    color red
-    fontWeight bold
   star # classSelector highlightedAnimalClass ? do
     fontWeight bold
   star # classSelector animalClass ? do
-    opacity 1
     cursor pointer
-    width (em 3.7)
-    margin (em 0.2) (em 0.2) (em 0.2) (em 0.2)
-    transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
+    width (em 2)
     display inlineBlock
-    height (em 3.7)
+    height (em 2)
     backgroundSize contain
     backgroundRepeat noRepeat
-    animationName "animal-kf"
-    animationDuration (sec 1)
-    animationIterationCount (iterationCount 1)
-  keyframes "animal-kf" [
-      (0, opacity 0),
-      (100, opacity 1)]
+  star # classSelector barnClass ? do
+    backgroundRepeat noRepeat
+    backgroundSize contain
+    backgroundImage $ url "data/barn.svg"
+    centerStyle 4
+    zIndex 1
+  star # classSelector validPotentialBarnClass ? do
+    opacity 0.5
+    backgroundColor green
+    centerStyle 4.6
+  star # classSelector invalidPotentialBarnClass ? do
+    backgroundColor red
+    opacity 0.5
+    centerStyle 4.6
 
 oneSixth :: Double
 oneSixth = 15
 oneQuarter :: Double
 oneQuarter = 20
+
+centerStyle :: Double -> Css
+centerStyle size = do
+    width (em size)
+    height (em size)
+    position absolute
+    left (pct 50)
+    top (pct 50)
+    marginLeft (em (size / (-2)))
+    marginTop (em (size / (-2)))
 
 smallBuildingTypeCss :: SmallBuildingType -> Css
 smallBuildingTypeCss Grass = background (url "data/grass.svg")

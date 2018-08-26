@@ -151,27 +151,29 @@ drawTileInfo dynamicInfo position tileInfo = do
       getPotentialCropText NoCrop = ""
       getPotentialCropText (ValidCrop tp) = T.pack $ show tp
       getPotentialCropText (InvalidCrop tp) = T.pack $ show tp
-      getPotentialBarnClass NoBarn = hiddenPotentialBarnClass
-      getPotentialBarnClass ValidBarn = validPotentialBarnClass
-      getPotentialBarnClass InvalidBarn = invalidPotentialBarnClass
+      drawPotentialBarn NoBarn = return ()
+      drawPotentialBarn ValidBarn = do
+        drawBarn True
+        divAttributeLike validPotentialBarnClass $ return ()
+      drawPotentialBarn InvalidBarn = do
+        drawBarn True
+        divAttributeLike invalidPotentialBarnClass $ return ()
       cropText [] = ""
       cropText x = T.pack $ show x
-      drawBarn True = text "Barn"
+      drawBarn True = divAttributeLike barnClass $ return ()
       drawBarn False = return ()
       tilePotentialCropDyn = getPotentialCrop <$> universeDyn <*> pure playerId <*> currentPlantingStatus dynamicInfo <*> pure position <*> isHovered
       tilePotentialBarnDyn = getPotentialBarn <$> currentlyBuildingBarn dynamicInfo <*> pure position <*> isHovered <*> pure playerId <*> universeDyn
   (divEl, inner) <- divAttributeLikeDyn' (buildingCss position <$> (getBuildingToDraw <$> potentialBuildingDyn <*> pure (tileBuilding tileInfo))) $ do
     divAttributeLikeDyn (getOverlayCss <$> potentialBuildingDyn) $ do
-      drawOccupantErrors $ tileOccupantErrors tileInfo
-      result <- divAttributeLike occupantContainerClass $ do
-        occupantClicks <- forM (tileOccupants tileInfo) (drawWorkplaceOccupant $ currentSelectedOccupant dynamicInfo)
-        let combinedClicks = NE.toList <$> mergeList occupantClicks
-        return combinedClicks
-      text $ cropText $ tileCrops tileInfo
+      _ <- dyn $ drawPotentialBarn <$> tilePotentialBarnDyn
       drawBarn $ tileHasBarn tileInfo
+      drawOccupantErrors $ tileOccupantErrors tileInfo
+      text $ cropText $ tileCrops tileInfo
       divAttributeLikeDyn (getPotentialCropClass <$> tilePotentialCropDyn) $ dynText (getPotentialCropText <$> tilePotentialCropDyn)
-      divAttributeLikeDyn (getPotentialBarnClass <$> tilePotentialBarnDyn) $ drawBarn True
-      return result
+      divAttributeLike buildingContainerClass $ do
+        occupantClicks <- forM (tileOccupants tileInfo) (drawWorkplaceOccupant $ currentSelectedOccupant dynamicInfo)
+        return $ NE.toList <$> mergeList occupantClicks
   hoveredPos <- holdDyn [] (leftmost [const [] <$> domEvent Mouseleave divEl, const [position] <$> domEvent Mouseenter divEl])
   return $ TileResults (const [position] <$> domEvent Click divEl) inner hoveredPos
 

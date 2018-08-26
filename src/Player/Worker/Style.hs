@@ -6,6 +6,7 @@ import Settings.Types
 import Common.CssClass
 
 import Clay
+import qualified Clay.Flexbox as F
 import Control.Monad
 
 activeWorkerClass :: CssClass
@@ -44,12 +45,10 @@ workerStyle :: Css
 workerStyle = do
   let workerCommon = do
         cursor pointer
-        opacity 1
-        width (em 3.7)
-        margin (em 0.2) (em 0.2) (em 0.2) (em 0.2)
-        transitions [("width", sec 0.5, easeInOut, sec 0), ("margin", sec 0.5, easeInOut, sec 0), ("opacity", sec 0.5, easeInOut, sec 0.5)]
+        F.flex 0 0 auto
+        width (em 3.5)
         display inlineBlock
-        height (em 3.7)
+        height (em 3.5)
         textAlign end
         backgroundSize contain
         backgroundRepeat noRepeat
