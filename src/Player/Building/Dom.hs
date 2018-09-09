@@ -162,10 +162,10 @@ drawTileInfo dynamicInfo position tileInfo = do
       cropText x = T.pack $ show x
       drawBarn True = divAttributeLike barnClass $ return ()
       drawBarn False = return ()
-      tilePotentialCropDyn = getPotentialCrop <$> universeDyn <*> pure playerId <*> currentPlantingStatus dynamicInfo <*> pure position <*> isHovered
-      tilePotentialBarnDyn = getPotentialBarn <$> currentlyBuildingBarn dynamicInfo <*> pure position <*> isHovered <*> pure playerId <*> universeDyn
   (divEl, inner) <- divAttributeLikeDyn' (buildingCss position <$> (getBuildingToDraw <$> potentialBuildingDyn <*> pure (tileBuilding tileInfo))) $ do
     divAttributeLikeDyn (getOverlayCss <$> potentialBuildingDyn) $ do
+      tilePotentialCropDyn <- holdUniqDyn $ getPotentialCrop <$> universeDyn <*> pure playerId <*> currentPlantingStatus dynamicInfo <*> pure position <*> isHovered
+      tilePotentialBarnDyn <- holdUniqDyn $ getPotentialBarn <$> currentlyBuildingBarn dynamicInfo <*> pure position <*> isHovered <*> pure playerId <*> universeDyn
       _ <- dyn $ drawPotentialBarn <$> tilePotentialBarnDyn
       drawBarn $ tileHasBarn tileInfo
       drawOccupantErrors $ tileOccupantErrors tileInfo
